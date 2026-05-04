@@ -1,10 +1,12 @@
 # go-sdk
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/agent-assembly/go-sdk.svg)](https://pkg.go.dev/github.com/agent-assembly/go-sdk)
+[![Live Docs](https://img.shields.io/badge/docs-live-blue)](https://ai-agent-assembly.github.io/go-sdk/)
 [![Go Test Matrix](https://github.com/AI-agent-assembly/go-sdk/actions/workflows/go-test.yml/badge.svg)](https://github.com/AI-agent-assembly/go-sdk/actions/workflows/go-test.yml)
 [![Lint](https://github.com/AI-agent-assembly/go-sdk/actions/workflows/lint.yml/badge.svg)](https://github.com/AI-agent-assembly/go-sdk/actions/workflows/lint.yml)
-[![Go Reference](https://pkg.go.dev/badge/github.com/agent-assembly/go-sdk.svg)](https://pkg.go.dev/github.com/agent-assembly/go-sdk)
-[![Go Report Card](https://goreportcard.com/badge/github.com/agent-assembly/go-sdk)](https://goreportcard.com/report/github.com/agent-assembly/go-sdk)
 [![Codecov](https://codecov.io/gh/AI-agent-assembly/go-sdk/graph/badge.svg)](https://codecov.io/gh/AI-agent-assembly/go-sdk)
+[![Go Report Card](https://goreportcard.com/badge/github.com/agent-assembly/go-sdk)](https://goreportcard.com/report/github.com/agent-assembly/go-sdk)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Go SDK for Agent Assembly.
 
