@@ -74,9 +74,18 @@ defer a.Close()
 
 ## Development
 
-- `make fmt`
-- `make lint`
-- `make test`
+```bash
+make fmt              # gofmt -w on all .go files
+make lint             # golangci-lint run ./...
+make test             # go test ./...
+
+go vet ./...
+go test ./assembly                            # one package
+go test ./assembly -run TestRegisterAgent     # one test
+go test -count=1 -race ./...                  # race detector
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contributor workflow, including the optional CGo native FFI build (`-tags aa_ffi_go`) and the memory regression harness.
 
 ## Context Propagation
 
