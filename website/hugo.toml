@@ -1,0 +1,59 @@
+baseURL = "https://ai-agent-assembly.github.io/go-sdk/"
+title = "go-sdk · AI Agent Assembly"
+languageCode = "en-us"
+description = "Go SDK for AI Agent Assembly — runtime governance for AI agent tool calls"
+
+[module]
+  [[module.imports]]
+    path = "github.com/imfing/hextra"
+
+  [[module.mounts]]
+    source = "../docs"
+    target = "content"
+  [[module.mounts]]
+    source = "assets"
+    target = "assets"
+  [[module.mounts]]
+    source = "static"
+    target = "static"
+  [[module.mounts]]
+    source = "layouts"
+    target = "layouts"
+  [[module.mounts]]
+    source = "archetypes"
+    target = "archetypes"
+
+[markup]
+  [markup.goldmark.renderer]
+    unsafe = true
+  [markup.highlight]
+    noClasses = false
+
+[params]
+  [params.navbar]
+    displayTitle = true
+    displayLogo = false
+  [params.theme]
+    default = "system"
+    displayToggle = true
+  [params.footer]
+    enable = true
+    displayCopyright = true
+    displayPoweredBy = true
+
+[menu]
+  [[menu.main]]
+    identifier = "docs"
+    name = "Docs"
+    pageRef = "/"
+    weight = 1
+  [[menu.main]]
+    identifier = "godoc"
+    name = "API Reference"
+    pageRef = "/api-reference"
+    weight = 2
+  [[menu.main]]
+    identifier = "github"
+    name = "GitHub"
+    url = "https://github.com/AI-agent-assembly/go-sdk"
+    weight = 3
