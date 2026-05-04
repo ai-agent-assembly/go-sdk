@@ -100,3 +100,19 @@ that's a design break — promote the API to `assembly/` rather than reaching
 across the boundary.
 
 ## Pull Request Checklist
+
+Before opening a PR, please confirm:
+
+- [ ] Branch follows `<release>/<ticket>/<type>/<short_summary>` (e.g. `v0.0.1/AAASM-1143/feat/readme_contributing`).
+- [ ] Commits are small, single-purpose, and use the GitEmoji convention (`✨ feat:`, `🐛 fix:`, `📝 docs:`, `♻️ refactor:`, `✅ test:`, `🚨 lint:`).
+- [ ] `make fmt`, `make lint`, `make test` all pass locally.
+- [ ] `go vet ./...` is clean.
+- [ ] If you touched concurrency: `go test -race ./...` is clean.
+- [ ] If you touched `internal/ffi/`: the native FFI build passes (`go test -tags aa_ffi_go ./...`) and the pure-Go fallback still passes (`CGO_ENABLED=0 go test ./...`).
+- [ ] Public API additions have full-sentence godoc comments.
+- [ ] No `//nolint` directives without an accompanying explanation.
+- [ ] The PR template in `.github/PULL_REQUEST_TEMPLATE.md` is filled in (Ticket, Summary, Change Scope, Validation, Rollout Notes).
+- [ ] At least one Pioneer-team reviewer is requested.
+- [ ] PR title format: `[<ticket>] <emoji> (<scope>): <imperative summary>`.
+
+CI will re-run all of the above. The local checklist exists to keep the review cycle short, not to replace CI.
