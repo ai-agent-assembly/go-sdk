@@ -180,3 +180,30 @@ The fallbacks are deliberate:
   twice.
 - `RunIDFromContext` returns an empty string when no run ID is present;
   `EnsureRunID` is the helper that guarantees one.
+
+## Tool Wrapping
+
+`WrapTools` is the convenience that turns a slice of plain `Tool`s into a
+slice of `*AssemblyTool`s. Each wrapped tool runs the [interceptor sequence
+above](#http-and-grpc-interceptors): `GovernanceClient.Check` *before*
+execution, `GovernanceClient.RecordResult` *after*.
+
+```go
+inner := []assembly.Tool{searchWebTool, runShellTool}
+wrapped := assembly.WrapTools(inner, a)  // a is the *Assembly from Init
+```
+
+Two design points worth knowing:
+
+- **`WrapTools` does not enforce policy itself.** It only delegates to the
+  governance client. The client (default: `GatewayClient` in
+  `gateway_client.go`) calls the gateway, which makes the decision.
+- **Failure mode is configurable.** `WithFailClosed(true)` makes a gateway
+  failure deny the call; the default (`false`) lets the call proceed when the
+  gateway cannot be reached. Pick based on how strictly your environment
+  needs to fail-safe vs. fail-open.
+
+The single-tool path (`AssemblyTool` + `NewAssemblyTool`) is exported for
+the rare case where you need to wrap one tool in isolation — for example,
+inside another framework's tool registry that reaches in one tool at a time.
+For everything else, prefer `WrapTools`.
