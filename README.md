@@ -55,18 +55,15 @@ import (
     "github.com/agent-assembly/go-sdk/assembly"
 )
 
-func main() {
-    a, err := assembly.Init(context.Background(),
-        assembly.WithGatewayURL("https://your-gateway.com"),
-        assembly.WithAPIKey("xxx"),
-        assembly.WithFailClosed(false),
-    )
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer a.Close()
+ctx := assembly.WithAgentID(context.Background(), "my-agent")
+a, err := assembly.Init(ctx, assembly.WithGatewayURL(url), assembly.WithAPIKey(key))
+if err != nil {
+    log.Fatal(err)
 }
+defer a.Close()
 ```
+
+`WithAgentID` attaches the calling agent's identity to `ctx`; the SDK forwards it (and any `WithTraceID` / `WithRunID` values) to the gateway on every `Check` and `RecordResult`. See [Context Propagation](#context-propagation) below for the full set of context helpers.
 
 ## Development
 
