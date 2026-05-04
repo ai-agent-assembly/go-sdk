@@ -88,3 +88,22 @@ named `Client` (or whatever the active path exports) at link time.
 
 CI exercises both lanes in the matrix (`CGO_ENABLED` 0 and 1), so a change to
 either transport that breaks the other will fail before merge.
+
+```mermaid
+flowchart LR
+    start([go build / go test])
+    tag{aa_ffi_go<br/>build tag set?}
+    cgo{CGO_ENABLED=1?}
+    native[cgo_bridge.go<br/>links libaa_ffi_go]
+    fallback[fallback_uds_nocgo.go<br/>UDS to sidecar]
+
+    start --> tag
+    tag -- "yes" --> cgo
+    tag -- "no" --> fallback
+    cgo -- "yes" --> native
+    cgo -- "no" --> fallback
+```
+
+The fallback path is the default in container images and CI lanes that
+disable CGo, which is most of them. Reach for the native path only when the
+in-process latency saving matters.
