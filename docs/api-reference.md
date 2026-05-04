@@ -20,3 +20,20 @@ variable, with their godoc and source links.
 > rename ticket lands, the link above will resolve to a 404. Use the
 > [local godoc preview](#local-preview) below to read the same information
 > from a clone of the repo.
+
+## Local preview
+
+Run godoc against the working tree to read the same content offline:
+
+```bash
+go install golang.org/x/tools/cmd/godoc@latest
+cd go-sdk
+godoc -http=:6060
+```
+
+Then open <http://localhost:6060/pkg/github.com/agent-assembly/go-sdk/> in
+your browser. Every exported symbol on `master` is rendered with the same
+godoc the public page would show after the rename ticket lands.
+
+Run `godoc` from the repo root (or any directory inside the module) — it
+follows `GOPATH`/module resolution to locate the source.
