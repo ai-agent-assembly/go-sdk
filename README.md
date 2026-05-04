@@ -8,7 +8,9 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/agent-assembly/go-sdk)](https://goreportcard.com/report/github.com/agent-assembly/go-sdk)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Go SDK for Agent Assembly.
+Go SDK for [AI Agent Assembly](https://github.com/AI-agent-assembly) — runtime governance for AI agent tool calls.
+
+The SDK initialises in a few lines, propagates agent identity through `context.Context`, wraps your agent's tool slice with policy enforcement, and forwards every check + result to the AAASM gateway over gRPC or HTTP.
 
 ## Layout
 
