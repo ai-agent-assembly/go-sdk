@@ -156,3 +156,27 @@ sequenceDiagram
 This sequence applies to *every* call against a tool produced by `WrapTools`.
 The interceptors plus context propagation (next section) make sure the
 governance metadata follows the call across whatever wire it crosses.
+
+## Context Propagation
+
+Three identifiers travel through `context.Context` for the lifetime of a
+governed call:
+
+| Identifier | Setter | Reader | Purpose |
+|---|---|---|---|
+| **AgentID** | `WithAgentID(ctx, id)` | `AgentIDFromContext(ctx)` | Names the calling agent so the gateway can attribute every check + record to it. |
+| **TraceID** | `WithTraceID(ctx, id)` | `TraceIDFromContext(ctx)` | Correlates work across SDK boundaries. Falls back to the OpenTelemetry span context's trace ID when unset. |
+| **RunID** | `WithRunID(ctx, id)` | `RunIDFromContext(ctx)` | Groups calls that belong to one logical agent run. `EnsureRunID(ctx)` returns a context guaranteed to carry one (creating it if absent). |
+
+All three are private context keys — there is no public type surface that lets
+external code accidentally collide with them. They are propagated **on the
+wire** by the interceptors (see previous section) so a downstream service
+that re-reads them sees the same identifiers the upstream caller set.
+
+The fallbacks are deliberate:
+
+- `TraceIDFromContext` falls back to `trace.SpanContextFromContext(ctx).TraceID()`
+  so OpenTelemetry-instrumented code does not have to set the trace ID
+  twice.
+- `RunIDFromContext` returns an empty string when no run ID is present;
+  `EnsureRunID` is the helper that guarantees one.
