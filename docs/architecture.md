@@ -38,3 +38,33 @@ internal/ffi/                   # private — low-level transport, see CGo FFI B
 Anything outside `assembly/` is internal and may change without notice. The
 [Tool Wrapping](#tool-wrapping) and [Context Propagation](#context-propagation)
 sections below describe how the public types compose at runtime.
+
+```mermaid
+flowchart TB
+    subgraph caller["Your agent code"]
+        agent["agent.go<br/>(your code)"]
+    end
+    subgraph public["assembly/ (public)"]
+        init[Init]
+        wrap[WrapTools]
+        intercept[Interceptors]
+        ctx[Context helpers]
+        gclient[GovernanceClient]
+    end
+    subgraph private["internal/ffi/ (private)"]
+        ffi[FFI transport<br/>cgo or UDS fallback]
+    end
+    subgraph external["External services"]
+        gw[(AAASM gateway)]
+    end
+
+    agent --> init
+    agent --> wrap
+    agent --> intercept
+    agent --> ctx
+    init --> gclient
+    wrap --> gclient
+    intercept --> gclient
+    gclient --> ffi
+    ffi --> gw
+```
