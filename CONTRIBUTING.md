@@ -35,6 +35,31 @@ If the test run is green, your environment is ready.
 
 ## Running Tests and Checks
 
+```bash
+# Full validation, equivalent to what CI runs.
+make fmt
+make lint
+make test
+
+# Static analysis (also covered by 'make lint' but useful in isolation).
+go vet ./...
+
+# A single package or a single test (regex match).
+go test ./assembly
+go test ./assembly -run TestRegisterAgent
+
+# Race detector — required for any change that touches concurrency.
+go test -count=1 -race ./...
+
+# Native FFI build (opt-in, requires CGo + Rust 'aa_ffi_go' library on linker path).
+go test -tags aa_ffi_go ./...
+
+# Memory regression harness (1M sends; opt-in, takes a few minutes).
+AAASM_MEMORY_HARNESS=1 go test ./internal/ffi -run TestMemoryRegressionHarness
+```
+
+CI runs the full matrix across Go 1.24 / 1.25, ubuntu / macOS, and `CGO_ENABLED` 0 / 1. If your local run passes, CI almost certainly will.
+
 ## Idiomatic Go Conventions
 
 ## Pull Request Checklist
