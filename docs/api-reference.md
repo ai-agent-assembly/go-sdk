@@ -37,3 +37,15 @@ godoc the public page would show after the rename ticket lands.
 
 Run `godoc` from the repo root (or any directory inside the module) — it
 follows `GOPATH`/module resolution to locate the source.
+
+## See also
+
+- [Architecture](architecture/) — module layout, FFI bridge, interceptor
+  flow, context propagation, and tool wrapping. Read this first if you want
+  to know *why* a particular API is shaped the way it is.
+- [Getting Started](getting-started/) — install, init, wrap your tools.
+- [Guides](guides/) — topical how-tos (context propagation, FFI modes,
+  error handling).
+- [Contributing](https://github.com/AI-agent-assembly/go-sdk/blob/master/CONTRIBUTING.md) —
+  conventions enforced in code review (context-first, `%w` wrapping,
+  `io.Closer`, functional options, `internal/` boundary).
