@@ -24,6 +24,8 @@ The SDK initialises in a few lines, propagates agent identity through `context.C
 go get github.com/AI-agent-assembly/go-sdk
 ```
 
+> **Note** — `go get` and pkg.go.dev indexing are blocked today pending a module-path rename. The `go.mod` declares `github.com/agent-assembly/go-sdk` while the canonical GitHub URL is `github.com/AI-agent-assembly/go-sdk`. Until that rename ticket lands, clone the repo and use a `replace` directive in your consumer's `go.mod`.
+
 ## Layout
 
 ```text
