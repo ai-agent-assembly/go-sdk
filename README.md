@@ -1,22 +1,30 @@
 # go-sdk
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/agent-assembly/go-sdk.svg)](https://pkg.go.dev/github.com/agent-assembly/go-sdk)
+[![Live Docs](https://img.shields.io/badge/docs-live-blue)](https://ai-agent-assembly.github.io/go-sdk/)
 [![Go Test Matrix](https://github.com/AI-agent-assembly/go-sdk/actions/workflows/go-test.yml/badge.svg)](https://github.com/AI-agent-assembly/go-sdk/actions/workflows/go-test.yml)
 [![Lint](https://github.com/AI-agent-assembly/go-sdk/actions/workflows/lint.yml/badge.svg)](https://github.com/AI-agent-assembly/go-sdk/actions/workflows/lint.yml)
-[![Go Reference](https://pkg.go.dev/badge/github.com/agent-assembly/go-sdk.svg)](https://pkg.go.dev/github.com/agent-assembly/go-sdk)
-[![Go Report Card](https://goreportcard.com/badge/github.com/agent-assembly/go-sdk)](https://goreportcard.com/report/github.com/agent-assembly/go-sdk)
 [![Codecov](https://codecov.io/gh/AI-agent-assembly/go-sdk/graph/badge.svg)](https://codecov.io/gh/AI-agent-assembly/go-sdk)
+[![Go Report Card](https://goreportcard.com/badge/github.com/agent-assembly/go-sdk)](https://goreportcard.com/report/github.com/agent-assembly/go-sdk)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Go SDK for Agent Assembly.
+Go SDK for [AI Agent Assembly](https://github.com/AI-agent-assembly) — runtime governance for AI agent tool calls.
 
-## Status
+The SDK initialises in a few lines, propagates agent identity through `context.Context`, wraps your agent's tool slice with policy enforcement, and forwards every check + result to the AAASM gateway over gRPC or HTTP.
 
-Runtime architecture scaffold for ticket `AAASM-63`.
+## Prerequisites
 
-## Module
+- **Go ≥ 1.24** — the floor declared in `go.mod`.
+- An AAASM gateway URL and API key (operator-issued).
+- *(Optional)* a C compiler — only needed if you build with `-tags aa_ffi_go` to enable the native FFI transport. The default transport is pure-Go and runs cleanly with `CGO_ENABLED=0`.
 
-```go
-module github.com/agent-assembly/go-sdk
+## Installation
+
+```bash
+go get github.com/AI-agent-assembly/go-sdk
 ```
+
+> **Note** — `go get` and pkg.go.dev indexing are blocked today pending a module-path rename. The `go.mod` declares `github.com/agent-assembly/go-sdk` while the canonical GitHub URL is `github.com/AI-agent-assembly/go-sdk`. Until that rename ticket lands, clone the repo and use a `replace` directive in your consumer's `go.mod`.
 
 ## Layout
 
@@ -47,24 +55,37 @@ import (
     "github.com/agent-assembly/go-sdk/assembly"
 )
 
-func main() {
-    a, err := assembly.Init(context.Background(),
-        assembly.WithGatewayURL("https://your-gateway.com"),
-        assembly.WithAPIKey("xxx"),
-        assembly.WithFailClosed(false),
-    )
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer a.Close()
+ctx := assembly.WithAgentID(context.Background(), "my-agent")
+a, err := assembly.Init(ctx, assembly.WithGatewayURL(url), assembly.WithAPIKey(key))
+if err != nil {
+    log.Fatal(err)
 }
+defer a.Close()
 ```
+
+`WithAgentID` attaches the calling agent's identity to `ctx`; the SDK forwards it (and any `WithTraceID` / `WithRunID` values) to the gateway on every `Check` and `RecordResult`. See [Context Propagation](#context-propagation) below for the full set of context helpers.
+
+## Documentation
+
+- **Live site** — [ai-agent-assembly.github.io/go-sdk](https://ai-agent-assembly.github.io/go-sdk/) (Hugo, Hextra theme; built and deployed from `master`).
+- **API reference** — [pkg.go.dev/github.com/agent-assembly/go-sdk](https://pkg.go.dev/github.com/agent-assembly/go-sdk) (auto-generated from godoc; pending the module-path rename, this is currently a 404 — preview locally with `godoc -http=:6060`).
+- **Architecture** — [docs/architecture.md](docs/architecture.md) and [docs/api-reference.md](docs/api-reference.md).
+- **Contributing** — [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Development
 
-- `make fmt`
-- `make lint`
-- `make test`
+```bash
+make fmt              # gofmt -w on all .go files
+make lint             # golangci-lint run ./...
+make test             # go test ./...
+
+go vet ./...
+go test ./assembly                            # one package
+go test ./assembly -run TestRegisterAgent     # one test
+go test -count=1 -race ./...                  # race detector
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contributor workflow, including the optional CGo native FFI build (`-tags aa_ffi_go`) and the memory regression harness.
 
 ## Context Propagation
 
