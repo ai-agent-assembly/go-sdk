@@ -65,6 +65,13 @@ defer a.Close()
 
 `WithAgentID` attaches the calling agent's identity to `ctx`; the SDK forwards it (and any `WithTraceID` / `WithRunID` values) to the gateway on every `Check` and `RecordResult`. See [Context Propagation](#context-propagation) below for the full set of context helpers.
 
+## Documentation
+
+- **Live site** — [ai-agent-assembly.github.io/go-sdk](https://ai-agent-assembly.github.io/go-sdk/) (Hugo, Hextra theme; built and deployed from `master`).
+- **API reference** — [pkg.go.dev/github.com/agent-assembly/go-sdk](https://pkg.go.dev/github.com/agent-assembly/go-sdk) (auto-generated from godoc; pending the module-path rename, this is currently a 404 — preview locally with `godoc -http=:6060`).
+- **Architecture** — [docs/architecture.md](docs/architecture.md) and [docs/api-reference.md](docs/api-reference.md).
+- **Contributing** — [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Development
 
 - `make fmt`
