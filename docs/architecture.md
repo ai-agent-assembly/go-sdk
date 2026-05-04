@@ -129,3 +129,30 @@ chain usable by the next governance check.
 The interceptors are intentionally narrow — they only move metadata. Policy
 enforcement (deny / allow / approval) happens in `GovernanceClient.Check`,
 called by the wrapped tool, not by the interceptor.
+
+```mermaid
+sequenceDiagram
+    participant Caller as Caller (your code)
+    participant Tool as AssemblyTool (wrapped)
+    participant Gov as GovernanceClient
+    participant GW as AAASM gateway
+    participant Inner as Inner tool (your impl)
+
+    Caller->>Tool: Call(ctx, args)
+    Tool->>Gov: Check(ctx, CheckRequest)
+    Gov->>GW: gRPC/HTTP Check<br/>(metadata = AgentID/TraceID/RunID)
+    GW-->>Gov: Decision (allow/deny/approve)
+    alt allow
+        Tool->>Inner: Call(ctx, args)
+        Inner-->>Tool: result
+        Tool->>Gov: RecordResult(ctx, RecordRequest)
+        Gov->>GW: gRPC/HTTP Record
+    else deny
+        Tool-->>Caller: PolicyViolationError
+    end
+    Tool-->>Caller: result or error
+```
+
+This sequence applies to *every* call against a tool produced by `WrapTools`.
+The interceptors plus context propagation (next section) make sure the
+governance metadata follows the call across whatever wire it crosses.
