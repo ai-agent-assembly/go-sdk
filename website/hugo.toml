@@ -40,3 +40,20 @@ description = "Go SDK for AI Agent Assembly — runtime governance for AI agent 
     enable = true
     displayCopyright = true
     displayPoweredBy = true
+
+[menu]
+  [[menu.main]]
+    identifier = "docs"
+    name = "Docs"
+    pageRef = "/"
+    weight = 1
+  [[menu.main]]
+    identifier = "godoc"
+    name = "API Reference"
+    pageRef = "/api-reference"
+    weight = 2
+  [[menu.main]]
+    identifier = "github"
+    name = "GitHub"
+    url = "https://github.com/AI-agent-assembly/go-sdk"
+    weight = 3
