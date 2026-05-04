@@ -62,4 +62,41 @@ CI runs the full matrix across Go 1.24 / 1.25, ubuntu / macOS, and `CGO_ENABLED`
 
 ## Idiomatic Go Conventions
 
+These conventions are load-bearing in this codebase. Reviewers will push back
+on PRs that skip them.
+
+### Context first
+
+Every public function takes `context.Context` as its first argument. Don't add
+positional arguments before `ctx`. Don't call `context.Background()` inside
+library code unless you are explicitly creating a new lifecycle scope (the
+`Assembly` runtime is the only place that does this today).
+
+### Errors are wrapped with `%w`
+
+Use `fmt.Errorf("operation: %w", err)` so callers can recover the chain via
+`errors.Is` / `errors.As`. Sentinel errors live in
+`assembly/governance_errors.go` and the structured `PolicyViolationError`
+type is already exported — prefer those over ad-hoc string messages.
+
+### Functional options
+
+`Init` and any future config-heavy entry point takes `(ctx, opts ...Option)`.
+New configuration knobs land as `WithXxx(value)` functions in
+`assembly/options.go`, never as new positional arguments to `Init`.
+
+### `io.Closer` for cleanup
+
+Anything that holds a long-lived resource (gateway connection, sidecar
+process, file handle) implements `io.Closer` and is paired with a `defer
+x.Close()` at the call site. Don't invent ad-hoc `Shutdown` / `Stop`
+methods when `Close` already covers it.
+
+### `internal/` is internal
+
+`internal/ffi/` is for low-level shims that are not part of the public API.
+If you find yourself needing to import from `internal/` outside the module,
+that's a design break — promote the API to `assembly/` rather than reaching
+across the boundary.
+
 ## Pull Request Checklist
