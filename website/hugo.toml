@@ -22,3 +22,9 @@ description = "Go SDK for AI Agent Assembly — runtime governance for AI agent 
   [[module.mounts]]
     source = "archetypes"
     target = "archetypes"
+
+[markup]
+  [markup.goldmark.renderer]
+    unsafe = true
+  [markup.highlight]
+    noClasses = false
