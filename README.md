@@ -12,6 +12,11 @@ Go SDK for [AI Agent Assembly](https://github.com/AI-agent-assembly) — runtime
 
 The SDK initialises in a few lines, propagates agent identity through `context.Context`, wraps your agent's tool slice with policy enforcement, and forwards every check + result to the AAASM gateway over gRPC or HTTP.
 
+## Prerequisites
+
+- **Go ≥ 1.24** — the floor declared in `go.mod`.
+- An AAASM gateway URL and API key (operator-issued).
+
 ## Layout
 
 ```text
