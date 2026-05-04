@@ -28,3 +28,15 @@ description = "Go SDK for AI Agent Assembly — runtime governance for AI agent 
     unsafe = true
   [markup.highlight]
     noClasses = false
+
+[params]
+  [params.navbar]
+    displayTitle = true
+    displayLogo = false
+  [params.theme]
+    default = "system"
+    displayToggle = true
+  [params.footer]
+    enable = true
+    displayCopyright = true
+    displayPoweredBy = true
