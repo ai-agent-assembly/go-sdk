@@ -10,16 +10,6 @@
 
 Go SDK for Agent Assembly.
 
-## Status
-
-Runtime architecture scaffold for ticket `AAASM-63`.
-
-## Module
-
-```go
-module github.com/agent-assembly/go-sdk
-```
-
 ## Layout
 
 ```text
