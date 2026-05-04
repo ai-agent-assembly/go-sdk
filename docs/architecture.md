@@ -107,3 +107,25 @@ flowchart LR
 The fallback path is the default in container images and CI lanes that
 disable CGo, which is most of them. Reach for the native path only when the
 in-process latency saving matters.
+
+## HTTP and gRPC Interceptors
+
+The interceptors in `assembly/interceptor.go` let governance-relevant metadata
+flow across process boundaries without your tool code having to know about
+it.
+
+- **`HTTPMiddleware(next http.RoundTripper)`** wraps an outbound HTTP
+  transport. It reads `AgentID`, `TraceID`, and `RunID` from the request's
+  `context.Context` and writes them to outgoing headers, so the receiving
+  service can resume the chain on the other side.
+- **`UnaryClientInterceptor()`** and **`StreamClientInterceptor()`** are the
+  gRPC equivalents. They attach the same identifiers as gRPC metadata.
+
+These run at the **outbound** edge of your process. On the **inbound** side,
+a corresponding server-side interceptor (in your service framework, not in
+this SDK) reads the metadata back into `context.Context`, which makes the
+chain usable by the next governance check.
+
+The interceptors are intentionally narrow — they only move metadata. Policy
+enforcement (deny / allow / approval) happens in `GovernanceClient.Check`,
+called by the wrapped tool, not by the interceptor.
