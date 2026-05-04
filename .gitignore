@@ -19,3 +19,8 @@ coverage.txt
 
 # macOS
 .DS_Store
+
+# Hugo (docs site under website/)
+website/public/
+website/resources/
+website/.hugo_build.lock
