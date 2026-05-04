@@ -16,6 +16,7 @@ The SDK initialises in a few lines, propagates agent identity through `context.C
 
 - **Go ≥ 1.24** — the floor declared in `go.mod`.
 - An AAASM gateway URL and API key (operator-issued).
+- *(Optional)* a C compiler — only needed if you build with `-tags aa_ffi_go` to enable the native FFI transport. The default transport is pure-Go and runs cleanly with `CGO_ENABLED=0`.
 
 ## Layout
 
