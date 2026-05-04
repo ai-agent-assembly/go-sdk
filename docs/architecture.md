@@ -68,3 +68,23 @@ flowchart TB
     gclient --> ffi
     ffi --> gw
 ```
+
+## CGo FFI Bridge
+
+`internal/ffi/` is the seam between the Go SDK and the Rust governance
+runtime. It ships **two interchangeable transport implementations** selected
+at compile time by build tags, so the rest of the SDK never has to care which
+one is in use.
+
+| Mode | Selected when | Source file | What it does |
+|---|---|---|---|
+| **Native (CGo)** | `-tags aa_ffi_go` *and* `CGO_ENABLED=1` | `cgo_bridge.go` | Links against `libaa_ffi_go` and calls into the Rust runtime in-process. Lowest latency. |
+| **Pure-Go fallback** *(default)* | `aa_ffi_go` tag unset, *or* `CGO_ENABLED=0` | `fallback_uds_nocgo.go` | Connects to the local sidecar over a Unix domain socket. No C toolchain required. |
+
+The dispatch lives in the build-tag-gated `binding_select_cgo.go` and
+`binding_select_fallback.go` files. Each compilation unit picks one or the
+other depending on the active build tags, so there is exactly one symbol
+named `Client` (or whatever the active path exports) at link time.
+
+CI exercises both lanes in the matrix (`CGO_ENABLED` 0 and 1), so a change to
+either transport that breaks the other will fail before merge.
