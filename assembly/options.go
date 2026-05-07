@@ -6,12 +6,15 @@ import "time"
 type Option func(*runtimeOptions)
 
 type runtimeOptions struct {
-	gatewayURL     string
-	apiKey         string
-	failClosed     bool
-	timeout        time.Duration
-	sidecarAddress string
-	sidecarBinary  string
+	gatewayURL       string
+	apiKey           string
+	failClosed       bool
+	timeout          time.Duration
+	sidecarAddress   string
+	sidecarBinary    string
+	parentAgentID    string
+	teamID           string
+	delegationReason string
 }
 
 // WithGatewayURL sets the governance gateway URL. This option is required;
@@ -55,6 +58,29 @@ func WithTimeout(timeout time.Duration) Option {
 func WithSidecarBinary(path string) Option {
 	return func(opts *runtimeOptions) {
 		opts.sidecarBinary = path
+	}
+}
+
+// WithParentAgent sets the parent agent ID for topology tracking.
+// When provided, the gateway records this agent as a child of the specified parent.
+func WithParentAgent(parentAgentID string) Option {
+	return func(opts *runtimeOptions) {
+		opts.parentAgentID = parentAgentID
+	}
+}
+
+// WithTeam sets the team ID this agent belongs to for budget and policy scoping.
+func WithTeam(teamID string) Option {
+	return func(opts *runtimeOptions) {
+		opts.teamID = teamID
+	}
+}
+
+// WithDelegationReason provides a human-readable explanation for why this agent
+// was delegated to by its parent.
+func WithDelegationReason(reason string) Option {
+	return func(opts *runtimeOptions) {
+		opts.delegationReason = reason
 	}
 }
 
