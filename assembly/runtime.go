@@ -15,6 +15,8 @@ type Assembly struct {
 	managedSidecar   *Sidecar
 }
 
+var newFFIClient = ffi.NewDefaultClient
+
 // newAssembly builds an Assembly runtime from functional options.
 func newAssembly(options ...Option) *Assembly {
 	opts := defaultRuntimeOptions()
@@ -27,7 +29,7 @@ func newAssembly(options ...Option) *Assembly {
 	return &Assembly{
 		opts:             opts,
 		sidecarConnector: sidecarConnector,
-		ffiClient:        ffi.NewDefaultClient(),
+		ffiClient:        newFFIClient(),
 	}
 }
 
@@ -51,7 +53,7 @@ func (a *Assembly) boot(ctx context.Context) error {
 
 	if a.opts.sidecarAddress != "" && a.ffiClient != nil {
 		if err := a.ffiClient.Connect(a.opts.sidecarAddress); err == nil {
-			return nil
+			return a.ffiClient.SendEvent(buildRegistrationEvent(a.opts))
 		}
 	}
 
