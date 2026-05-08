@@ -11,9 +11,11 @@ import (
 type contextKey string
 
 const (
-	agentIDContextKey contextKey = "assembly.agent_id"
-	traceIDContextKey contextKey = "assembly.trace_id"
-	runIDContextKey   contextKey = "assembly.run_id"
+	agentIDContextKey       contextKey = "assembly.agent_id"
+	traceIDContextKey       contextKey = "assembly.trace_id"
+	runIDContextKey         contextKey = "assembly.run_id"
+	parentAgentIDContextKey contextKey = "assembly.parent_agent_id"
+	spawnedByToolContextKey contextKey = "assembly.spawned_by_tool"
 )
 
 // WithAgentID returns a new context containing the assembly agent ID.
@@ -91,4 +93,37 @@ func EnsureRunID(ctx context.Context) (context.Context, string) {
 
 func generateRunID() string {
 	return fmt.Sprintf("run_%s", ulid.Make().String())
+}
+
+// ContextWithParentAgentID returns a context carrying the parent agent's ID.
+// Child agents that call Init with this context auto-inherit the parentAgentID
+// without needing to pass it explicitly via WithParentAgentID.
+func ContextWithParentAgentID(ctx context.Context, parentAgentID string) context.Context {
+	return context.WithValue(ctx, parentAgentIDContextKey, parentAgentID)
+}
+
+// ParentAgentIDFromContext returns the parent agent ID set by ContextWithParentAgentID,
+// or an empty string if absent.
+func ParentAgentIDFromContext(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	id, _ := ctx.Value(parentAgentIDContextKey).(string)
+	return id
+}
+
+// ContextWithSpawnedByTool returns a context carrying the name of the tool that
+// spawned this agent, for topology tracking.
+func ContextWithSpawnedByTool(ctx context.Context, tool string) context.Context {
+	return context.WithValue(ctx, spawnedByToolContextKey, tool)
+}
+
+// SpawnedByToolFromContext returns the spawned-by-tool name set by ContextWithSpawnedByTool,
+// or an empty string if absent.
+func SpawnedByToolFromContext(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	tool, _ := ctx.Value(spawnedByToolContextKey).(string)
+	return tool
 }

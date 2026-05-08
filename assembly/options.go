@@ -15,6 +15,7 @@ type runtimeOptions struct {
 	timeout          time.Duration
 	sidecarAddress   string
 	sidecarBinary    string
+	agentID          string
 	parentAgentID    string
 	teamID           string
 	delegationReason string
@@ -63,6 +64,15 @@ func WithTimeout(timeout time.Duration) Option {
 func WithSidecarBinary(path string) Option {
 	return func(opts *runtimeOptions) {
 		opts.sidecarBinary = path
+	}
+}
+
+// WithSelfAgentID records this agent's own ID for lineage tracking.
+// When WrapChain is used, this ID is propagated to child agents via context
+// so they can auto-register their parentAgentID without manual threading.
+func WithSelfAgentID(agentID string) Option {
+	return func(opts *runtimeOptions) {
+		opts.agentID = agentID
 	}
 }
 
