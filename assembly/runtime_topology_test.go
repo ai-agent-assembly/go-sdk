@@ -10,8 +10,6 @@ import (
 )
 
 func TestBootSendsRegistrationEventWithTopologyFields(t *testing.T) {
-	t.Parallel()
-
 	capClient, events := ffi.NewCapturingClient()
 
 	origFactory := newFFIClient
@@ -58,8 +56,6 @@ func TestBootSendsRegistrationEventWithTopologyFields(t *testing.T) {
 }
 
 func TestBootSendsRegistrationEventWithNoTopologyFields(t *testing.T) {
-	t.Parallel()
-
 	capClient, events := ffi.NewCapturingClient()
 
 	origFactory := newFFIClient
@@ -96,8 +92,6 @@ func TestBootSendsRegistrationEventWithNoTopologyFields(t *testing.T) {
 }
 
 func TestBootRegistrationEventFailureIsReturned(t *testing.T) {
-	t.Parallel()
-
 	if ffi.NativeBindingEnabled() {
 		t.Skip("native binding does not use capturing client path")
 	}
