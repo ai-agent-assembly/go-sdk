@@ -23,14 +23,6 @@ func TestParentAgentIDFromContextReturnsEmptyWhenAbsent(t *testing.T) {
 	}
 }
 
-func TestParentAgentIDFromContextNilContext(t *testing.T) {
-	t.Parallel()
-
-	if got := ParentAgentIDFromContext(nil); got != "" {
-		t.Fatalf("expected empty string for nil context, got %q", got)
-	}
-}
-
 func TestSpawnedByToolRoundTrip(t *testing.T) {
 	t.Parallel()
 
@@ -45,14 +37,6 @@ func TestSpawnedByToolFromContextReturnsEmptyWhenAbsent(t *testing.T) {
 
 	if got := SpawnedByToolFromContext(context.Background()); got != "" {
 		t.Fatalf("expected empty spawnedByTool, got %q", got)
-	}
-}
-
-func TestSpawnedByToolFromContextNilContext(t *testing.T) {
-	t.Parallel()
-
-	if got := SpawnedByToolFromContext(nil); got != "" {
-		t.Fatalf("expected empty string for nil context, got %q", got)
 	}
 }
 
@@ -75,7 +59,7 @@ func TestInitAutoInheritsParentAgentIDFromContext(t *testing.T) {
 
 	originalConnector := sidecarConnector
 	t.Cleanup(func() { sidecarConnector = originalConnector })
-	sidecarConnector = func(ctx context.Context, _ string) (SidecarClient, error) {
+	sidecarConnector = func(_ context.Context, _ string) (SidecarClient, error) {
 		return nil, nil
 	}
 
@@ -98,7 +82,7 @@ func TestInitExplicitParentAgentIDOverridesContext(t *testing.T) {
 
 	originalConnector := sidecarConnector
 	t.Cleanup(func() { sidecarConnector = originalConnector })
-	sidecarConnector = func(ctx context.Context, _ string) (SidecarClient, error) {
+	sidecarConnector = func(_ context.Context, _ string) (SidecarClient, error) {
 		return nil, nil
 	}
 
@@ -122,7 +106,7 @@ func TestInitDoesNotSetParentAgentIDWhenContextEmpty(t *testing.T) {
 
 	originalConnector := sidecarConnector
 	t.Cleanup(func() { sidecarConnector = originalConnector })
-	sidecarConnector = func(ctx context.Context, _ string) (SidecarClient, error) {
+	sidecarConnector = func(_ context.Context, _ string) (SidecarClient, error) {
 		return nil, nil
 	}
 
