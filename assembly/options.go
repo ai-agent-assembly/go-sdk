@@ -1,17 +1,25 @@
 package assembly
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 // Option mutates runtime options during Assembly construction.
 type Option func(*runtimeOptions)
 
 type runtimeOptions struct {
-	gatewayURL     string
-	apiKey         string
-	failClosed     bool
-	timeout        time.Duration
-	sidecarAddress string
-	sidecarBinary  string
+	gatewayURL       string
+	apiKey           string
+	failClosed       bool
+	timeout          time.Duration
+	sidecarAddress   string
+	sidecarBinary    string
+	parentAgentID    string
+	teamID           string
+	delegationReason string
+	spawnedByTool    string
+	errs             []error
 }
 
 // WithGatewayURL sets the governance gateway URL. This option is required;
@@ -55,6 +63,41 @@ func WithTimeout(timeout time.Duration) Option {
 func WithSidecarBinary(path string) Option {
 	return func(opts *runtimeOptions) {
 		opts.sidecarBinary = path
+	}
+}
+
+// WithParentAgentID sets the parent agent ID for topology tracking.
+// When provided, the gateway records this agent as a child of the specified parent.
+func WithParentAgentID(parentAgentID string) Option {
+	return func(opts *runtimeOptions) {
+		opts.parentAgentID = parentAgentID
+	}
+}
+
+// WithTeamID sets the team ID this agent belongs to for budget and policy scoping.
+func WithTeamID(teamID string) Option {
+	return func(opts *runtimeOptions) {
+		opts.teamID = teamID
+	}
+}
+
+// WithDelegationReason provides a human-readable explanation for why this agent
+// was delegated to by its parent. The reason must be 256 characters or fewer;
+// longer values are rejected via the option's error-collecting field.
+func WithDelegationReason(reason string) Option {
+	return func(opts *runtimeOptions) {
+		if len(reason) > 256 {
+			opts.errs = append(opts.errs, errors.New("assembly: delegationReason must be <= 256 characters"))
+			return
+		}
+		opts.delegationReason = reason
+	}
+}
+
+// WithSpawnedByTool records the name of the tool that spawned this agent.
+func WithSpawnedByTool(tool string) Option {
+	return func(opts *runtimeOptions) {
+		opts.spawnedByTool = tool
 	}
 }
 
