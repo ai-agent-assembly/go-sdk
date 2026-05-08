@@ -4,9 +4,12 @@ package assembly
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/agent-assembly/go-sdk/internal/ffi"
 )
 
 // recordingGovernanceClient captures all governance calls for assertion.
@@ -143,6 +146,91 @@ func TestEndToEnd_AgentToolCallEventCapture(t *testing.T) {
 	govClient.mu.Unlock()
 
 	// 7. Close assembly
+	if err := a.Close(); err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+}
+
+func TestIntegration_TopologyRegistrationEvent(t *testing.T) {
+	capClient, events := ffi.NewCapturingClient()
+
+	origFactory := newFFIClient
+	newFFIClient = func() *ffi.Client { return capClient }
+	t.Cleanup(func() { newFFIClient = origFactory })
+
+	a, err := Init(context.Background(),
+		WithGatewayURL("https://gateway.test.local"),
+		WithAPIKey("integration-test-key"),
+		withSidecarAddress("unix:///tmp/aa-topology-test.sock"),
+		WithParentAgentID("parent-agent-integration"),
+		WithTeamID("team-integration"),
+		WithDelegationReason("integration delegation"),
+		WithSpawnedByTool("integration_tool"),
+	)
+	if err != nil {
+		t.Fatalf("Init with topology failed: %v", err)
+	}
+
+	if len(*events) == 0 {
+		t.Fatal("expected registration event to be sent via SendEvent")
+	}
+
+	var payload map[string]string
+	if err := json.Unmarshal([]byte((*events)[0]), &payload); err != nil {
+		t.Fatalf("registration event is not valid JSON: %v — raw: %s", err, (*events)[0])
+	}
+
+	checkField := func(key, want string) {
+		t.Helper()
+		if got := payload[key]; got != want {
+			t.Errorf("registration event %q = %q, want %q", key, got, want)
+		}
+	}
+	checkField("event_type", "register")
+	checkField("parent_agent_id", "parent-agent-integration")
+	checkField("team_id", "team-integration")
+	checkField("delegation_reason", "integration delegation")
+	checkField("spawned_by_tool", "integration_tool")
+
+	if err := a.Close(); err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+}
+
+func TestIntegration_TopologyRegistrationEvent_NoTopologyFields(t *testing.T) {
+	capClient, events := ffi.NewCapturingClient()
+
+	origFactory := newFFIClient
+	newFFIClient = func() *ffi.Client { return capClient }
+	t.Cleanup(func() { newFFIClient = origFactory })
+
+	a, err := Init(context.Background(),
+		WithGatewayURL("https://gateway.test.local"),
+		WithAPIKey("integration-test-key"),
+		withSidecarAddress("unix:///tmp/aa-topology-bare-test.sock"),
+	)
+	if err != nil {
+		t.Fatalf("Init without topology failed: %v", err)
+	}
+
+	if len(*events) == 0 {
+		t.Fatal("expected registration event even with no topology fields")
+	}
+
+	var payload map[string]string
+	if err := json.Unmarshal([]byte((*events)[0]), &payload); err != nil {
+		t.Fatalf("registration event is not valid JSON: %v", err)
+	}
+
+	if payload["event_type"] != "register" {
+		t.Errorf("expected event_type=register, got %q", payload["event_type"])
+	}
+	for _, field := range []string{"parent_agent_id", "team_id", "delegation_reason", "spawned_by_tool"} {
+		if v, ok := payload[field]; ok {
+			t.Errorf("expected %q absent for no-topology init, got %q", field, v)
+		}
+	}
+
 	if err := a.Close(); err != nil {
 		t.Fatalf("Close failed: %v", err)
 	}
