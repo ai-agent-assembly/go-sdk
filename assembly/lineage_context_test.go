@@ -55,8 +55,6 @@ func TestParentAgentIDAndAgentIDAreIndependent(t *testing.T) {
 }
 
 func TestInitAutoInheritsParentAgentIDFromContext(t *testing.T) {
-	t.Parallel()
-
 	originalConnector := sidecarConnector
 	t.Cleanup(func() { sidecarConnector = originalConnector })
 	sidecarConnector = func(_ context.Context, _ string) (SidecarClient, error) {
@@ -78,8 +76,6 @@ func TestInitAutoInheritsParentAgentIDFromContext(t *testing.T) {
 }
 
 func TestInitExplicitParentAgentIDOverridesContext(t *testing.T) {
-	t.Parallel()
-
 	originalConnector := sidecarConnector
 	t.Cleanup(func() { sidecarConnector = originalConnector })
 	sidecarConnector = func(_ context.Context, _ string) (SidecarClient, error) {
@@ -102,8 +98,6 @@ func TestInitExplicitParentAgentIDOverridesContext(t *testing.T) {
 }
 
 func TestInitDoesNotSetParentAgentIDWhenContextEmpty(t *testing.T) {
-	t.Parallel()
-
 	originalConnector := sidecarConnector
 	t.Cleanup(func() { sidecarConnector = originalConnector })
 	sidecarConnector = func(_ context.Context, _ string) (SidecarClient, error) {
@@ -134,8 +128,6 @@ func TestWithSelfAgentIDOption(t *testing.T) {
 }
 
 func TestInitWithBootError_DoesNotLeakParentAgentID(t *testing.T) {
-	t.Parallel()
-
 	originalConnector := sidecarConnector
 	t.Cleanup(func() { sidecarConnector = originalConnector })
 	wantErr := errors.New("boot-failure")
