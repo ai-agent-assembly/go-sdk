@@ -2,7 +2,15 @@ name: CodeQL
 
 on:
   pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "LICENSE"
   push:
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "LICENSE"
     branches:
       - master
   schedule:

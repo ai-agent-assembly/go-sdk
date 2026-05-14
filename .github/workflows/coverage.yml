@@ -2,7 +2,15 @@ name: Coverage
 
 on:
   pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "LICENSE"
   push:
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "LICENSE"
     branches:
       - master
 

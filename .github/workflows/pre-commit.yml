@@ -2,6 +2,10 @@ name: Pre-commit Checks
 
 on:
   pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "LICENSE"
 
 jobs:
   quality-gate:
