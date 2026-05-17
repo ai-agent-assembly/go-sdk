@@ -37,4 +37,12 @@
 //
 // [HTTPMiddleware] and [UnaryClientInterceptor] / [StreamClientInterceptor]
 // provide transport-level interception for outbound HTTP and gRPC calls.
+//
+// # Audit Events
+//
+// [AuditEvent] is the Go-side mirror of the gateway's audit-trail event
+// shape, including the hierarchical [CallStackNode] tree that records
+// LLM / tool / result steps for inline rendering in the dashboard's
+// Live Ops view. Use [CallStackNodeKindLLM], [CallStackNodeKindTool],
+// and [CallStackNodeKindResult] as the canonical Kind values.
 package assembly
