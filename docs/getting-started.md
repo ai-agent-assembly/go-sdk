@@ -21,12 +21,6 @@ that a tool call is reaching the AI Agent Assembly gateway.
 go get github.com/AI-agent-assembly/go-sdk
 ```
 
-> **Note** — `go get` and pkg.go.dev indexing are blocked today pending a
-> module-path rename ticket (the `go.mod` declares
-> `github.com/agent-assembly/go-sdk`, but the canonical GitHub URL is
-> `github.com/AI-agent-assembly/go-sdk`). Until that ticket lands, clone
-> the repo and use a `replace` directive in your consumer.
-
 ## Initialise
 
 ```go
