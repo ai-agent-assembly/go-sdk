@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/agent-assembly/go-sdk/assembly"
+	"github.com/AI-agent-assembly/go-sdk/assembly"
 )
 
 func main() {

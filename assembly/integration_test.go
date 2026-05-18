@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agent-assembly/go-sdk/internal/ffi"
+	"github.com/AI-agent-assembly/go-sdk/internal/ffi"
 )
 
 // recordingGovernanceClient captures all governance calls for assertion.

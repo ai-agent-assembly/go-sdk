@@ -3,7 +3,7 @@ package assembly
 import (
 	"context"
 
-	"github.com/agent-assembly/go-sdk/internal/ffi"
+	"github.com/AI-agent-assembly/go-sdk/internal/ffi"
 )
 
 // Assembly is the runtime entrypoint for governance-enabled execution.
