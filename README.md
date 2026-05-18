@@ -1,11 +1,11 @@
 # go-sdk
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/agent-assembly/go-sdk.svg)](https://pkg.go.dev/github.com/agent-assembly/go-sdk)
+[![Go Reference](https://pkg.go.dev/badge/github.com/AI-agent-assembly/go-sdk.svg)](https://pkg.go.dev/github.com/AI-agent-assembly/go-sdk)
 [![Live Docs](https://img.shields.io/badge/docs-live-blue)](https://ai-agent-assembly.github.io/go-sdk/)
 [![Go Test Matrix](https://github.com/AI-agent-assembly/go-sdk/actions/workflows/go-test.yml/badge.svg)](https://github.com/AI-agent-assembly/go-sdk/actions/workflows/go-test.yml)
 [![Lint](https://github.com/AI-agent-assembly/go-sdk/actions/workflows/lint.yml/badge.svg)](https://github.com/AI-agent-assembly/go-sdk/actions/workflows/lint.yml)
 [![Codecov](https://codecov.io/gh/AI-agent-assembly/go-sdk/graph/badge.svg)](https://codecov.io/gh/AI-agent-assembly/go-sdk)
-[![Go Report Card](https://goreportcard.com/badge/github.com/agent-assembly/go-sdk)](https://goreportcard.com/report/github.com/agent-assembly/go-sdk)
+[![Go Report Card](https://goreportcard.com/badge/github.com/AI-agent-assembly/go-sdk)](https://goreportcard.com/report/github.com/AI-agent-assembly/go-sdk)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Go SDK for [AI Agent Assembly](https://github.com/AI-agent-assembly) — runtime governance for AI agent tool calls.
@@ -23,8 +23,6 @@ The SDK initialises in a few lines, propagates agent identity through `context.C
 ```bash
 go get github.com/AI-agent-assembly/go-sdk
 ```
-
-> **Note** — `go get` and pkg.go.dev indexing are blocked today pending a module-path rename. The `go.mod` declares `github.com/agent-assembly/go-sdk` while the canonical GitHub URL is `github.com/AI-agent-assembly/go-sdk`. Until that rename ticket lands, clone the repo and use a `replace` directive in your consumer's `go.mod`.
 
 ## Layout
 
@@ -52,7 +50,7 @@ import (
     "context"
     "log"
 
-    "github.com/agent-assembly/go-sdk/assembly"
+    "github.com/AI-agent-assembly/go-sdk/assembly"
 )
 
 ctx := assembly.WithAgentID(context.Background(), "my-agent")
@@ -68,7 +66,7 @@ defer a.Close()
 ## Documentation
 
 - **Live site** — [ai-agent-assembly.github.io/go-sdk](https://ai-agent-assembly.github.io/go-sdk/) (Hugo, Hextra theme; built and deployed from `master`).
-- **API reference** — [pkg.go.dev/github.com/agent-assembly/go-sdk](https://pkg.go.dev/github.com/agent-assembly/go-sdk) (auto-generated from godoc; pending the module-path rename, this is currently a 404 — preview locally with `godoc -http=:6060`).
+- **API reference** — [pkg.go.dev/github.com/AI-agent-assembly/go-sdk](https://pkg.go.dev/github.com/AI-agent-assembly/go-sdk) (auto-generated from godoc; preview locally with `godoc -http=:6060`).
 - **Architecture** — [docs/architecture.md](docs/architecture.md) and [docs/api-reference.md](docs/api-reference.md).
 - **Contributing** — [CONTRIBUTING.md](CONTRIBUTING.md).
 

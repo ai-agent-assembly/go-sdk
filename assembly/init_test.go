@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/agent-assembly/go-sdk/internal/ffi"
+	"github.com/AI-agent-assembly/go-sdk/internal/ffi"
 )
 
 func TestInit(t *testing.T) {
