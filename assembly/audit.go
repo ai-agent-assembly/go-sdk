@@ -30,20 +30,24 @@ const (
 // CallStackNode is one node in the hierarchical call stack attached to
 // an AuditEvent. Renders inline beneath an expanded Live Ops row in
 // the dashboard.
+//
+// JSON field naming is snake_case to match the proto/JSON wire shape
+// (`assembly.audit.v1.CallStackNode`); see MarshalAuditEvent /
+// UnmarshalAuditEvent in audit_wire.go for the serialization helpers.
 type CallStackNode struct {
 	// ID is a stable identifier for this node within the call stack.
-	ID string
+	ID string `json:"id"`
 	// Kind is the node category — typically one of CallStackNodeKindLLM,
 	// CallStackNodeKindTool, or CallStackNodeKindResult.
-	Kind CallStackNodeKind
+	Kind CallStackNodeKind `json:"kind"`
 	// Label is the human-readable label rendered by downstream UI.
-	Label string
+	Label string `json:"label"`
 	// LatencyMs is the step-local latency in milliseconds. `0` means
 	// the producer did not record a duration (proto3 default semantics).
-	LatencyMs int64
+	LatencyMs int64 `json:"latency_ms"`
 	// Children is the recursive descent — nested calls produced by
 	// this step. Nil or empty slice when the node has no children.
-	Children []*CallStackNode
+	Children []*CallStackNode `json:"children,omitempty"`
 }
 
 // AuditEvent records a governance-relevant occurrence in the gateway
@@ -58,28 +62,28 @@ type CallStackNode struct {
 // them.
 type AuditEvent struct {
 	// EventID is the unique identifier for this audit record (UUID v7).
-	EventID string
+	EventID string `json:"event_id"`
 	// AgentID is the identity string of the agent that produced the event.
-	AgentID string
+	AgentID string `json:"agent_id"`
 	// ActionType is the high-level action category — e.g. "llm_call",
 	// "tool_call", "file_op". Open-ended on the wire.
-	ActionType string
+	ActionType string `json:"action_type"`
 	// Decision is the policy engine verdict — e.g. "allow", "deny",
 	// "redact". Open-ended on the wire.
-	Decision string
+	Decision string `json:"decision"`
 	// TraceID is the distributed tracing run-level identifier. Empty
 	// when unset.
-	TraceID string
+	TraceID string `json:"trace_id,omitempty"`
 	// SpanID is the distributed tracing action-level identifier. Empty
 	// when unset.
-	SpanID string
+	SpanID string `json:"span_id,omitempty"`
 	// ParentSpanID is the distributed tracing parent span identifier.
 	// Empty when this is a root span.
-	ParentSpanID string
+	ParentSpanID string `json:"parent_span_id,omitempty"`
 	// Labels are arbitrary key/value labels attached at event creation.
-	Labels map[string]string
+	Labels map[string]string `json:"labels,omitempty"`
 	// CallStack is the hierarchical record of LLM / tool / result
 	// steps that led to this event. Nil or empty slice when the
 	// producer did not record a stack.
-	CallStack []*CallStackNode
+	CallStack []*CallStackNode `json:"call_stack,omitempty"`
 }
