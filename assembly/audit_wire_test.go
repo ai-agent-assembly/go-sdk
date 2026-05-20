@@ -50,9 +50,6 @@ func TestMarshalUnmarshalAuditEvent_ThreeLevelCallStack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UnmarshalAuditEvent: %v", err)
 	}
-	if decoded == nil {
-		t.Fatal("UnmarshalAuditEvent returned nil *AuditEvent")
-	}
 
 	if !reflect.DeepEqual(original, decoded) {
 		t.Errorf("round-trip mismatch\noriginal: %+v\ndecoded:  %+v", original, decoded)
@@ -72,9 +69,6 @@ func TestUnmarshalAuditEvent_LegacyPayloadNoCallStack(t *testing.T) {
 	decoded, err := UnmarshalAuditEvent(legacy)
 	if err != nil {
 		t.Fatalf("UnmarshalAuditEvent: %v", err)
-	}
-	if decoded == nil {
-		t.Fatal("UnmarshalAuditEvent returned nil *AuditEvent")
 	}
 	if decoded.CallStack != nil {
 		t.Errorf("CallStack: got %v, want nil for legacy payload", decoded.CallStack)
