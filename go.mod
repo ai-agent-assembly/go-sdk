@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/oklog/ulid/v2 v2.1.1
 	go.opentelemetry.io/otel/trace v1.43.0
-	google.golang.org/grpc v1.81.0
+	google.golang.org/grpc v1.81.1
 )
 
 require (
