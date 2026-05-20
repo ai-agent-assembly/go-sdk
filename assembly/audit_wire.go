@@ -20,3 +20,19 @@ import "encoding/json"
 func MarshalAuditEvent(ev *AuditEvent) ([]byte, error) {
 	return json.Marshal(ev)
 }
+
+// UnmarshalAuditEvent decodes a JSON wire payload back into an
+// AuditEvent. Legacy payloads with no `call_stack` (or no `labels`)
+// field set decode to a struct with the corresponding Go slice / map
+// left as nil, matching the producer-side `omitempty` round-trip
+// invariant.
+//
+// Returns a non-nil *AuditEvent on success. Decoding errors surface
+// the underlying `encoding/json` error unchanged.
+func UnmarshalAuditEvent(data []byte) (*AuditEvent, error) {
+	ev := &AuditEvent{}
+	if err := json.Unmarshal(data, ev); err != nil {
+		return nil, err
+	}
+	return ev, nil
+}
