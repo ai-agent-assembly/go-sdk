@@ -56,3 +56,31 @@ func TestMarshalUnmarshalAuditEvent_ThreeLevelCallStack(t *testing.T) {
 		t.Errorf("round-trip mismatch\noriginal: %+v\ndecoded:  %+v", original, decoded)
 	}
 }
+
+func TestUnmarshalAuditEvent_LegacyPayloadNoCallStack(t *testing.T) {
+	// Payload predating AAASM-1419: no call_stack field on the wire.
+	// Also omits labels to exercise the symmetric nil-map case.
+	legacy := []byte(`{
+		"event_id":   "evt-legacy",
+		"agent_id":   "support-agent",
+		"action_type":"llm_call",
+		"decision":   "allow"
+	}`)
+
+	decoded, err := UnmarshalAuditEvent(legacy)
+	if err != nil {
+		t.Fatalf("UnmarshalAuditEvent: %v", err)
+	}
+	if decoded == nil {
+		t.Fatal("UnmarshalAuditEvent returned nil *AuditEvent")
+	}
+	if decoded.CallStack != nil {
+		t.Errorf("CallStack: got %v, want nil for legacy payload", decoded.CallStack)
+	}
+	if decoded.Labels != nil {
+		t.Errorf("Labels: got %v, want nil for legacy payload", decoded.Labels)
+	}
+	if decoded.EventID != "evt-legacy" {
+		t.Errorf("EventID: got %q, want %q", decoded.EventID, "evt-legacy")
+	}
+}
