@@ -53,13 +53,6 @@ func (f *fakeStream) end() {
 	f.cond.Broadcast()
 }
 
-func (f *fakeStream) errorOut(err error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.err = err
-	f.cond.Broadcast()
-}
-
 func (f *fakeStream) Recv() (*pb.OpControlMessage, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -83,8 +76,8 @@ func (f *fakeStream) Header() (metadata.MD, error) { return nil, nil }
 func (f *fakeStream) Trailer() metadata.MD         { return nil }
 func (f *fakeStream) CloseSend() error             { return nil }
 func (f *fakeStream) Context() context.Context     { return context.Background() }
-func (f *fakeStream) SendMsg(m any) error          { return nil }
-func (f *fakeStream) RecvMsg(m any) error          { return nil }
+func (f *fakeStream) SendMsg(_ any) error          { return nil }
+func (f *fakeStream) RecvMsg(_ any) error          { return nil }
 
 // fakeClient implements OpControlClient.
 type fakeClient struct {
