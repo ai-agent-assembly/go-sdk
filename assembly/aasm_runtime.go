@@ -20,6 +20,12 @@ import (
 	"time"
 )
 
+// dialAddr is split out so go vet's printf-address check does not flag the
+// fmt.Sprintf %s:%d → net.Dial path on IPv6.
+func dialAddr(host string, port int) string {
+	return net.JoinHostPort(host, strconv.Itoa(port))
+}
+
 const (
 	// BinaryName is the on-disk name of the Rust sidecar binary.
 	BinaryName = "aasm"
@@ -73,8 +79,7 @@ func findAasmBinary() (string, error) {
 // orchestrator uses this to skip startRuntime() when the sidecar is
 // already up (idempotent re-init).
 func isRunning(port int) bool {
-	addr := fmt.Sprintf("%s:%d", DefaultRuntimeHost, port)
-	conn, err := net.DialTimeout("tcp", addr, 100*time.Millisecond)
+	conn, err := net.DialTimeout("tcp", dialAddr(DefaultRuntimeHost, port), 100*time.Millisecond)
 	if err != nil {
 		return false
 	}
