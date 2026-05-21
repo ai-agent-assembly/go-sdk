@@ -8,7 +8,12 @@
 
 package assembly
 
-import "errors"
+import (
+	"errors"
+	"os"
+	"os/exec"
+	"path/filepath"
+)
 
 const (
 	// BinaryName is the on-disk name of the Rust sidecar binary.
@@ -35,3 +40,24 @@ const InstallHint = `agent-assembly runtime not found.
 // no `aasm` binary is found across any of the supported install paths.
 // Callers can check `errors.Is(err, assembly.ErrBinaryNotFound)`.
 var ErrBinaryNotFound = errors.New(InstallHint)
+
+// findAasmBinary locates the `aasm` binary across the 3 supported install
+// paths: $PATH (Homebrew, `go install`, curl-installer) → ~/.local/bin/aasm
+// (curl installer alt) → /usr/local/bin/aasm (Docker base image).
+// Returns the first existing match or ErrBinaryNotFound when none exist.
+func findAasmBinary() (string, error) {
+	if path, err := exec.LookPath(BinaryName); err == nil {
+		return path, nil
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		candidate := filepath.Join(home, UserLocalBin, BinaryName)
+		if info, statErr := os.Stat(candidate); statErr == nil && !info.IsDir() {
+			return candidate, nil
+		}
+	}
+	docker := filepath.Join(DockerBaseBin, BinaryName)
+	if info, statErr := os.Stat(docker); statErr == nil && !info.IsDir() {
+		return docker, nil
+	}
+	return "", ErrBinaryNotFound
+}
