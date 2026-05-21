@@ -14,6 +14,7 @@ package assembly
 
 import (
 	"errors"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -94,5 +95,30 @@ func TestFindAasmBinaryHitsUserLocalBin(t *testing.T) {
 	}
 	if resolved != fake {
 		t.Fatalf("findAasmBinary returned %q, want %q", resolved, fake)
+	}
+}
+
+// TestIsRunningDetectsActiveListener covers the already-running scenario
+// from the AAASM-1230 AC. Binds an ephemeral 127.0.0.1 port, asserts
+// isRunning(port) returns true while the listener is alive and false
+// once it closes — the primitive the InitAssembly orchestrator's
+// early-return relies on for idempotency.
+func TestIsRunningDetectsActiveListener(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("net.Listen: %v", err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+
+	if !isRunning(port) {
+		_ = listener.Close()
+		t.Fatalf("isRunning(%d) returned false while listener was active", port)
+	}
+
+	if err := listener.Close(); err != nil {
+		t.Fatalf("listener.Close: %v", err)
+	}
+	if isRunning(port) {
+		t.Fatalf("isRunning(%d) returned true after listener closed", port)
 	}
 }
