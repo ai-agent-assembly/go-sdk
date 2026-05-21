@@ -45,3 +45,26 @@ func TestFindAasmBinaryHitsPath(t *testing.T) {
 		t.Fatalf("findAasmBinary returned %q, want %q", resolved, fake)
 	}
 }
+
+// TestFindAasmBinaryHitsUserLocalBin covers the bundled / curl-installer
+// fallback location. The Go SDK has no language-specific bundled binary
+// path (unlike Python's wheel or Node's optional dep), so ~/.local/bin is
+// the equivalent "binary-bundled" slot in the AAASM-1230 AC matrix.
+func TestFindAasmBinaryHitsUserLocalBin(t *testing.T) {
+	homeDir := t.TempDir()
+	localBin := filepath.Join(homeDir, UserLocalBin)
+	if err := os.MkdirAll(localBin, 0o755); err != nil {
+		t.Fatalf("mkdir ~/.local/bin: %v", err)
+	}
+	fake := makeFakeAasm(t, localBin)
+	t.Setenv("PATH", filepath.Join(homeDir, "no-such-path"))
+	t.Setenv("HOME", homeDir)
+
+	resolved, err := findAasmBinary()
+	if err != nil {
+		t.Fatalf("findAasmBinary returned error: %v", err)
+	}
+	if resolved != fake {
+		t.Fatalf("findAasmBinary returned %q, want %q", resolved, fake)
+	}
+}
