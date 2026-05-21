@@ -27,3 +27,21 @@ func makeFakeAasm(t *testing.T, dir string) string {
 	}
 	return path
 }
+
+// TestFindAasmBinaryHitsPath covers the binary-in-PATH scenario from the
+// AAASM-1230 AC. exec.LookPath must return the shim first, ahead of every
+// fallback location.
+func TestFindAasmBinaryHitsPath(t *testing.T) {
+	dir := t.TempDir()
+	fake := makeFakeAasm(t, dir)
+	t.Setenv("PATH", dir)
+	t.Setenv("HOME", filepath.Join(dir, "no-such-home"))
+
+	resolved, err := findAasmBinary()
+	if err != nil {
+		t.Fatalf("findAasmBinary returned error: %v", err)
+	}
+	if resolved != fake {
+		t.Fatalf("findAasmBinary returned %q, want %q", resolved, fake)
+	}
+}
