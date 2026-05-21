@@ -13,11 +13,8 @@
 package assembly
 
 import (
-	"errors"
-	"net"
 	"os"
 	"path/filepath"
-	"strconv"
 	"testing"
 )
 
