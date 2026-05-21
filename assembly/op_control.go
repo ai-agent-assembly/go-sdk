@@ -214,6 +214,14 @@ func (s *OpControlSubscriber) WaitForOp(ctx context.Context, opID string) error 
 		s.mu.Unlock()
 		return nil
 	}
+	if !s.alive {
+		// Stream already closed and we'd never be woken by an incoming
+		// signal. Yield so the caller can observe StreamAlive() and
+		// decide whether to reconnect — matches the close-is-not-a-
+		// terminate semantic.
+		s.mu.Unlock()
+		return nil
+	}
 	ch := make(chan struct{})
 	state.waiters = append(state.waiters, ch)
 	s.mu.Unlock()
