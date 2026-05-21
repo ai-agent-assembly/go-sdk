@@ -1,0 +1,279 @@
+// Package assembly: gateway → SDK op-control consumer (AAASM-1422 PR-G / AAASM-1656).
+//
+// OpControlSubscriber subscribes to PolicyService.OpControlStream and exposes
+// a per-op_id cooperative-pause / fast-fail-terminate state machine through
+// WaitForOp.
+//
+// State machine per op_id:
+//   - OP_CONTROL_SIGNAL_PAUSE     → WaitForOp blocks until RESUME arrives.
+//   - OP_CONTROL_SIGNAL_RESUME    → WaitForOp returns nil immediately.
+//   - OP_CONTROL_SIGNAL_TERMINATE → WaitForOp returns *OpTerminatedError.
+//
+// Signals that arrive for an op_id no one is currently awaiting are buffered
+// into the per-op slot so the next WaitForOp sees them.
+//
+// Out of scope for PR-G (deferred):
+//   - Reconnection / heartbeat on stream close (caller observes StreamAlive
+//     and re-instantiates if desired).
+//   - Auto-wiring into the existing GatewayClient / interceptor.go hooks
+//     (separate sub-task when the adapter surface is stable).
+
+package assembly
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"sync"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	pb "github.com/AI-agent-assembly/go-sdk/internal/proto"
+)
+
+// OpControlClient is the slice of PolicyServiceClient the subscriber actually
+// uses. Defined as an interface so tests can inject a mock without standing
+// up a gRPC server. Mirrors PR-E's _OpControlStub Protocol and PR-F's
+// OpControlClient interface.
+type OpControlClient interface {
+	OpControlStream(
+		ctx context.Context,
+		in *pb.OpControlSubscribeRequest,
+		opts ...grpc.CallOption,
+	) (grpc.ServerStreamingClient[pb.OpControlMessage], error)
+}
+
+// opControlState is the per-op slot used by the cooperative-pause machine.
+type opControlState struct {
+	paused     bool
+	terminated bool
+	// waiters are unbuffered channels closed when the op becomes runnable
+	// (resume) or terminated (terminate). Each WaitForOp call registers a
+	// fresh waiter so multiple goroutines can await the same op_id.
+	waiters []chan struct{}
+}
+
+// OpControlSubscriber subscribes to OpControlStream and serves per-op
+// pause/terminate signals.
+//
+// Construct via Connect; never directly. The zero value is not usable.
+//
+// Thread-safe: WaitForOp may be called from any goroutine; internal state
+// is guarded by a sync.Mutex.
+type OpControlSubscriber struct {
+	client OpControlClient
+	agent  *pb.AgentId
+	conn   *grpc.ClientConn // set when Connect opened the channel; nil when constructed for tests
+	cancel context.CancelFunc
+
+	mu    sync.Mutex
+	ops   map[string]*opControlState
+	alive bool
+}
+
+// Connect opens a gRPC channel to gatewayURL, opens the OpControlStream
+// subscription, and starts the background reader.
+//
+// gatewayURL is the "host:port" of the gateway's gRPC endpoint (no scheme;
+// gRPC uses its own). Uses insecure credentials by default — wrap with
+// custom DialOptions for TLS in production.
+func Connect(
+	ctx context.Context,
+	gatewayURL string,
+	orgID, teamID, agentID string,
+	opts ...grpc.DialOption,
+) (*OpControlSubscriber, error) {
+	if len(opts) == 0 {
+		opts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	}
+	conn, err := grpc.NewClient(gatewayURL, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("op_control: dial %s: %w", gatewayURL, err)
+	}
+	client := pb.NewPolicyServiceClient(conn)
+	sub, err := NewOpControlSubscriber(ctx, client, orgID, teamID, agentID)
+	if err != nil {
+		_ = conn.Close()
+		return nil, err
+	}
+	sub.conn = conn
+	return sub, nil
+}
+
+// NewOpControlSubscriber wraps a pre-built PolicyServiceClient (or any type
+// satisfying OpControlClient) and starts the subscription. Tests pass a
+// mock client here; Connect uses this internally.
+func NewOpControlSubscriber(
+	ctx context.Context,
+	client OpControlClient,
+	orgID, teamID, agentID string,
+) (*OpControlSubscriber, error) {
+	streamCtx, cancel := context.WithCancel(ctx)
+	agent := &pb.AgentId{OrgId: orgID, TeamId: teamID, AgentId: agentID}
+	stream, err := client.OpControlStream(streamCtx, &pb.OpControlSubscribeRequest{AgentId: agent})
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("op_control: subscribe: %w", err)
+	}
+	sub := &OpControlSubscriber{
+		client: client,
+		agent:  agent,
+		cancel: cancel,
+		ops:    make(map[string]*opControlState),
+		alive:  true,
+	}
+	go sub.readLoop(stream)
+	return sub, nil
+}
+
+func (s *OpControlSubscriber) readLoop(stream grpc.ServerStreamingClient[pb.OpControlMessage]) {
+	for {
+		msg, err := stream.Recv()
+		if err != nil {
+			// io.EOF = clean server shutdown; any other error = transport
+			// failure or cancel. Either way, mark dead and wake waiters.
+			s.markStreamDead()
+			if !errors.Is(err, io.EOF) && !errors.Is(err, context.Canceled) {
+				// Future PR-G+1 may want to surface this; for now we let
+				// the caller observe StreamAlive() and re-Connect.
+				_ = err
+			}
+			return
+		}
+		s.dispatch(msg)
+	}
+}
+
+func (s *OpControlSubscriber) dispatch(msg *pb.OpControlMessage) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	state := s.slot(msg.GetOpId())
+	switch msg.GetSignal() {
+	case pb.OpControlSignal_OP_CONTROL_SIGNAL_PAUSE:
+		state.paused = true
+	case pb.OpControlSignal_OP_CONTROL_SIGNAL_RESUME:
+		state.paused = false
+		s.flushWaiters(state)
+	case pb.OpControlSignal_OP_CONTROL_SIGNAL_TERMINATE:
+		state.terminated = true
+		s.flushWaiters(state)
+	}
+	// UNSPECIFIED and any future variant: drop on the floor.
+}
+
+// slot lazily creates a state slot for opID. Caller must hold s.mu.
+func (s *OpControlSubscriber) slot(opID string) *opControlState {
+	if state, ok := s.ops[opID]; ok {
+		return state
+	}
+	state := &opControlState{}
+	s.ops[opID] = state
+	return state
+}
+
+// flushWaiters closes every pending waiter channel and clears the slice.
+// Caller must hold s.mu.
+func (s *OpControlSubscriber) flushWaiters(state *opControlState) {
+	for _, ch := range state.waiters {
+		close(ch)
+	}
+	state.waiters = nil
+}
+
+func (s *OpControlSubscriber) markStreamDead() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.alive = false
+	// Wake any blocked waiters so they can re-check state via the ctx Done
+	// path. We don't set their state to terminated — close is a normal
+	// lifecycle event, not a terminate.
+	for _, state := range s.ops {
+		s.flushWaiters(state)
+	}
+}
+
+// WaitForOp blocks until opID is runnable, or returns an error.
+//
+// Returns nil immediately when the op is not currently paused. When paused,
+// blocks until a resume signal arrives or ctx is cancelled. Returns
+// *OpTerminatedError if the op has been (or becomes) terminated.
+//
+// A ctx cancel returns ctx.Err() — the caller can inspect IsPaused or
+// retry. This matches the cooperative-pause expectation in the architecture
+// doc (the SDK yields, it doesn't deadline-enforce).
+func (s *OpControlSubscriber) WaitForOp(ctx context.Context, opID string) error {
+	s.mu.Lock()
+	state := s.slot(opID)
+	if state.terminated {
+		s.mu.Unlock()
+		return &OpTerminatedError{OpID: opID}
+	}
+	if !state.paused {
+		s.mu.Unlock()
+		return nil
+	}
+	ch := make(chan struct{})
+	state.waiters = append(state.waiters, ch)
+	s.mu.Unlock()
+
+	select {
+	case <-ch:
+		s.mu.Lock()
+		terminated := state.terminated
+		s.mu.Unlock()
+		if terminated {
+			return &OpTerminatedError{OpID: opID}
+		}
+		return nil
+	case <-ctx.Done():
+		// Best-effort drop our waiter from the slot so a future flush
+		// doesn't carry a no-longer-listening channel forward.
+		s.mu.Lock()
+		for i, w := range state.waiters {
+			if w == ch {
+				state.waiters = append(state.waiters[:i], state.waiters[i+1:]...)
+				break
+			}
+		}
+		s.mu.Unlock()
+		return ctx.Err()
+	}
+}
+
+// IsPaused returns true iff the gateway has the op currently paused.
+func (s *OpControlSubscriber) IsPaused(opID string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	state, ok := s.ops[opID]
+	return ok && state.paused
+}
+
+// IsTerminated returns true iff the gateway has terminated the op.
+func (s *OpControlSubscriber) IsTerminated(opID string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	state, ok := s.ops[opID]
+	return ok && state.terminated
+}
+
+// StreamAlive returns false once the underlying gRPC stream has closed.
+func (s *OpControlSubscriber) StreamAlive() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.alive
+}
+
+// Close cancels the stream and (if Connect opened the channel) closes it.
+// Always returns nil — provided so callers can `defer sub.Close()`.
+func (s *OpControlSubscriber) Close() error {
+	if s.cancel != nil {
+		s.cancel()
+	}
+	if s.conn != nil {
+		_ = s.conn.Close()
+	}
+	s.markStreamDead()
+	return nil
+}
