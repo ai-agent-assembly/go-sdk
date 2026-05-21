@@ -15,6 +15,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"syscall"
 	"time"
 )
 
@@ -78,4 +80,27 @@ func isRunning(port int) bool {
 	}
 	_ = conn.Close()
 	return true
+}
+
+// startRuntime spawns `aasm serve --port <port>` as a detached background
+// process. Stdout/stderr are appended to <cwd>/.aasm-runtime.log so the
+// sidecar outlives the parent. SysProcAttr.Setsid puts the child in its
+// own session so SIGHUP from the parent's controlling terminal does not
+// take it down. Returns the *os.Process handle; the caller does not wait.
+func startRuntime(binaryPath string, port int) (*os.Process, error) {
+	logPath := filepath.Join(".", RuntimeLogFilename)
+	logFile, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return nil, fmt.Errorf("open runtime log: %w", err)
+	}
+	cmd := exec.Command(binaryPath, "serve", "--port", strconv.Itoa(port))
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
+	cmd.Stdin = nil
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	if err := cmd.Start(); err != nil {
+		_ = logFile.Close()
+		return nil, fmt.Errorf("spawn aasm sidecar: %w", err)
+	}
+	return cmd.Process, nil
 }
