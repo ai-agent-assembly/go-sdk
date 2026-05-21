@@ -13,8 +13,10 @@
 package assembly
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -43,6 +45,32 @@ func TestFindAasmBinaryHitsPath(t *testing.T) {
 	}
 	if resolved != fake {
 		t.Fatalf("findAasmBinary returned %q, want %q", resolved, fake)
+	}
+}
+
+// TestInitAssemblyReturnsErrBinaryNotFoundWhenMissing covers the
+// binary-not-found AC. Empties every search location and asserts
+// InitAssembly returns ErrBinaryNotFound whose message is InstallHint.
+//
+// Skipped when /usr/local/bin/aasm exists on the dev box — the Docker
+// fallback path is unconditional and can't be redirected via env vars.
+func TestInitAssemblyReturnsErrBinaryNotFoundWhenMissing(t *testing.T) {
+	if _, err := os.Stat(filepath.Join(DockerBaseBin, BinaryName)); err == nil {
+		t.Skipf("skipping: %s/%s exists on this host (Docker fallback would resolve)", DockerBaseBin, BinaryName)
+	}
+	tmp := t.TempDir()
+	t.Setenv("PATH", filepath.Join(tmp, "no-such-path"))
+	t.Setenv("HOME", filepath.Join(tmp, "no-such-home"))
+
+	err := InitAssembly("")
+	if err == nil {
+		t.Fatal("InitAssembly returned nil; expected ErrBinaryNotFound")
+	}
+	if !errors.Is(err, ErrBinaryNotFound) {
+		t.Fatalf("InitAssembly returned %v; expected errors.Is(err, ErrBinaryNotFound)", err)
+	}
+	if !strings.Contains(err.Error(), "agent-assembly runtime not found") {
+		t.Fatalf("InitAssembly error missing install hint substring: %v", err)
 	}
 }
 
