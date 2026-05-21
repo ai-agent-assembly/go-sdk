@@ -104,3 +104,32 @@ func startRuntime(binaryPath string, port int) (*os.Process, error) {
 	}
 	return cmd.Process, nil
 }
+
+// InitAssembly ensures the local `aasm` sidecar is running, starting it
+// if necessary. Lifecycle per F115 / AAASM-1205:
+//
+//  1. Probe DefaultRuntimeHost:DefaultPort via isRunning; return early
+//     if the sidecar is already up (idempotent re-init).
+//  2. Resolve the binary via findAasmBinary.
+//  3. Spawn the sidecar via startRuntime.
+//
+// agentID is accepted to keep the ticket-specified signature stable;
+// register-and-connect is performed by the existing gateway-aware
+// assembly.Init(ctx, opts...) once the sidecar is reachable.
+//
+// Returns ErrBinaryNotFound (errors.Is-compatible) wrapped in an
+// install-hint message when no binary is found on disk.
+func InitAssembly(agentID string) error {
+	_ = agentID // not consumed at the lifecycle layer; see godoc
+	if isRunning(DefaultPort) {
+		return nil
+	}
+	binary, err := findAasmBinary()
+	if err != nil {
+		return err
+	}
+	if _, err := startRuntime(binary, DefaultPort); err != nil {
+		return err
+	}
+	return nil
+}
