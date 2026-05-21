@@ -10,9 +10,12 @@ package assembly
 
 import (
 	"errors"
+	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 )
 
 const (
@@ -60,4 +63,19 @@ func findAasmBinary() (string, error) {
 		return docker, nil
 	}
 	return "", ErrBinaryNotFound
+}
+
+// isRunning returns true iff a local TCP listener accepts a connect on
+// DefaultRuntimeHost:port within 100 ms. Any dial error (refused,
+// timeout, unreachable) is treated as no sidecar — the lifecycle
+// orchestrator uses this to skip startRuntime() when the sidecar is
+// already up (idempotent re-init).
+func isRunning(port int) bool {
+	addr := fmt.Sprintf("%s:%d", DefaultRuntimeHost, port)
+	conn, err := net.DialTimeout("tcp", addr, 100*time.Millisecond)
+	if err != nil {
+		return false
+	}
+	_ = conn.Close()
+	return true
 }
