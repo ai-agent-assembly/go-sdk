@@ -13,7 +13,12 @@
 
 package assembly
 
-import "time"
+import (
+	"context"
+	"net/http"
+	"strings"
+	"time"
+)
 
 const (
 	defaultGatewayURL            = "http://localhost:7391"
@@ -30,3 +35,26 @@ const (
 // aasmAutoStartArgs is the argv tail passed to the aasm binary when
 // the resolver auto-starts a local control plane.
 var aasmAutoStartArgs = []string{"start", "--mode", "local", "--foreground"}
+
+// probeHealthz returns true when the gateway at baseUrl responds with
+// a 2xx status to a GET on /healthz inside the timeout window. Any
+// transport or HTTP error is swallowed and surfaces as false — the
+// resolver treats unreachable as "absent" rather than fatal.
+func probeHealthz(ctx context.Context, baseURL string, timeout time.Duration) bool {
+	probeCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	url := strings.TrimRight(baseURL, "/") + defaultHealthzPath
+	req, err := http.NewRequestWithContext(probeCtx, http.MethodGet, url, nil)
+	if err != nil {
+		return false
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return false
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	return resp.StatusCode >= 200 && resp.StatusCode < 300
+}
