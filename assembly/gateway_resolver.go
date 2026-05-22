@@ -16,8 +16,12 @@ package assembly
 import (
 	"context"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -77,4 +81,47 @@ func waitForHealthz(ctx context.Context, baseURL string, timeout, pollInterval t
 		}
 	}
 	return probeHealthz(ctx, baseURL, defaultProbeTimeout)
+}
+
+func expandHome(p string) string {
+	if !strings.HasPrefix(p, "~") {
+		return p
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return p
+	}
+	if p == "~" {
+		return home
+	}
+	if strings.HasPrefix(p, "~/") {
+		return filepath.Join(home, p[2:])
+	}
+	return p
+}
+
+// loadConfigFile reads ~/.aasm/config.yaml when present. Missing file,
+// read errors, parse errors, and non-mapping payloads all collapse to
+// an empty map — the resolver chain treats step 3 as purely advisory
+// and never propagates a config-file failure.
+func loadConfigFile(path string) map[string]any {
+	if path == "" {
+		path = defaultConfigFilePath
+	}
+	expanded := expandHome(path)
+
+	data, err := os.ReadFile(expanded)
+	if err != nil {
+		return map[string]any{}
+	}
+
+	var parsed any
+	if err := yaml.Unmarshal(data, &parsed); err != nil {
+		return map[string]any{}
+	}
+	mapped, ok := parsed.(map[string]any)
+	if !ok {
+		return map[string]any{}
+	}
+	return mapped
 }
