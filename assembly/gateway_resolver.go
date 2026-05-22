@@ -58,3 +58,23 @@ func probeHealthz(ctx context.Context, baseURL string, timeout time.Duration) bo
 
 	return resp.StatusCode >= 200 && resp.StatusCode < 300
 }
+
+// waitForHealthz polls the gateway healthz endpoint until success or
+// the timeout elapses. Returns true on the first successful probe,
+// false when no probe succeeds within timeout. The poll interval is
+// short (default 100ms) so the auto-start path feels instant when
+// the local CP comes up quickly.
+func waitForHealthz(ctx context.Context, baseURL string, timeout, pollInterval time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if probeHealthz(ctx, baseURL, defaultProbeTimeout) {
+			return true
+		}
+		select {
+		case <-ctx.Done():
+			return false
+		case <-time.After(pollInterval):
+		}
+	}
+	return probeHealthz(ctx, baseURL, defaultProbeTimeout)
+}
