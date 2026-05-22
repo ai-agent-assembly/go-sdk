@@ -145,7 +145,11 @@ func TestLoadConfigFile_ReturnsEmptyOnMalformedYAML(t *testing.T) {
 
 	tmp := t.TempDir()
 	cfg := filepath.Join(tmp, "config.yaml")
-	if err := os.WriteFile(cfg, []byte("agent:\n  - this:\n     -malformed: yaml"), 0o600); err != nil {
+	// Genuinely invalid YAML: an unclosed quoted scalar with an embedded
+	// colon followed by a sibling mapping key. yaml.v3 is forgiving for
+	// mildly weird YAML so the sample has to be unambiguously broken.
+	contents := "agent:\n  gateway_url: \"unclosed string\n  api_key: val"
+	if err := os.WriteFile(cfg, []byte(contents), 0o600); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
 	if got := loadConfigFile(cfg); len(got) != 0 {
