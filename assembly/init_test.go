@@ -57,10 +57,20 @@ func TestInit(t *testing.T) {
 		}
 	})
 
-	t.Run("validation failure returns error", func(t *testing.T) {
+	t.Run("missing gateway and absent aasm surfaces ConfigurationError", func(t *testing.T) {
+		// AAASM-1849 / E17 S-G: empty gateway URL is no longer an
+		// immediate ErrInvalidGateway — the resolver tries env → config
+		// → local default → auto-start. With aasm absent from PATH the
+		// chain ends in *ConfigurationError.
+		withSeams(t, func() string { return "" }, func(string) error { return nil })
+		t.Setenv(envGatewayURL, "")
 		a, err := Init(context.Background(), WithAPIKey("test-key"))
-		if !errors.Is(err, ErrInvalidGateway) {
-			t.Fatalf("expected ErrInvalidGateway, got %v", err)
+		if err == nil {
+			t.Fatalf("expected ConfigurationError, got nil")
+		}
+		var ce *ConfigurationError
+		if !errorsAs(err, &ce) {
+			t.Fatalf("expected *ConfigurationError, got %T: %v", err, err)
 		}
 		if a != nil {
 			t.Fatal("expected nil Assembly on validation error")

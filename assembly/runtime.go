@@ -35,6 +35,13 @@ func newAssembly(options ...Option) *Assembly {
 
 // boot boots the runtime and prepares governance integrations.
 func (a *Assembly) boot(ctx context.Context) error {
+	resolvedURL, err := resolveGatewayURL(ctx, a.opts.gatewayURL)
+	if err != nil {
+		return err
+	}
+	a.opts.gatewayURL = resolvedURL
+	a.opts.apiKey = resolveAPIKey(a.opts.apiKey)
+
 	if err := validateRuntimeOptions(a.opts); err != nil {
 		return err
 	}
