@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -89,5 +91,64 @@ func TestWaitForHealthz_FalseOnTimeout(t *testing.T) {
 
 	if waitForHealthz(context.Background(), "http://127.0.0.1:1", 50*time.Millisecond, 10*time.Millisecond) {
 		t.Fatalf("expected false when no gateway is reachable within timeout")
+	}
+}
+
+func TestLoadConfigFile_ReturnsEmptyWhenMissing(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	got := loadConfigFile(filepath.Join(tmp, "absent.yaml"))
+	if len(got) != 0 {
+		t.Fatalf("expected empty map for missing file, got %v", got)
+	}
+}
+
+func TestLoadConfigFile_ReturnsParsedMapping(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	cfg := filepath.Join(tmp, "config.yaml")
+	contents := "agent:\n  gateway_url: \"http://staging.internal:7391\"\n  api_key: \"k-1\"\n"
+	if err := os.WriteFile(cfg, []byte(contents), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	got := loadConfigFile(cfg)
+	agent, ok := got["agent"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected agent section as map, got %T", got["agent"])
+	}
+	if agent["gateway_url"] != "http://staging.internal:7391" {
+		t.Errorf("agent.gateway_url: got %v", agent["gateway_url"])
+	}
+	if agent["api_key"] != "k-1" {
+		t.Errorf("agent.api_key: got %v", agent["api_key"])
+	}
+}
+
+func TestLoadConfigFile_ReturnsEmptyOnNonMappingRoot(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	cfg := filepath.Join(tmp, "config.yaml")
+	if err := os.WriteFile(cfg, []byte("- just-a-list\n"), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	if got := loadConfigFile(cfg); len(got) != 0 {
+		t.Fatalf("expected empty map for non-mapping YAML, got %v", got)
+	}
+}
+
+func TestLoadConfigFile_ReturnsEmptyOnMalformedYAML(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	cfg := filepath.Join(tmp, "config.yaml")
+	if err := os.WriteFile(cfg, []byte("agent:\n  - this:\n     -malformed: yaml"), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	if got := loadConfigFile(cfg); len(got) != 0 {
+		t.Fatalf("expected empty map for malformed YAML, got %v", got)
 	}
 }
