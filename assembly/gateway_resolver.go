@@ -17,7 +17,9 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -124,4 +126,46 @@ func loadConfigFile(path string) map[string]any {
 		return map[string]any{}
 	}
 	return mapped
+}
+
+// defaultFindAasmOnPath returns the absolute path to “aasm“ on the
+// caller's PATH, or "" when absent. Used as the default seam for
+// autoStartGateway; tests override this via gatewayResolverSeams.
+func defaultFindAasmOnPath() string {
+	bin := "aasm"
+	if runtime.GOOS == "windows" {
+		bin = "aasm.exe"
+	}
+	path, err := exec.LookPath(bin)
+	if err != nil {
+		return ""
+	}
+	return path
+}
+
+// defaultSpawnAasm starts “aasm start --mode local --foreground“ as
+// a background subprocess detached from the calling process group.
+// Process.Release decouples the child so it survives after Init
+// returns — the docker-style daemon hand-off described in Epic 17 S-G.
+func defaultSpawnAasm(aasmPath string) error {
+	cmd := exec.Command(aasmPath, aasmAutoStartArgs...)
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	configureDetachedProcess(cmd)
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	return cmd.Process.Release()
+}
+
+// gatewayResolverSeams holds the mutable hooks that autoStartGateway
+// composes. Tests replace these to avoid real subprocess and network
+// activity. Package-level variable so it stays trivially mockable —
+// production callers should treat it as private.
+var gatewayResolverSeams = struct {
+	findAasmOnPath func() string
+	spawnAasm      func(string) error
+}{
+	findAasmOnPath: defaultFindAasmOnPath,
+	spawnAasm:      defaultSpawnAasm,
 }
