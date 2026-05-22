@@ -169,3 +169,78 @@ var gatewayResolverSeams = struct {
 	findAasmOnPath: defaultFindAasmOnPath,
 	spawnAasm:      defaultSpawnAasm,
 }
+
+// autoStartGateway spawns "aasm start --mode local --foreground" and
+// waits for /healthz to respond.
+//
+// Returns a *ConfigurationError when the aasm binary is missing from
+// PATH — the SDK cannot meaningfully auto-start without it. Returns a
+// *GatewayError when the spawned gateway does not become ready within
+// timeout. The subprocess is launched detached so it survives the
+// parent Go process exit — the docker-style daemon hand-off
+// described in Epic 17 S-G.
+func autoStartGateway(ctx context.Context, baseURL string, timeout time.Duration) error {
+	aasmPath := gatewayResolverSeams.findAasmOnPath()
+	if aasmPath == "" {
+		return &ConfigurationError{
+			Message: "no gateway found at " + baseURL +
+				" and 'aasm' is not on PATH. Install it with: go install github.com/AI-agent-assembly/aa-cli/cmd/aasm@latest",
+		}
+	}
+
+	if err := gatewayResolverSeams.spawnAasm(aasmPath); err != nil {
+		return &ConfigurationError{Message: "failed to spawn aasm: " + err.Error()}
+	}
+
+	if !waitForHealthz(ctx, baseURL, timeout, defaultAutoStartPollInterval) {
+		return &GatewayError{
+			Message: "auto-started gateway at " + baseURL + " did not become ready within timeout",
+		}
+	}
+	return nil
+}
+
+// resolveGatewayURL applies the 4-step precedence chain. Returns the
+// resolved URL or a *ConfigurationError / *GatewayError when the local
+// default is needed but cannot be brought up.
+func resolveGatewayURL(ctx context.Context, explicit string) (string, error) {
+	if explicit != "" {
+		return explicit, nil
+	}
+	if env := os.Getenv(envGatewayURL); env != "" {
+		return env, nil
+	}
+	cfg := loadConfigFile("")
+	if agent, ok := cfg["agent"].(map[string]any); ok {
+		if url, ok := agent["gateway_url"].(string); ok && url != "" {
+			return url, nil
+		}
+	}
+	if probeHealthz(ctx, defaultGatewayURL, defaultProbeTimeout) {
+		return defaultGatewayURL, nil
+	}
+	if err := autoStartGateway(ctx, defaultGatewayURL, defaultAutoStartTimeout); err != nil {
+		return "", err
+	}
+	return defaultGatewayURL, nil
+}
+
+// resolveAPIKey mirrors resolveGatewayURL's precedence chain. Returns
+// the resolved key (possibly empty for local mode, which accepts
+// unauthenticated agents). Never returns an error — an empty API key
+// is the documented "local dev" default per Epic 17.
+func resolveAPIKey(explicit string) string {
+	if explicit != "" {
+		return explicit
+	}
+	if env := os.Getenv(envAPIKey); env != "" {
+		return env
+	}
+	cfg := loadConfigFile("")
+	if agent, ok := cfg["agent"].(map[string]any); ok {
+		if key, ok := agent["api_key"].(string); ok && key != "" {
+			return key
+		}
+	}
+	return ""
+}
