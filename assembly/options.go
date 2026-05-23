@@ -20,6 +20,7 @@ type runtimeOptions struct {
 	teamID           string
 	delegationReason string
 	spawnedByTool    string
+	enforcementMode  EnforcementMode
 	errs             []error
 }
 
@@ -108,6 +109,28 @@ func WithDelegationReason(reason string) Option {
 func WithSpawnedByTool(tool string) Option {
 	return func(opts *runtimeOptions) {
 		opts.spawnedByTool = tool
+	}
+}
+
+// WithEnforcementMode sets the per-agent governance posture sent to the
+// gateway at registration. Pass [EnforcementModeObserve] to register this
+// agent in dry-run / sandbox mode (every action proceeds; the gateway
+// records would-be violations as shadow audit events surfaced by
+// `aa audit list --dry-run-only`).
+//
+// When this option is not called, the field is omitted from the registration
+// body and the gateway applies its server-side default of live enforcement —
+// the pre-feature wire shape is preserved.
+//
+// Unknown values are rejected via the option's error-collecting field; the
+// resulting error surfaces from [Init].
+func WithEnforcementMode(mode EnforcementMode) Option {
+	return func(opts *runtimeOptions) {
+		if !mode.Valid() {
+			opts.errs = append(opts.errs, errors.New("assembly: enforcement mode must be one of: enforce, observe, disabled"))
+			return
+		}
+		opts.enforcementMode = mode
 	}
 }
 
