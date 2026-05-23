@@ -2,7 +2,6 @@ package assembly
 
 import (
 	"context"
-	"errors"
 	"testing"
 )
 
@@ -47,11 +46,19 @@ func TestAssemblyLifecycle(t *testing.T) {
 }
 
 func TestAssemblyInitValidation(t *testing.T) {
-	t.Parallel()
-
+	// Cannot run in parallel: swaps gatewayResolverSeams. Forces the
+	// resolver's auto-start path to fail by stubbing findAasmOnPath to
+	// "" — the post-AAASM-1849 equivalent of the old "no gateway URL"
+	// validation error is *ConfigurationError from the resolver chain.
+	withSeams(t, func() string { return "" }, func(string) error { return nil })
+	t.Setenv(envGatewayURL, "")
 	a, err := Init(context.Background(), WithAPIKey("test-key"))
-	if !errors.Is(err, ErrInvalidGateway) {
-		t.Fatalf("expected ErrInvalidGateway, got %v", err)
+	if err == nil {
+		t.Fatalf("expected ConfigurationError, got nil")
+	}
+	var ce *ConfigurationError
+	if !errorsAs(err, &ce) {
+		t.Fatalf("expected *ConfigurationError, got %T: %v", err, err)
 	}
 	if a != nil {
 		t.Fatal("expected nil Assembly on validation error")

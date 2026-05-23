@@ -11,9 +11,9 @@ func validateRuntimeOptions(opts runtimeOptions) error {
 		return ErrInvalidGateway
 	}
 
-	if strings.TrimSpace(opts.apiKey) == "" {
-		return ErrInvalidAPIKey
-	}
+	// apiKey is intentionally allowed to be empty — local mode is
+	// unauth-accepting per Epic 17. The resolver fills it from env /
+	// config when present, or defaults to "" for local development.
 
 	return nil
 }
