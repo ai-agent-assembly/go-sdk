@@ -7,11 +7,12 @@ import "encoding/json"
 // forwards this as a RegisterRequest to the gateway.
 func buildRegistrationEvent(opts runtimeOptions) string {
 	type event struct {
-		EventType        string `json:"event_type"`
-		ParentAgentID    string `json:"parent_agent_id,omitempty"`
-		TeamID           string `json:"team_id,omitempty"`
-		DelegationReason string `json:"delegation_reason,omitempty"`
-		SpawnedByTool    string `json:"spawned_by_tool,omitempty"`
+		EventType        string          `json:"event_type"`
+		ParentAgentID    string          `json:"parent_agent_id,omitempty"`
+		TeamID           string          `json:"team_id,omitempty"`
+		DelegationReason string          `json:"delegation_reason,omitempty"`
+		SpawnedByTool    string          `json:"spawned_by_tool,omitempty"`
+		EnforcementMode  EnforcementMode `json:"enforcement_mode,omitempty"`
 	}
 
 	payload, err := json.Marshal(event{
@@ -20,6 +21,7 @@ func buildRegistrationEvent(opts runtimeOptions) string {
 		TeamID:           opts.teamID,
 		DelegationReason: opts.delegationReason,
 		SpawnedByTool:    opts.spawnedByTool,
+		EnforcementMode:  opts.enforcementMode,
 	})
 	if err != nil {
 		return `{"event_type":"register"}`
