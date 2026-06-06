@@ -76,6 +76,12 @@ defer a.Close()
 - **Architecture** — [docs/architecture.md](docs/architecture.md) and [docs/api-reference.md](docs/api-reference.md).
 - **Contributing** — [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Support & Security
+
+- **Questions / bugs / feature requests** — open an issue at [github.com/AI-agent-assembly/go-sdk/issues](https://github.com/AI-agent-assembly/go-sdk/issues).
+- **Security vulnerabilities** — do **not** file a public issue; report privately via the [security policy](https://github.com/AI-agent-assembly/go-sdk/security/policy).
+- **Troubleshooting** — common errors and fixes are in [docs/troubleshooting.md](docs/troubleshooting.md).
+
 ## Development
 
 ```bash
