@@ -17,11 +17,6 @@ on:
       - ".github/workflows/docs-site.yml"
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -32,6 +27,10 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -46,7 +45,7 @@ jobs:
 
       - name: Install Hugo extended
         run: |
-          wget -O "$RUNNER_TEMP/hugo.deb" \
+          wget --https-only -O "$RUNNER_TEMP/hugo.deb" \
             "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb"
           sudo dpkg -i "$RUNNER_TEMP/hugo.deb"
 
@@ -76,6 +75,9 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     needs: build
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

@@ -13,6 +13,12 @@ on:
       - "LICENSE"
     branches:
       - master
+  schedule:
+    - cron: "0 4 * * 1"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   govulncheck:
@@ -29,11 +35,14 @@ jobs:
         with:
           go-version: "1.26.x"
 
-      - name: Resolve modules
-        run: go mod tidy
+      - name: Verify modules
+        run: |
+          go mod download
+          go mod verify
+          git diff --exit-code go.mod go.sum
 
       - name: Install govulncheck
-        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.3.0
 
       - name: Run govulncheck
         run: |
