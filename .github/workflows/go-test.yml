@@ -41,8 +41,11 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
-      - name: Resolve modules
-        run: go mod tidy
+      - name: Verify modules
+        run: |
+          go mod download
+          go mod verify
+          git diff --exit-code go.mod go.sum
 
       - name: Run tests
         run: go test ./...
@@ -68,8 +71,11 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
-      - name: Resolve modules
-        run: go mod tidy
+      - name: Verify modules
+        run: |
+          go mod download
+          go mod verify
+          git diff --exit-code go.mod go.sum
 
       - name: Run go vet
         run: go vet ./...
@@ -91,8 +97,11 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
-      - name: Resolve modules
-        run: go mod tidy
+      - name: Verify modules
+        run: |
+          go mod download
+          go mod verify
+          git diff --exit-code go.mod go.sum
 
       - name: Run integration tests
         run: go test -tags integration ./assembly/... -v
