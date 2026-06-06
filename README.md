@@ -76,6 +76,14 @@ defer a.Close()
 - **Architecture** — [docs/architecture.md](docs/architecture.md) and [docs/api-reference.md](docs/api-reference.md).
 - **Contributing** — [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## AI Agent Assembly ecosystem
+
+- **Organization** — [github.com/AI-agent-assembly](https://github.com/AI-agent-assembly): org profile and the full production-repo map.
+- **Core runtime** — [AI-agent-assembly/agent-assembly](https://github.com/AI-agent-assembly/agent-assembly): the gateway, policy engine, proxy, and eBPF layers this SDK talks to.
+- **Protocol spec** — the gateway wire protocol this SDK is pinned to lives in the core monorepo at [docs/src/protocol](https://github.com/AI-agent-assembly/agent-assembly/tree/master/docs/src/protocol).
+- **Canonical docs** — the org-wide documentation site at [ai-agent-assembly.github.io/agent-assembly-docs](https://ai-agent-assembly.github.io/agent-assembly-docs/).
+- **Release notes** — [github.com/AI-agent-assembly/go-sdk/releases](https://github.com/AI-agent-assembly/go-sdk/releases).
+
 ## Support & Security
 
 - **Questions / bugs / feature requests** — open an issue at [github.com/AI-agent-assembly/go-sdk/issues](https://github.com/AI-agent-assembly/go-sdk/issues).
