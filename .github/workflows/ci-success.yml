@@ -1,0 +1,42 @@
+name: CI Success
+
+# Aggregate gate: a single required status check that summarises the result of
+# the individual CI workflows. Mark only "CI Success" as a required check in
+# branch protection instead of each underlying context (~12).
+on:
+  workflow_run:
+    workflows:
+      - "Go Test Matrix"
+      - "Coverage"
+      - "Lint"
+      - "Pre-commit Checks"
+      - "Govulncheck"
+      - "CodeQL"
+      - "SonarQube"
+      - "Goreleaser Check"
+    types:
+      - completed
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci-success:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.event == 'pull_request' || github.event.workflow_run.event == 'push' }}
+    steps:
+      - name: Check triggering workflow conclusion
+        env:
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+        run: |
+          echo "Workflow '${WORKFLOW_NAME}' concluded with: ${CONCLUSION}"
+          if [ "${CONCLUSION}" = "success" ] || [ "${CONCLUSION}" = "skipped" ]; then
+            exit 0
+          fi
+          echo "::error::Upstream workflow '${WORKFLOW_NAME}' did not succeed (conclusion=${CONCLUSION})."
+          exit 1
