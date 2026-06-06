@@ -12,7 +12,6 @@ on:
       - "Pre-commit Checks"
       - "Govulncheck"
       - "CodeQL"
-      - "SonarQube"
       - "Goreleaser Check"
     types:
       - completed
