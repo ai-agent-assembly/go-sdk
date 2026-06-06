@@ -24,10 +24,17 @@ jobs:
     strategy:
       matrix:
         cgo-enabled: ["0", "1"]
+    permissions:
+      contents: read
+      pull-requests: read
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       CGO_ENABLED: ${{ matrix.cgo-enabled }}
       COVERAGE_FILE: coverage-${{ matrix.cgo-enabled }}.out
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || 'https://sonarcloud.io' }}
+      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'AI-agent-assembly_go-sdk' }}
+      SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION || 'ai-agent-assembly' }}
 
     steps:
       - name: Checkout
@@ -64,3 +71,39 @@ jobs:
       - name: Skip Codecov upload when token is missing
         if: ${{ env.CODECOV_TOKEN == '' }}
         run: echo "CODECOV_TOKEN is not configured; skipping upload."
+
+      # AAASM-2666: run the SonarQube scan here in the cgo=1 coverage leg,
+      # reusing the coverage profile already produced above. This removes the
+      # duplicate `go test` that the standalone sonarqube.yml used to run.
+      - name: Build Sonar scanner arguments
+        if: ${{ matrix.cgo-enabled == '1' && env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' && env.SONAR_PROJECT_KEY != '' }}
+        run: |
+          scanner_args="-Dsonar.projectKey=${SONAR_PROJECT_KEY} -Dsonar.go.coverage.reportPaths=${COVERAGE_FILE} -Dsonar.test.inclusions=**/*_test.go -Dsonar.coverage.exclusions=examples/**"
+          if [ -n "${SONAR_ORGANIZATION}" ]; then
+            scanner_args="${scanner_args} -Dsonar.organization=${SONAR_ORGANIZATION}"
+          fi
+          echo "SONAR_SCANNER_ARGS=${scanner_args}" >> "${GITHUB_ENV}"
+
+      - name: Run SonarQube scan
+        if: ${{ matrix.cgo-enabled == '1' && env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' && env.SONAR_PROJECT_KEY != '' }}
+        uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
+        env:
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
+        with:
+          args: ${{ env.SONAR_SCANNER_ARGS }}
+
+      # Advisory: a failed quality gate (coverage/issues) is an acceptance
+      # signal, not a build error — it reports to SonarCloud but must not redden
+      # CI (mirrors the agent-assembly model where sonar is excluded from the gate).
+      - name: Check SonarQube quality gate (advisory)
+        if: ${{ matrix.cgo-enabled == '1' && env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' && env.SONAR_PROJECT_KEY != '' }}
+        continue-on-error: true
+        uses: SonarSource/sonarqube-quality-gate-action@cf038b0e0cdecfa9e56c198bbb7d21d751d62c3b # v1.2.0
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
+        with:
+          scanMetadataReportFile: .scannerwork/report-task.txt
+          pollingTimeoutSec: 300
