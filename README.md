@@ -12,6 +12,12 @@ Go SDK for [AI Agent Assembly](https://github.com/AI-agent-assembly) — runtime
 
 The SDK initialises in a few lines, propagates agent identity through `context.Context`, wraps your agent's tool slice with policy enforcement, and forwards every check + result to the AAASM gateway over gRPC or HTTP.
 
+## Project status
+
+`go-sdk` is **pre-release**. Published tags are on the `v0.0.1-alpha` line (latest [`v0.0.1-alpha.3`](https://github.com/AI-agent-assembly/go-sdk/releases)); the [`VERSION`](VERSION) file pins the gateway **protocol version** the SDK is built against (currently `0.0.0`). The public `assembly` package API may still change between alpha tags — pin an exact tag in your `go.mod` and review the [release notes](https://github.com/AI-agent-assembly/go-sdk/releases) before upgrading. See [Core-runtime compatibility](docs/compatibility.md) for the version/protocol contract.
+
+Anything outside the `assembly/` package (`internal/`, `examples/`) is not part of the public API and may change without notice.
+
 ## Prerequisites
 
 - **Go ≥ 1.26** — the floor declared in `go.mod`.
