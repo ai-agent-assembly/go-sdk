@@ -46,6 +46,8 @@ execution and recorded after.
 
 ## Where to next
 
+- [Configuration](../configuration/) — every `Init` option, defaults, and enforcement modes
 - [Architecture](../architecture/) — what's actually happening inside the SDK
 - [API reference](../api-reference/) — godoc on pkg.go.dev (when indexing is unblocked)
+- [Troubleshooting](../troubleshooting/) — what to do when `Init` or a check fails
 - [Guides](../guides/) — deeper how-tos
