@@ -12,9 +12,15 @@ Go SDK for [AI Agent Assembly](https://github.com/AI-agent-assembly) — runtime
 
 The SDK initialises in a few lines, propagates agent identity through `context.Context`, wraps your agent's tool slice with policy enforcement, and forwards every check + result to the AAASM gateway over gRPC or HTTP.
 
+## Project status
+
+`go-sdk` is **pre-release**. Published tags are on the `v0.0.1-alpha` line (latest [`v0.0.1-alpha.3`](https://github.com/AI-agent-assembly/go-sdk/releases)); the [`VERSION`](VERSION) file pins the gateway **protocol version** the SDK is built against (currently `0.0.0`). The public `assembly` package API may still change between alpha tags — pin an exact tag in your `go.mod` and review the [release notes](https://github.com/AI-agent-assembly/go-sdk/releases) before upgrading. See [Core-runtime compatibility](docs/compatibility.md) for the version/protocol contract.
+
+Anything outside the `assembly/` package (`internal/`, `examples/`) is not part of the public API and may change without notice.
+
 ## Prerequisites
 
-- **Go ≥ 1.24** — the floor declared in `go.mod`.
+- **Go ≥ 1.26** — the floor declared in `go.mod`.
 - An AAASM gateway URL and API key (operator-issued).
 - *(Optional)* a C compiler — only needed if you build with `-tags aa_ffi_go` to enable the native FFI transport. The default transport is pure-Go and runs cleanly with `CGO_ENABLED=0`.
 
@@ -69,6 +75,20 @@ defer a.Close()
 - **API reference** — [pkg.go.dev/github.com/AI-agent-assembly/go-sdk](https://pkg.go.dev/github.com/AI-agent-assembly/go-sdk) (auto-generated from godoc; preview locally with `godoc -http=:6060`).
 - **Architecture** — [docs/architecture.md](docs/architecture.md) and [docs/api-reference.md](docs/api-reference.md).
 - **Contributing** — [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## AI Agent Assembly ecosystem
+
+- **Organization** — [github.com/AI-agent-assembly](https://github.com/AI-agent-assembly): org profile and the full production-repo map.
+- **Core runtime** — [AI-agent-assembly/agent-assembly](https://github.com/AI-agent-assembly/agent-assembly): the gateway, policy engine, proxy, and eBPF layers this SDK talks to.
+- **Protocol spec** — the gateway wire protocol this SDK is pinned to lives in the core monorepo at [docs/src/protocol](https://github.com/AI-agent-assembly/agent-assembly/tree/master/docs/src/protocol).
+- **Canonical docs** — the org-wide documentation site at [ai-agent-assembly.github.io/agent-assembly-docs](https://ai-agent-assembly.github.io/agent-assembly-docs/).
+- **Release notes** — [github.com/AI-agent-assembly/go-sdk/releases](https://github.com/AI-agent-assembly/go-sdk/releases).
+
+## Support & Security
+
+- **Questions / bugs / feature requests** — open an issue at [github.com/AI-agent-assembly/go-sdk/issues](https://github.com/AI-agent-assembly/go-sdk/issues).
+- **Security vulnerabilities** — do **not** file a public issue; report privately via the [security policy](https://github.com/AI-agent-assembly/go-sdk/security/policy).
+- **Troubleshooting** — common errors and fixes are in [docs/troubleshooting.md](docs/troubleshooting.md).
 
 ## Development
 

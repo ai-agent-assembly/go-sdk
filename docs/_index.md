@@ -43,6 +43,10 @@ func main() {
 ## Where to next
 
 - [Getting started](getting-started/) — install, configure, and run a first governed call.
+- [Configuration](configuration/) — every `Init` option, defaults, enforcement modes, and context helpers.
 - [Architecture](architecture/) — module layout, FFI bridge, interceptor flow, context propagation.
 - [API reference](api-reference/) — godoc on pkg.go.dev plus local preview instructions.
+- [Troubleshooting](troubleshooting/) — typed errors, timeouts, and build/transport gotchas.
+- [Compatibility](compatibility/) — gateway protocol pin, wire contract, and toolchain floor.
+- [Release process](release-process/) — versioning and how tags become releases.
 - [Guides](guides/) — context propagation, FFI modes, error handling.
