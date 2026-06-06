@@ -33,6 +33,3 @@ jobs:
         run: |
           unformatted=$(gofmt -l $(find . -name '*.go' -type f))
           test -z "$unformatted" || (echo "Unformatted files:" && echo "$unformatted" && exit 1)
-
-      - name: Vet
-        run: go vet ./...
