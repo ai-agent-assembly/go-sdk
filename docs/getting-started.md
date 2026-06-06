@@ -10,7 +10,7 @@ that a tool call is reaching the AI Agent Assembly gateway.
 
 ## Prerequisites
 
-- **Go** ≥ 1.24 (matches the floor declared in `go.mod`)
+- **Go** ≥ 1.26 (matches the floor declared in `go.mod`)
 - An AAASM **gateway URL** and **API key** (see your operator)
 - *(Optional)* a C compiler if you want to enable the native FFI transport
   with `-tags aa_ffi_go`. The default transport is pure-Go and needs none.
