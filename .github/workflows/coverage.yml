@@ -40,8 +40,11 @@ jobs:
         with:
           go-version: "1.26.x"
 
-      - name: Resolve modules
-        run: go mod tidy
+      - name: Verify modules
+        run: |
+          go mod download
+          go mod verify
+          git diff --exit-code go.mod go.sum
 
       - name: Run tests with coverage
         run: go test ./... -covermode=atomic -coverprofile=$COVERAGE_FILE
