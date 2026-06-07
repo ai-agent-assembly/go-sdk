@@ -60,7 +60,7 @@ func (a *Assembly) boot(ctx context.Context) error {
 
 	if a.opts.sidecarAddress != "" && a.ffiClient != nil {
 		if err := a.ffiClient.Connect(a.opts.sidecarAddress); err == nil {
-			return a.ffiClient.SendEvent(buildRegistrationEvent(a.opts))
+			return a.ffiClient.SendEvent("register", buildRegistrationEvent(a.opts))
 		}
 	}
 

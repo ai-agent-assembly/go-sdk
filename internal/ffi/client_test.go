@@ -39,7 +39,7 @@ func TestStatusToError(t *testing.T) {
 func TestClientWrappers(t *testing.T) {
 	t.Parallel()
 
-	binding := &mockBinding{response: `{"allow":true}`}
+	binding := &mockBinding{}
 	client := NewClient(binding)
 
 	if err := client.Connect("unix:///tmp/aa.sock"); err != nil {
@@ -49,19 +49,11 @@ func TestClientWrappers(t *testing.T) {
 		t.Fatal("expected connect to be called")
 	}
 
-	if err := client.SendEvent(`{"event":"test"}`); err != nil {
+	if err := client.SendEvent("tool_call", `{"event":"test"}`); err != nil {
 		t.Fatalf("expected send_event success, got %v", err)
 	}
 	if !binding.sendCalled {
 		t.Fatal("expected send_event to be called")
-	}
-
-	response, err := client.QueryPolicy(`{"tool":"calculator"}`)
-	if err != nil {
-		t.Fatalf("expected query_policy success, got %v", err)
-	}
-	if response != binding.response {
-		t.Fatalf("expected response %q, got %q", binding.response, response)
 	}
 
 	if err := client.Disconnect(); err != nil {
@@ -85,7 +77,6 @@ type mockBinding struct {
 	connectCalled    bool
 	sendCalled       bool
 	disconnectCalled bool
-	response         string
 }
 
 func (m *mockBinding) connect(string) (unsafe.Pointer, int32) {
@@ -94,13 +85,9 @@ func (m *mockBinding) connect(string) (unsafe.Pointer, int32) {
 	return unsafe.Pointer(handle), statusOK
 }
 
-func (m *mockBinding) sendEvent(unsafe.Pointer, string) int32 {
+func (m *mockBinding) sendEvent(unsafe.Pointer, string, string) int32 {
 	m.sendCalled = true
 	return statusOK
-}
-
-func (m *mockBinding) queryPolicy(unsafe.Pointer, string) (string, int32) {
-	return m.response, statusOK
 }
 
 func (m *mockBinding) disconnect(unsafe.Pointer) int32 {

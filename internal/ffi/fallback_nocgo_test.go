@@ -3,7 +3,6 @@
 package ffi
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -23,16 +22,8 @@ func TestFallbackClientFlowWithoutCGO(t *testing.T) {
 		t.Fatalf("expected connect success, got %v", err)
 	}
 
-	if err := client.SendEvent(`{"event":"x"}`); err != nil {
+	if err := client.SendEvent("tool_call", `{"event":"x"}`); err != nil {
 		t.Fatalf("expected send_event success, got %v", err)
-	}
-
-	response, err := client.QueryPolicy(`{"tool":"calc"}`)
-	if err != nil {
-		t.Fatalf("expected query_policy success, got %v", err)
-	}
-	if !strings.Contains(response, "fallback-uds") {
-		t.Fatalf("expected fallback response marker, got %q", response)
 	}
 
 	if err := client.Disconnect(); err != nil {

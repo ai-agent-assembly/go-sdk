@@ -27,8 +27,8 @@ func TestConcurrentSendEventSafety(t *testing.T) {
 		go func() {
 			defer group.Done()
 			for sendIndex := 0; sendIndex < sendsPerWorker; sendIndex++ {
-				payload := fmt.Sprintf(`{"worker":%d,"send":%d}`, worker, sendIndex)
-				if err := client.SendEvent(payload); err != nil {
+				details := fmt.Sprintf(`{"worker":%d,"send":%d}`, worker, sendIndex)
+				if err := client.SendEvent("tool_call", details); err != nil {
 					t.Errorf("send_event failed: %v", err)
 					return
 				}
@@ -52,13 +52,9 @@ func (r *raceSafeBinding) connect(string) (unsafe.Pointer, int32) {
 	return unsafe.Pointer(handle), statusOK
 }
 
-func (r *raceSafeBinding) sendEvent(unsafe.Pointer, string) int32 {
+func (r *raceSafeBinding) sendEvent(unsafe.Pointer, string, string) int32 {
 	atomic.AddUint64(&r.sent, 1)
 	return statusOK
-}
-
-func (r *raceSafeBinding) queryPolicy(unsafe.Pointer, string) (string, int32) {
-	return `{"allow":true}`, statusOK
 }
 
 func (r *raceSafeBinding) disconnect(unsafe.Pointer) int32 {
