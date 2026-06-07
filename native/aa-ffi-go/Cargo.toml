@@ -1,0 +1,16 @@
+[package]
+name = "aa-ffi-go"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Go C-ABI static library bindings for Agent Assembly (thin shim over aa-sdk-client)"
+
+[lib]
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[dependencies]
+# Shared SDK runtime-client consumed via a git-SHA pin (ADR 0002 / AAASM-2559),
+# mirroring node-sdk/native/aa-ffi-node and python-sdk/rust/aa-ffi-python. The
+# advisory preflight arrives transitively via aa-sdk-client's default features.
+# Keep this SHA in lockstep with the node/python shims.
+aa-sdk-client = { git = "https://github.com/ai-agent-assembly/agent-assembly.git", rev = "9cf8a033d39c870ba46a0929b62261d125a00a09", package = "aa-sdk-client" }

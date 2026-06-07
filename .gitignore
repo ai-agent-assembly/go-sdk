@@ -6,6 +6,9 @@ bin/
 *.so
 *.dylib
 
+# Vendored Rust FFI shim build artifacts (native/aa-ffi-go); Cargo.lock IS committed
+native/**/target/
+
 # Test binaries
 *.test
 
