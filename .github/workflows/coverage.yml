@@ -66,7 +66,9 @@ jobs:
           flags: unit,go-sdk,cgo-${{ matrix.cgo-enabled }}
           name: go-sdk-coverage-cgo-${{ matrix.cgo-enabled }}
           verbose: true
-          fail_ci_if_error: true
+          # Codecov upload is an informational report, not a correctness gate; do not
+          # let codecov-action infra flakes (e.g. CLI GPG-signature verification) fail CI.
+          fail_ci_if_error: false
 
       - name: Skip Codecov upload when token is missing
         if: ${{ env.CODECOV_TOKEN == '' }}
