@@ -18,7 +18,7 @@ that a tool call is reaching the AI Agent Assembly gateway.
 ## Install
 
 ```bash
-go get github.com/AI-agent-assembly/go-sdk
+go get github.com/ai-agent-assembly/go-sdk
 ```
 
 ## Initialise

@@ -33,7 +33,7 @@ jobs:
       COVERAGE_FILE: coverage-${{ matrix.cgo-enabled }}.out
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || 'https://sonarcloud.io' }}
-      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'AI-agent-assembly_go-sdk' }}
+      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'ai-agent-assembly_go-sdk' }}
       SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION || 'ai-agent-assembly' }}
 
     steps:
@@ -61,12 +61,14 @@ jobs:
         uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           token: ${{ env.CODECOV_TOKEN }}
-          slug: AI-agent-assembly/go-sdk
+          slug: ai-agent-assembly/go-sdk
           files: ${{ env.COVERAGE_FILE }}
           flags: unit,go-sdk,cgo-${{ matrix.cgo-enabled }}
           name: go-sdk-coverage-cgo-${{ matrix.cgo-enabled }}
           verbose: true
-          fail_ci_if_error: true
+          # Codecov upload is an informational report, not a correctness gate; do not
+          # let codecov-action infra flakes (e.g. CLI GPG-signature verification) fail CI.
+          fail_ci_if_error: false
 
       - name: Skip Codecov upload when token is missing
         if: ${{ env.CODECOV_TOKEN == '' }}

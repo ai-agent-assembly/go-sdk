@@ -24,8 +24,8 @@ func TestMemoryRegressionHarness(t *testing.T) {
 	runtime.ReadMemStats(&before)
 
 	for index := 0; index < 1_000_000; index++ {
-		payload := fmt.Sprintf(`{"seq":%d}`, index)
-		if err := client.SendEvent(payload); err != nil {
+		details := fmt.Sprintf(`{"seq":%d}`, index)
+		if err := client.SendEvent("tool_call", details); err != nil {
 			t.Fatalf("send_event %d failed: %v", index, err)
 		}
 	}
@@ -47,12 +47,8 @@ func (m *memoryHarnessBinding) connect(string) (unsafe.Pointer, int32) {
 	return unsafe.Pointer(handle), statusOK
 }
 
-func (m *memoryHarnessBinding) sendEvent(unsafe.Pointer, string) int32 {
+func (m *memoryHarnessBinding) sendEvent(unsafe.Pointer, string, string) int32 {
 	return statusOK
-}
-
-func (m *memoryHarnessBinding) queryPolicy(unsafe.Pointer, string) (string, int32) {
-	return `{"allow":true}`, statusOK
 }
 
 func (m *memoryHarnessBinding) disconnect(unsafe.Pointer) int32 {

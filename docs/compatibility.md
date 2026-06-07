@@ -6,13 +6,13 @@ weight: 6
 # Core-runtime compatibility
 
 `go-sdk` is a **client** of the AI Agent Assembly gateway (the core runtime in
-[AI-agent-assembly/agent-assembly](https://github.com/AI-agent-assembly/agent-assembly)).
+[ai-agent-assembly/agent-assembly](https://github.com/ai-agent-assembly/agent-assembly)).
 It is built against a specific gateway **protocol version** and a minimum Go
 toolchain.
 
 ## Protocol version
 
-The [`VERSION`](https://github.com/AI-agent-assembly/go-sdk/blob/master/VERSION)
+The [`VERSION`](https://github.com/ai-agent-assembly/go-sdk/blob/master/VERSION)
 file pins the gateway protocol version this SDK speaks (currently `0.0.0`). It
 is the wire-compatibility contract, separate from the module's release tags:
 
@@ -44,5 +44,5 @@ change ships.
 
 The SDK is **pre-release** on the `v0.0.1-alpha` line. The public `assembly`
 package API may change between alpha tags; pin an exact tag and review the
-[release notes](https://github.com/AI-agent-assembly/go-sdk/releases) before
+[release notes](https://github.com/ai-agent-assembly/go-sdk/releases) before
 upgrading. See [Release process](release-process/) for how versions are cut.

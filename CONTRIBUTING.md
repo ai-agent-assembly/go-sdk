@@ -14,18 +14,20 @@ a development environment, run the test suite, and submit a pull request.
 
 ### Optional
 
-- **A C compiler + Rust toolchain** — required only when building or testing
-  the native FFI transport (`-tags aa_ffi_go`). The default pure-Go transport
-  works without either. The Rust side ships the `aa_ffi_go` shared library that
-  the CGo bridge links against; see `internal/ffi/cgo_bridge.go` for the
-  `#cgo LDFLAGS` line and the build-tag-gated source layout.
+- **A C compiler + Rust toolchain (+ protoc)** — required only when building or
+  testing the native FFI transport (`-tags aa_ffi_go`). The default build uses a
+  **fail-closed** pure-Go fallback (no native binding → `ErrRuntimeUnavailable`,
+  never a silent allow). The native binding is the vendored `native/aa-ffi-go`
+  crate — a thin C-ABI shim over the SHA-pinned `aa-sdk-client`. Build it with
+  `make native`; the cgo bridge links it via `native/aa-ffi-go/{include,target/debug}`
+  (see `internal/ffi/cgo_bridge.go`).
 - **Hugo (extended) ≥ 0.146** — required only if you want to preview the docs
   site locally (`cd website && hugo server`).
 
 ### First-time setup
 
 ```bash
-git clone https://github.com/AI-agent-assembly/go-sdk.git
+git clone https://github.com/ai-agent-assembly/go-sdk.git
 cd go-sdk
 go mod download
 make test
@@ -51,8 +53,8 @@ go test ./assembly -run TestRegisterAgent
 # Race detector — required for any change that touches concurrency.
 go test -count=1 -race ./...
 
-# Native FFI build (opt-in, requires CGo + Rust 'aa_ffi_go' library on linker path).
-go test -tags aa_ffi_go ./...
+# Native FFI build (opt-in; builds native/aa-ffi-go then runs the real cgo binding).
+make test-native
 
 # Memory regression harness (1M sends; opt-in, takes a few minutes).
 AAASM_MEMORY_HARNESS=1 go test ./internal/ffi -run TestMemoryRegressionHarness

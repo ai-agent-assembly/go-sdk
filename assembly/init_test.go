@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/AI-agent-assembly/go-sdk/internal/ffi"
+	"github.com/ai-agent-assembly/go-sdk/internal/ffi"
 )
 
 func TestInit(t *testing.T) {
@@ -77,7 +77,7 @@ func TestInit(t *testing.T) {
 		}
 	})
 
-	t.Run("fallback ffi transport is selected before sidecar connector", func(t *testing.T) {
+	t.Run("fallback ffi fails closed and falls through to sidecar connector", func(t *testing.T) {
 		if ffi.NativeBindingEnabled() {
 			t.Skip("native aa_ffi_go binding build does not use fallback transport")
 		}
@@ -87,16 +87,24 @@ func TestInit(t *testing.T) {
 			sidecarConnector = originalConnector
 		})
 
+		// Without the native binding the fallback ffi connect fails closed
+		// (ErrRuntimeUnavailable), so boot must fall through to the real
+		// sidecar connector rather than silently "succeeding".
+		connectorCalled := false
 		sidecarConnector = func(context.Context, string) (SidecarClient, error) {
-			return nil, errors.New("connector should not be reached when fallback ffi connect succeeds")
+			connectorCalled = true
+			return stubSidecarClient{}, nil
 		}
 
 		a, err := Init(context.Background(), validTestOptions()...)
 		if err != nil {
-			t.Fatalf("expected fallback ffi connect to succeed, got %v", err)
+			t.Fatalf("expected sidecar fallthrough to succeed, got %v", err)
 		}
 		if a == nil {
 			t.Fatal("expected non-nil Assembly")
+		}
+		if !connectorCalled {
+			t.Fatal("fallback ffi must fail closed, so sidecarConnector should be reached")
 		}
 	})
 }

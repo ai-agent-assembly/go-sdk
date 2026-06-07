@@ -1,4 +1,4 @@
-module github.com/AI-agent-assembly/go-sdk/website
+module github.com/ai-agent-assembly/go-sdk/website
 
 go 1.24
 

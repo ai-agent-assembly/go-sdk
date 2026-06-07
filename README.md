@@ -1,20 +1,20 @@
 # go-sdk
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/AI-agent-assembly/go-sdk.svg)](https://pkg.go.dev/github.com/AI-agent-assembly/go-sdk)
+[![Go Reference](https://pkg.go.dev/badge/github.com/ai-agent-assembly/go-sdk.svg)](https://pkg.go.dev/github.com/ai-agent-assembly/go-sdk)
 [![Live Docs](https://img.shields.io/badge/docs-live-blue)](https://ai-agent-assembly.github.io/go-sdk/)
-[![Go Test Matrix](https://github.com/AI-agent-assembly/go-sdk/actions/workflows/go-test.yml/badge.svg)](https://github.com/AI-agent-assembly/go-sdk/actions/workflows/go-test.yml)
-[![Lint](https://github.com/AI-agent-assembly/go-sdk/actions/workflows/lint.yml/badge.svg)](https://github.com/AI-agent-assembly/go-sdk/actions/workflows/lint.yml)
-[![Codecov](https://codecov.io/gh/AI-agent-assembly/go-sdk/graph/badge.svg)](https://codecov.io/gh/AI-agent-assembly/go-sdk)
-[![Go Report Card](https://goreportcard.com/badge/github.com/AI-agent-assembly/go-sdk)](https://goreportcard.com/report/github.com/AI-agent-assembly/go-sdk)
+[![Go Test Matrix](https://github.com/ai-agent-assembly/go-sdk/actions/workflows/go-test.yml/badge.svg)](https://github.com/ai-agent-assembly/go-sdk/actions/workflows/go-test.yml)
+[![Lint](https://github.com/ai-agent-assembly/go-sdk/actions/workflows/lint.yml/badge.svg)](https://github.com/ai-agent-assembly/go-sdk/actions/workflows/lint.yml)
+[![Codecov](https://codecov.io/gh/ai-agent-assembly/go-sdk/graph/badge.svg)](https://codecov.io/gh/ai-agent-assembly/go-sdk)
+[![Go Report Card](https://goreportcard.com/badge/github.com/ai-agent-assembly/go-sdk)](https://goreportcard.com/report/github.com/ai-agent-assembly/go-sdk)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Go SDK for [AI Agent Assembly](https://github.com/AI-agent-assembly) — runtime governance for AI agent tool calls.
+Go SDK for [AI Agent Assembly](https://github.com/ai-agent-assembly) — runtime governance for AI agent tool calls.
 
 The SDK initialises in a few lines, propagates agent identity through `context.Context`, wraps your agent's tool slice with policy enforcement, and forwards every check + result to the AAASM gateway over gRPC or HTTP.
 
 ## Project status
 
-`go-sdk` is **pre-release**. Published tags are on the `v0.0.1-alpha` line (latest [`v0.0.1-alpha.3`](https://github.com/AI-agent-assembly/go-sdk/releases)); the [`VERSION`](VERSION) file pins the gateway **protocol version** the SDK is built against (currently `0.0.0`). The public `assembly` package API may still change between alpha tags — pin an exact tag in your `go.mod` and review the [release notes](https://github.com/AI-agent-assembly/go-sdk/releases) before upgrading. See [Core-runtime compatibility](docs/compatibility.md) for the version/protocol contract.
+`go-sdk` is **pre-release**. Published tags are on the `v0.0.1-alpha` line (latest [`v0.0.1-alpha.3`](https://github.com/ai-agent-assembly/go-sdk/releases)); the [`VERSION`](VERSION) file pins the gateway **protocol version** the SDK is built against (currently `0.0.0`). The public `assembly` package API may still change between alpha tags — pin an exact tag in your `go.mod` and review the [release notes](https://github.com/ai-agent-assembly/go-sdk/releases) before upgrading. See [Core-runtime compatibility](docs/compatibility.md) for the version/protocol contract.
 
 Anything outside the `assembly/` package (`internal/`, `examples/`) is not part of the public API and may change without notice.
 
@@ -27,7 +27,7 @@ Anything outside the `assembly/` package (`internal/`, `examples/`) is not part 
 ## Installation
 
 ```bash
-go get github.com/AI-agent-assembly/go-sdk
+go get github.com/ai-agent-assembly/go-sdk
 ```
 
 ## Layout
@@ -56,7 +56,7 @@ import (
     "context"
     "log"
 
-    "github.com/AI-agent-assembly/go-sdk/assembly"
+    "github.com/ai-agent-assembly/go-sdk/assembly"
 )
 
 ctx := assembly.WithAgentID(context.Background(), "my-agent")
@@ -72,22 +72,22 @@ defer a.Close()
 ## Documentation
 
 - **Live site** — [ai-agent-assembly.github.io/go-sdk](https://ai-agent-assembly.github.io/go-sdk/) (Hugo, Hextra theme; built and deployed from `master`).
-- **API reference** — [pkg.go.dev/github.com/AI-agent-assembly/go-sdk](https://pkg.go.dev/github.com/AI-agent-assembly/go-sdk) (auto-generated from godoc; preview locally with `godoc -http=:6060`).
+- **API reference** — [pkg.go.dev/github.com/ai-agent-assembly/go-sdk](https://pkg.go.dev/github.com/ai-agent-assembly/go-sdk) (auto-generated from godoc; preview locally with `godoc -http=:6060`).
 - **Architecture** — [docs/architecture.md](docs/architecture.md) and [docs/api-reference.md](docs/api-reference.md).
 - **Contributing** — [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## AI Agent Assembly ecosystem
 
-- **Organization** — [github.com/AI-agent-assembly](https://github.com/AI-agent-assembly): org profile and the full production-repo map.
-- **Core runtime** — [AI-agent-assembly/agent-assembly](https://github.com/AI-agent-assembly/agent-assembly): the gateway, policy engine, proxy, and eBPF layers this SDK talks to.
-- **Protocol spec** — the gateway wire protocol this SDK is pinned to lives in the core monorepo at [docs/src/protocol](https://github.com/AI-agent-assembly/agent-assembly/tree/master/docs/src/protocol).
+- **Organization** — [github.com/ai-agent-assembly](https://github.com/ai-agent-assembly): org profile and the full production-repo map.
+- **Core runtime** — [ai-agent-assembly/agent-assembly](https://github.com/ai-agent-assembly/agent-assembly): the gateway, policy engine, proxy, and eBPF layers this SDK talks to.
+- **Protocol spec** — the gateway wire protocol this SDK is pinned to lives in the core monorepo at [docs/src/protocol](https://github.com/ai-agent-assembly/agent-assembly/tree/master/docs/src/protocol).
 - **Canonical docs** — the org-wide documentation site at [ai-agent-assembly.github.io/agent-assembly-docs](https://ai-agent-assembly.github.io/agent-assembly-docs/).
-- **Release notes** — [github.com/AI-agent-assembly/go-sdk/releases](https://github.com/AI-agent-assembly/go-sdk/releases).
+- **Release notes** — [github.com/ai-agent-assembly/go-sdk/releases](https://github.com/ai-agent-assembly/go-sdk/releases).
 
 ## Support & Security
 
-- **Questions / bugs / feature requests** — open an issue at [github.com/AI-agent-assembly/go-sdk/issues](https://github.com/AI-agent-assembly/go-sdk/issues).
-- **Security vulnerabilities** — do **not** file a public issue; report privately via the [security policy](https://github.com/AI-agent-assembly/go-sdk/security/policy).
+- **Questions / bugs / feature requests** — open an issue at [github.com/ai-agent-assembly/go-sdk/issues](https://github.com/ai-agent-assembly/go-sdk/issues).
+- **Security vulnerabilities** — do **not** file a public issue; report privately via the [security policy](https://github.com/ai-agent-assembly/go-sdk/security/policy).
 - **Troubleshooting** — common errors and fixes are in [docs/troubleshooting.md](docs/troubleshooting.md).
 
 ## Development

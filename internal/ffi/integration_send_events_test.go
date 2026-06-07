@@ -16,8 +16,8 @@ func TestIntegrationSendThousandEvents(t *testing.T) {
 	}
 
 	for index := 0; index < 1000; index++ {
-		event := fmt.Sprintf(`{"event":%d}`, index)
-		if err := client.SendEvent(event); err != nil {
+		details := fmt.Sprintf(`{"event":%d}`, index)
+		if err := client.SendEvent("tool_call", details); err != nil {
 			t.Fatalf("send_event %d failed: %v", index, err)
 		}
 	}
@@ -36,13 +36,9 @@ func (c *countingBinding) connect(string) (unsafe.Pointer, int32) {
 	return unsafe.Pointer(handle), statusOK
 }
 
-func (c *countingBinding) sendEvent(unsafe.Pointer, string) int32 {
+func (c *countingBinding) sendEvent(unsafe.Pointer, string, string) int32 {
 	atomic.AddUint64(&c.sent, 1)
 	return statusOK
-}
-
-func (c *countingBinding) queryPolicy(unsafe.Pointer, string) (string, int32) {
-	return `{"allow":true}`, statusOK
 }
 
 func (c *countingBinding) disconnect(unsafe.Pointer) int32 {

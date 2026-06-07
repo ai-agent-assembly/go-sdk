@@ -60,12 +60,12 @@ done
 GO_OPTS=(
   "--go_out=${OUTPUT_DIR}"
   "--go_opt=paths=source_relative"
-  "--go_opt=Mcommon.proto=github.com/AI-agent-assembly/go-sdk/internal/proto"
-  "--go_opt=Mpolicy.proto=github.com/AI-agent-assembly/go-sdk/internal/proto"
+  "--go_opt=Mcommon.proto=github.com/ai-agent-assembly/go-sdk/internal/proto"
+  "--go_opt=Mpolicy.proto=github.com/ai-agent-assembly/go-sdk/internal/proto"
   "--go-grpc_out=${OUTPUT_DIR}"
   "--go-grpc_opt=paths=source_relative"
-  "--go-grpc_opt=Mcommon.proto=github.com/AI-agent-assembly/go-sdk/internal/proto"
-  "--go-grpc_opt=Mpolicy.proto=github.com/AI-agent-assembly/go-sdk/internal/proto"
+  "--go-grpc_opt=Mcommon.proto=github.com/ai-agent-assembly/go-sdk/internal/proto"
+  "--go-grpc_opt=Mpolicy.proto=github.com/ai-agent-assembly/go-sdk/internal/proto"
 )
 
 echo "running: protoc --proto_path=${PROTO_DIR} ${GO_OPTS[*]} ${PROTOS[*]}"

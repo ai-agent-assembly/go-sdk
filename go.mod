@@ -1,4 +1,4 @@
-module github.com/AI-agent-assembly/go-sdk
+module github.com/ai-agent-assembly/go-sdk
 
 go 1.26.0
 

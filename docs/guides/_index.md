@@ -21,4 +21,4 @@ and follow-up Stories complete.
   calls.
 
 If a topic you need isn't here yet, open an issue against the
-[go-sdk repo](https://github.com/AI-agent-assembly/go-sdk/issues).
+[go-sdk repo](https://github.com/ai-agent-assembly/go-sdk/issues).

@@ -2,73 +2,27 @@
 
 package ffi
 
-import (
-	"encoding/json"
-	"unsafe"
-)
+import "unsafe"
 
-type fallbackUDSHandle struct {
-	endpoint  string
-	connected bool
-	events    uint64
-}
-
+// fallbackUDSBridge is the binding selected when the native cgo shim is not
+// compiled in (no `-tags aa_ffi_go`, or CGO disabled).
+//
+// It performs NO transport. Agent Assembly is a security/governance product, so
+// rather than silently allowing traffic when there is no runtime to enforce it,
+// the fallback **fails closed**: every operation reports the runtime as
+// unavailable (statusRuntimeUnavailable → ErrRuntimeUnavailable). Build with
+// `-tags aa_ffi_go` and CGO_ENABLED=1 to link the native aa-ffi-go binding and
+// route events through the authoritative runtime.
 type fallbackUDSBridge struct{}
 
-func (fallbackUDSBridge) connect(endpoint string) (unsafe.Pointer, int32) {
-	handle := &fallbackUDSHandle{
-		endpoint:  endpoint,
-		connected: true,
-	}
-
-	return unsafe.Pointer(handle), statusOK
+func (fallbackUDSBridge) connect(string) (unsafe.Pointer, int32) {
+	return nil, statusRuntimeUnavailable
 }
 
-func (fallbackUDSBridge) sendEvent(handle unsafe.Pointer, _ string) int32 {
-	client := (*fallbackUDSHandle)(handle)
-	if client == nil {
-		return statusNullPointer
-	}
-	if !client.connected {
-		return statusNotConnected
-	}
-
-	client.events++
-	return statusOK
+func (fallbackUDSBridge) sendEvent(unsafe.Pointer, string, string) int32 {
+	return statusRuntimeUnavailable
 }
 
-func (fallbackUDSBridge) queryPolicy(handle unsafe.Pointer, queryJSON string) (string, int32) {
-	client := (*fallbackUDSHandle)(handle)
-	if client == nil {
-		return "", statusNullPointer
-	}
-	if !client.connected {
-		return "", statusNotConnected
-	}
-
-	payload, err := json.Marshal(map[string]any{
-		"allow":       true,
-		"reason":      "fallback-uds",
-		"endpoint":    client.endpoint,
-		"events_sent": client.events,
-		"query":       queryJSON,
-	})
-	if err != nil {
-		return "", statusInvalidUTF8
-	}
-
-	return string(payload), statusOK
-}
-
-func (fallbackUDSBridge) disconnect(handle unsafe.Pointer) int32 {
-	client := (*fallbackUDSHandle)(handle)
-	if client == nil {
-		return statusNullPointer
-	}
-	if !client.connected {
-		return statusNotConnected
-	}
-
-	client.connected = false
-	return statusOK
+func (fallbackUDSBridge) disconnect(unsafe.Pointer) int32 {
+	return statusRuntimeUnavailable
 }
