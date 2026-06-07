@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/AI-agent-assembly/go-sdk/assembly"
+	"github.com/ai-agent-assembly/go-sdk/assembly"
 )
 
 // demoTool is a minimal Tool implementation for demonstration purposes.

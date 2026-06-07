@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/AI-agent-assembly/go-sdk/internal/ffi"
+	"github.com/ai-agent-assembly/go-sdk/internal/ffi"
 )
 
 // TestInit_ZeroArgResolvesLocalDefault is the AAASM-1849 primary AC:

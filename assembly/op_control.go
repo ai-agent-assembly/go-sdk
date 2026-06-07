@@ -30,7 +30,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	pb "github.com/AI-agent-assembly/go-sdk/internal/proto"
+	pb "github.com/ai-agent-assembly/go-sdk/internal/proto"
 )
 
 // OpControlClient is the slice of PolicyServiceClient the subscriber actually

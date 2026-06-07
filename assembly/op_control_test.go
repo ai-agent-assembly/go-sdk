@@ -19,7 +19,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	pb "github.com/AI-agent-assembly/go-sdk/internal/proto"
+	pb "github.com/ai-agent-assembly/go-sdk/internal/proto"
 )
 
 // fakeStream stands in for grpc.ServerStreamingClient[pb.OpControlMessage].

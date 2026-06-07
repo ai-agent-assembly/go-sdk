@@ -27,7 +27,7 @@ a development environment, run the test suite, and submit a pull request.
 ### First-time setup
 
 ```bash
-git clone https://github.com/AI-agent-assembly/go-sdk.git
+git clone https://github.com/ai-agent-assembly/go-sdk.git
 cd go-sdk
 go mod download
 make test

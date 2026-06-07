@@ -51,7 +51,7 @@ if errors.Is(err, assembly.ErrInvalidGateway) {
 
 ## API reference not showing on pkg.go.dev
 
-The reference on [pkg.go.dev](https://pkg.go.dev/github.com/AI-agent-assembly/go-sdk)
+The reference on [pkg.go.dev](https://pkg.go.dev/github.com/ai-agent-assembly/go-sdk)
 is generated per released tag. If a symbol is missing, it is almost always
 because no tag has been pushed for that change yet — push a `vX.Y.Z` tag (see
 [Release process](release-process/)) and pkg.go.dev picks it up within minutes.
@@ -60,7 +60,7 @@ Preview the working tree locally with `godoc -http=:6060`.
 ## Still stuck?
 
 Open an issue at
-[github.com/AI-agent-assembly/go-sdk/issues](https://github.com/AI-agent-assembly/go-sdk/issues).
+[github.com/ai-agent-assembly/go-sdk/issues](https://github.com/ai-agent-assembly/go-sdk/issues).
 For suspected security issues, use the
-[security policy](https://github.com/AI-agent-assembly/go-sdk/security/policy)
+[security policy](https://github.com/ai-agent-assembly/go-sdk/security/policy)
 instead of a public issue.

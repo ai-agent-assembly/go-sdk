@@ -184,7 +184,7 @@ func autoStartGateway(ctx context.Context, baseURL string, timeout time.Duration
 	if aasmPath == "" {
 		return &ConfigurationError{
 			Message: "no gateway found at " + baseURL +
-				" and 'aasm' is not on PATH. Install it with: go install github.com/AI-agent-assembly/aa-cli/cmd/aasm@latest",
+				" and 'aasm' is not on PATH. Install it with: go install github.com/ai-agent-assembly/aa-cli/cmd/aasm@latest",
 		}
 	}
 

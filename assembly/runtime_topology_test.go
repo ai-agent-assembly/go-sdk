@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/AI-agent-assembly/go-sdk/internal/ffi"
+	"github.com/ai-agent-assembly/go-sdk/internal/ffi"
 )
 
 func TestBootSendsRegistrationEventWithTopologyFields(t *testing.T) {

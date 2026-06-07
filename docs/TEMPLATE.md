@@ -84,7 +84,7 @@ project plumbing stays out of the SDK's main eye-line.
 ## Adopting this template in `python-sdk` / `node-sdk`
 
 1. Copy the `website/` directory verbatim; bump the `module` line in
-   `website/go.mod` to `github.com/AI-agent-assembly/<sdk-name>/website`.
+   `website/go.mod` to `github.com/ai-agent-assembly/<sdk-name>/website`.
 2. Copy this `docs/` directory; replace the `_index.md`, `getting-started.md`,
    and `TEMPLATE.md` to point at your SDK.
 3. Copy `.github/workflows/docs-site.yml` verbatim; no changes needed if the
