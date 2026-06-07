@@ -3,6 +3,8 @@ package assembly
 import (
 	"context"
 	"testing"
+
+	"github.com/AI-agent-assembly/go-sdk/internal/ffi"
 )
 
 // TestInit_ZeroArgResolvesLocalDefault is the AAASM-1849 primary AC:
@@ -54,6 +56,15 @@ func TestInit_ExplicitOptionsBypassResolver(t *testing.T) {
 			return nil
 		},
 	)
+
+	// Pin a deterministic in-memory FFI client via the seam so the boot
+	// transport path succeeds regardless of build tag (the real -tags aa_ffi_go
+	// binding would need a live runtime). This test is about resolver bypass,
+	// not the FFI transport.
+	capClient, _ := ffi.NewCapturingClient()
+	originalFactory := newFFIClient
+	t.Cleanup(func() { newFFIClient = originalFactory })
+	newFFIClient = func() *ffi.Client { return capClient }
 
 	originalConnector := sidecarConnector
 	t.Cleanup(func() { sidecarConnector = originalConnector })

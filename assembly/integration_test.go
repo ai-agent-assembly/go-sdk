@@ -59,7 +59,15 @@ func (r *recordingGovernanceClient) Close() error {
 }
 
 func TestEndToEnd_AgentToolCallEventCapture(t *testing.T) {
-	// 1. Init assembly (fallback UDS bridge succeeds for any address)
+	// Pin a deterministic in-memory FFI client so Init's transport path succeeds
+	// regardless of build tag (the default fallback is fail-closed). This test
+	// exercises tool wrapping + governance, not the FFI transport.
+	capClient, _ := ffi.NewCapturingClient()
+	origFactory := newFFIClient
+	newFFIClient = func() *ffi.Client { return capClient }
+	t.Cleanup(func() { newFFIClient = origFactory })
+
+	// 1. Init assembly
 	a, err := Init(context.Background(),
 		WithGatewayURL("https://gateway.test.local"),
 		WithAPIKey("integration-test-key"),
