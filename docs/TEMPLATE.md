@@ -52,6 +52,16 @@ project plumbing stays out of the SDK's main eye-line.
 | Local preview | `cd website && hugo server -D` |
 | Pages source | "GitHub Actions" (set once in repo Settings → Pages) |
 
+## Shared brand styling (Path A)
+
+Styling now follows the **shared documentation brand kit** tracked in the
+[`agent-assembly-docs`](https://github.com/ai-agent-assembly/agent-assembly-docs)
+repo under `design/`. The kit is applied here (Path A — vendor the snippet into
+each SDK site) by dropping `design/snippets/hextra-custom.css` at
+`website/assets/css/custom.css` (Hextra auto-loads it) and the brand logo /
+favicon from `design/brand/` into `website/static/images/`. Re-sync from
+`agent-assembly-docs` `design/` when the kit changes.
+
 ## Required `hugo.toml` keys
 
 - `baseURL` — must end with trailing slash for project-site relative URLs to resolve

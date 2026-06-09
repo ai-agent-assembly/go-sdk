@@ -32,7 +32,11 @@ description = "Go SDK for AI Agent Assembly — runtime governance for AI agent 
 [params]
   [params.navbar]
     displayTitle = true
-    displayLogo = false
+    displayLogo = true
+    [params.navbar.logo]
+      path = "images/logo.png"
+      width = 28
+      height = 28
   [params.theme]
     default = "system"
     displayToggle = true
@@ -57,3 +61,33 @@ description = "Go SDK for AI Agent Assembly — runtime governance for AI agent 
     name = "GitHub"
     url = "https://github.com/ai-agent-assembly/go-sdk"
     weight = 3
+
+  # SDK switcher — cross-links to the shared docs hub and sibling SDK sites.
+  [[menu.main]]
+    identifier = "sdk-docs-hub"
+    name = "Docs Hub"
+    url = "https://ai-agent-assembly.github.io/agent-assembly-docs/"
+    weight = 10
+    [menu.main.params]
+      group = "SDKs"
+  [[menu.main]]
+    identifier = "sdk-python"
+    name = "Python SDK"
+    url = "https://ai-agent-assembly.github.io/python-sdk/"
+    weight = 11
+    [menu.main.params]
+      group = "SDKs"
+  [[menu.main]]
+    identifier = "sdk-node"
+    name = "Node SDK"
+    url = "https://ai-agent-assembly.github.io/node-sdk/"
+    weight = 12
+    [menu.main.params]
+      group = "SDKs"
+  [[menu.main]]
+    identifier = "sdk-go"
+    name = "Go SDK"
+    url = "https://ai-agent-assembly.github.io/go-sdk/"
+    weight = 13
+    [menu.main.params]
+      group = "SDKs"
