@@ -32,7 +32,11 @@ description = "Go SDK for AI Agent Assembly — runtime governance for AI agent 
 [params]
   [params.navbar]
     displayTitle = true
-    displayLogo = false
+    displayLogo = true
+    [params.navbar.logo]
+      path = "images/logo.png"
+      width = 28
+      height = 28
   [params.theme]
     default = "system"
     displayToggle = true
