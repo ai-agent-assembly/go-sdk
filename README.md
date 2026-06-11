@@ -21,7 +21,7 @@ Anything outside the `assembly/` package (`internal/`, `examples/`) is not part 
 ## Prerequisites
 
 - **Go ≥ 1.26** — the floor declared in `go.mod`.
-- An AAASM gateway URL and API key (operator-issued).
+- For production: an operator-issued gateway URL and API key. For local development you can skip both — `Init` discovers a gateway on `http://localhost:7391` (see [Configuration](docs/configuration.md#gateway-and-credential-resolution)).
 - *(Optional)* a C compiler — only needed if you build with `-tags aa_ffi_go` to enable the native FFI transport. The default transport is pure-Go and runs cleanly with `CGO_ENABLED=0`.
 
 ## Installation
