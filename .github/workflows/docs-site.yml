@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+    tags:
+      - "v*"
     paths:
       - "website/**"
       - "docs/**"
@@ -23,6 +25,9 @@ concurrency:
 
 env:
   HUGO_VERSION: "0.161.1"
+  # Pages site-root path prefix. Used to build per-version baseURLs and the
+  # root redirect target. Must match params.versionsBasePath in website/hugo.toml.
+  PAGES_BASE: "https://ai-agent-assembly.github.io/go-sdk"
 
 jobs:
   build:
@@ -50,7 +55,7 @@ jobs:
           sudo dpkg -i "$RUNNER_TEMP/hugo.deb"
 
       - name: Configure GitHub Pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: github.event_name == 'push'
         id: pages
         uses: actions/configure-pages@v6
 
@@ -58,21 +63,79 @@ jobs:
         working-directory: website
         run: hugo mod tidy
 
+      # Determine which documentation version this run publishes.
+      #   * push to master      -> "latest" (live docs tracking master)
+      #   * push of a v* tag     -> the tag name (frozen snapshot, e.g. v0.1.0)
+      #   * PRs / dispatch       -> "latest" (preview build only, never deployed)
+      - name: Resolve docs version
+        id: version
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "version=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            echo "frozen=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=latest" >> "$GITHUB_OUTPUT"
+            echo "frozen=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # On a release tag, append the new frozen version to the selector data
+      # file so the navbar dropdown lists it. The FIRST frozen snapshot is cut
+      # at v0.1.0 — master pushes never touch this file.
+      - name: Register frozen version in selector data
+        if: steps.version.outputs.frozen == 'true'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          FILE="website/data/versions.toml"
+          if grep -q "version = \"${VERSION}\"" "$FILE"; then
+            echo "Version ${VERSION} already present in ${FILE}; skipping."
+          else
+            {
+              echo ""
+              echo "[[versions]]"
+              echo "  version = \"${VERSION}\""
+              echo "  path = \"/${VERSION}/\""
+            } >> "$FILE"
+            echo "Appended ${VERSION} to ${FILE}."
+          fi
+
       - name: Build site
         working-directory: website
         env:
           HUGO_ENVIRONMENT: production
           HUGO_ENV: production
-        run: hugo --minify
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          hugo --gc --minify \
+            --baseURL "${PAGES_BASE}/${VERSION}/" \
+            --destination "public/${VERSION}"
+
+      # Assemble the Pages artifact. Existing version subpaths must NOT be
+      # wiped: a single deploy-pages artifact replaces the whole site, so a
+      # release that cuts a new frozen snapshot must also re-include the
+      # previously-published versions.
+      #
+      # NOTE (release-time aggregation): this job currently builds only the
+      # version under publication ("latest" on master, or the tagged snapshot).
+      # Master pushes correctly republish "latest" each time. Cutting the first
+      # frozen v0.1.0 snapshot additionally requires re-materialising the live
+      # "latest" subpath alongside the new version in the same artifact (e.g.
+      # rebuild "latest" from master in this job, or fetch the deployed site).
+      # That aggregation is the v0.1.0 release step and is intentionally left
+      # for the release window rather than implemented speculatively now.
+      - name: Add site-root redirect to latest
+        if: github.event_name == 'push'
+        run: |
+          mkdir -p website/public
+          cp website/redirect/index.html website/public/index.html
 
       - name: Upload Pages artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: github.event_name == 'push'
         uses: actions/upload-pages-artifact@v5
         with:
           path: website/public
 
   deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     needs: build
     permissions:
