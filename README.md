@@ -69,6 +69,14 @@ defer a.Close()
 
 `WithAgentID` attaches the calling agent's identity to `ctx`; the SDK forwards it (and any `WithTraceID` / `WithRunID` values) to the gateway on every `Check` and `RecordResult`. See [Context Propagation](#context-propagation) below for the full set of context helpers.
 
+Then wrap your agent's tools so every call is governed:
+
+```go
+governed := assembly.WrapTools(myTools, a)
+```
+
+Each call against a tool in `governed` is checked against the gateway policy before it runs and recorded after. Hand `governed` to your agent in place of the originals. See [Getting started](docs/getting-started.md) for the end-to-end walk-through.
+
 ## Documentation
 
 - **Live site** — [ai-agent-assembly.github.io/go-sdk](https://ai-agent-assembly.github.io/go-sdk/) (Hugo, Hextra theme; built and deployed from `master`).
