@@ -25,28 +25,52 @@ checked against the AI Agent Assembly gateway.
 go get github.com/ai-agent-assembly/go-sdk
 ```
 
-## Initialise
+## Initialise the runtime
+
+`Init` returns an `*assembly.Assembly` — the handle you pass to the tool
+wrappers below. Always `Close` it when you are done.
 
 ```go
-ctx, err := assembly.Init(context.Background(),
-    assembly.WithGatewayURL("https://gateway.example.com"),
-    assembly.WithAPIKey("..."),
-    assembly.WithFailClosed(false),
+package main
+
+import (
+    "context"
+    "log"
+
+    "github.com/ai-agent-assembly/go-sdk/assembly"
 )
-if err != nil {
-    log.Fatal(err)
+
+func main() {
+    ctx := assembly.WithAgentID(context.Background(), "my-agent")
+
+    a, err := assembly.Init(ctx,
+        assembly.WithGatewayURL("https://gateway.example.com"),
+        assembly.WithAPIKey("..."),
+    )
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer a.Close()
 }
-defer ctx.Close()
 ```
+
+`WithAgentID` stamps the calling agent's identity onto `ctx`; the SDK
+forwards it to the gateway on every check and record. See
+[Configuration](../configuration/#per-call-identity-context-helpers) for the
+other per-call identifiers.
 
 ## Wrap your tools
 
+`WrapTools` takes your tool slice and the `*Assembly` from `Init`, and returns
+a slice of governed tools:
+
 ```go
-wrapped := assembly.WrapTools(myTools, ctx)
+governed := assembly.WrapTools(myTools, a)
 ```
 
-Each call against `wrapped` is checked against the gateway policy before
-execution and recorded after.
+Each call against a tool in `governed` is checked against the gateway policy
+before execution and recorded after. Hand `governed` to your agent in place of
+the originals.
 
 ## Where to next
 
