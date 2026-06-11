@@ -20,9 +20,12 @@ if errors.Is(err, assembly.ErrInvalidGateway) {
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `ErrInvalidGateway` from `Init` | `WithGatewayURL` not set (or empty) | Pass `assembly.WithGatewayURL("https://…")`. |
-| `ErrInvalidAPIKey` from `Init` | `WithAPIKey` not set (or empty) | Pass `assembly.WithAPIKey("…")` with an operator-issued key. |
+| `ErrInvalidGateway` from `Init` | No gateway URL from any source — the option, `AASM_GATEWAY_URL`, the config file, and the local default all came back empty (the local auto-start also failed). | Pass `assembly.WithGatewayURL("https://…")`, or make sure a local gateway is reachable on `http://localhost:7391`. See the [resolution chain](../configuration/#gateway-and-credential-resolution). |
 | `ErrRuntimeNotInitialized` | Using the runtime before a successful `Init`, or after `Close` | Check the `Init` error before use; don't reuse a closed `*Assembly`. |
+
+An empty API key is **not** an error — local mode accepts unauthenticated
+agents. Set `WithAPIKey` (or `AASM_API_KEY`) only when your gateway requires
+authentication.
 
 ## Sidecar mode
 
