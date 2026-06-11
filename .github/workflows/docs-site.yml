@@ -97,65 +97,96 @@ jobs:
             } >> "$GITHUB_OUTPUT"
           fi
 
-      # On a release tag, register both the frozen archived snapshot and the
-      # moving channel alias in the selector data file. The append is guarded by
-      # frozen=true (i.e. github.ref_type == 'tag'); master pushes never touch
-      # this file. The channel alias entry is rewritten in place so re-pointing
-      # stable/pre-release to a newer tag updates rather than duplicates.
-      - name: Register frozen version + channel alias in selector data
+      # On a release tag, register the frozen archived snapshot for the tag and
+      # RECOMPUTE the moving channel entries (stable / pre-release) from the FULL
+      # set of known tags. Channels are never appended incrementally: every run
+      # rebuilds them from scratch so a superseding stable correctly drops a
+      # pre-release that is now behind it (the pre-release stays reachable as an
+      # archived entry). The latest (master) entry is left untouched. The gate
+      # itself lives in website/scripts/versions_channels.py and is unit-tested.
+      - name: Register frozen version + recompute channel aliases
         if: steps.version.outputs.frozen == 'true'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          CHANNEL="${{ steps.version.outputs.channel }}"
           FILE="website/data/versions.toml"
-          python3 - "$FILE" "$VERSION" "$CHANNEL" <<'PY'
-          import sys, re
-          path, version, channel = sys.argv[1], sys.argv[2], sys.argv[3]
+          python3 - "$FILE" "$VERSION" <<'PY'
+          import os, re, sys
+
+          sys.path.insert(0, os.path.join("website", "scripts"))
+          from versions_channels import compute_channels  # noqa: E402
+
+          path, version = sys.argv[1], sys.argv[2]
           with open(path, encoding="utf-8") as fh:
               text = fh.read()
 
-          # Drop any existing moving-channel block for this channel (re-point it).
+          # Parse existing entries into (channel, field-dict) records.
           blocks = re.split(r'(?m)^\[\[versions\]\]\s*$', text)
           head = blocks[0]
-          kept = []
+          records = []
           for body in blocks[1:]:
-              m = re.search(r'channel\s*=\s*"([^"]+)"', body)
-              ch = m.group(1) if m else ""
-              if ch == channel and channel in ("stable", "pre-release"):
-                  continue  # supersede the old alias for this moving channel
-              kept.append(body)
+              fields = dict(re.findall(r'(\w+)\s*=\s*"([^"]+)"', body))
+              flags = dict(re.findall(r'(\w+)\s*=\s*(true|false)\b', body))
+              fields.update({k: v for k, v in flags.items()})
+              records.append(fields)
+
+          # The full known tag set = the tag being pushed + every archived tag +
+          # every tag a moving channel currently points at. This is what the
+          # channel gate recomputes from.
+          tags = {version}
+          for r in records:
+              if r.get("channel") == "archived" and r.get("version"):
+                  tags.add(r["version"])
+              if r.get("channel") in ("stable", "pre-release") and r.get("tag"):
+                  tags.add(r["tag"])
+
+          # Keep only non-channel entries (latest + archived); channels are
+          # regenerated below. Re-emit latest first, then archived.
+          latest = [r for r in records if r.get("channel") == "latest"]
+          archived = [r for r in records if r.get("channel") == "archived"]
+
+          # Ensure the pushed tag has an archived entry (idempotent).
+          if not any(r.get("version") == version for r in archived):
+              archived.append({
+                  "channel": "archived",
+                  "version": version,
+                  "label": version,
+                  "path": f"/{version}/",
+              })
+
+          channels = compute_channels(sorted(tags))
+
+          def emit(r):
+              order = ["channel", "version", "label", "path", "tag", "default"]
+              keys = order + [k for k in r if k not in order]
+              lines = ["[[versions]]"]
+              for k in keys:
+                  if k not in r:
+                      continue
+                  v = r[k]
+                  if v in ("true", "false"):
+                      lines.append(f"  {k} = {v}")
+                  else:
+                      lines.append(f'  {k} = "{v}"')
+              return "\n".join(lines)
 
           out = head.rstrip("\n") + "\n"
-          for body in kept:
-              out += "[[versions]]" + body.rstrip("\n") + "\n"
-
-          # Archived frozen snapshot for the concrete tag (idempotent).
-          if f'version = "{version}"' not in out or f'path = "/{version}/"' not in out:
-              out += "\n".join([
-                  "",
-                  "[[versions]]",
-                  '  channel = "archived"',
-                  f'  version = "{version}"',
-                  f'  label = "{version}"',
-                  f'  path = "/{version}/"',
-                  "",
-              ])
-
-          # Moving channel alias pointing at this tag.
-          label = f"{channel} ({version})"
-          out += "\n".join([
-              "[[versions]]",
-              f'  channel = "{channel}"',
-              f'  version = "{channel}"',
-              f'  label = "{label}"',
-              f'  path = "/{channel}/"',
-              f'  tag = "{version}"',
-              "",
-          ])
+          out_records = list(latest)
+          for channel in ("stable", "pre-release"):
+              tag = channels.get(channel)
+              if tag:
+                  out_records.append({
+                      "channel": channel,
+                      "version": channel,
+                      "label": f"{channel} ({tag})",
+                      "path": f"/{channel}/",
+                      "tag": tag,
+                  })
+          out_records.extend(archived)
+          out += "\n" + "\n\n".join(emit(r) for r in out_records) + "\n"
 
           with open(path, "w", encoding="utf-8") as fh:
               fh.write(out)
-          print(f"Registered {version} (archived) + {channel} alias -> {version}.")
+          print(f"Recomputed channels {channels} from tags {sorted(tags)}.")
           print(open(path, encoding="utf-8").read())
           PY
 
@@ -174,12 +205,30 @@ jobs:
             --destination "public/${VERSION}"
           # On a release tag, also build the moving channel alias subpath
           # (/stable/ or /pre-release/) pointing at the same content, so
-          # .../go-sdk/<channel>/ resolves to this concrete build. The selector
-          # data already lists the alias, so its baked links stay correct.
-          if [ "${{ steps.version.outputs.frozen }}" = "true" ] && [ "$VERSION" != "$CHANNEL" ]; then
+          # .../go-sdk/<channel>/ resolves to this concrete build. Only build the
+          # alias when the recompute step actually emitted that channel pointing
+          # at THIS tag: a pre-release tag that is behind the newest stable is
+          # gated out (no pre-release entry), so its /pre-release/ alias must not
+          # be built. The selector data lists only emitted aliases.
+          ALIAS_TAG=$(python3 - website/data/versions.toml "$CHANNEL" <<'PY'
+          import re, sys
+          with open(sys.argv[1], encoding="utf-8") as fh:
+              text = fh.read()
+          channel = sys.argv[2]
+          for body in re.split(r'(?m)^\[\[versions\]\]\s*$', text)[1:]:
+              ch = re.search(r'channel\s*=\s*"([^"]+)"', body)
+              tag = re.search(r'tag\s*=\s*"([^"]+)"', body)
+              if ch and ch.group(1) == channel and tag:
+                  print(tag.group(1))
+                  break
+          PY
+          )
+          if [ "${{ steps.version.outputs.frozen }}" = "true" ] && [ "$VERSION" != "$CHANNEL" ] && [ "$ALIAS_TAG" = "$VERSION" ]; then
             hugo --gc --minify \
               --baseURL "${PAGES_BASE}/${CHANNEL}/" \
               --destination "public/${CHANNEL}"
+          else
+            echo "Channel '$CHANNEL' not emitted for $VERSION (gated or superseded); skipping alias build."
           fi
 
       # Assemble the Pages artifact. Existing version subpaths must NOT be
