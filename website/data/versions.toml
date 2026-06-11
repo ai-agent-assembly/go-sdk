@@ -1,0 +1,20 @@
+# Documentation versions for the navbar version selector.
+#
+# Each entry renders one item in the version dropdown (see
+# layouts/_partials/navbar-title.html). The site is published to GitHub Pages
+# under a per-version subpath; `path` is that subpath (with leading and trailing
+# slash), relative to the Pages site root.
+#
+# Lifecycle:
+#   * `latest` tracks master and is rebuilt on every push to master.
+#   * Frozen snapshots (e.g. `v0.1.0`) are appended here by the release workflow
+#     when a `v*` tag is pushed — the FIRST frozen snapshot is cut at v0.1.0, not
+#     now. Do not hand-add frozen versions; the release job owns that.
+#
+# `latest` must remain the default (first) entry so the selector highlights it
+# while master docs are the live default.
+
+[[versions]]
+  version = "latest"
+  path = "/latest/"
+  default = true
