@@ -210,7 +210,7 @@ jobs:
           # at THIS tag: a pre-release tag that is behind the newest stable is
           # gated out (no pre-release entry), so its /pre-release/ alias must not
           # be built. The selector data lists only emitted aliases.
-          ALIAS_TAG=$(python3 - website/data/versions.toml "$CHANNEL" <<'PY'
+          ALIAS_TAG=$(python3 - data/versions.toml "$CHANNEL" <<'PY'
           import re, sys
           with open(sys.argv[1], encoding="utf-8") as fh:
               text = fh.read()
