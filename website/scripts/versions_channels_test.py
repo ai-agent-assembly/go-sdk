@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import sys
 import unittest
+from typing import ClassVar
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -50,7 +51,7 @@ class TestSemverComparator(unittest.TestCase):
 
 class TestChannelGate(unittest.TestCase):
     # Scenario 1: pre-releases ahead of the newest stable -> shown.
-    SET1 = [
+    SET1: ClassVar[list[str]] = [
         "v0.0.2",
         "v0.1.0-alpha.5",
         "v0.1.0-alpha.6",
