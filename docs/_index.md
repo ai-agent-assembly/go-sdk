@@ -7,7 +7,9 @@ toc: false
 
 Go SDK for **AI Agent Assembly** — runtime governance for AI agent tool calls, written in idiomatic Go.
 
-## Quick Start
+Initialise the runtime, wrap your agent's tools, and every tool call is checked against the gateway policy before it runs and recorded after.
+
+## Quick start
 
 ```go
 import (
