@@ -1,0 +1,53 @@
+{{- /*
+  Documentation version selector for the Hextra navbar.
+
+  Data-driven from data/versions.toml. Renders a small dropdown listing every
+  published documentation version; each entry links to its Pages subpath
+  (e.g. /go-sdk/latest/, /go-sdk/v0.1.0/). The currently-served version is
+  detected from the request path so the trigger label reflects where the
+  reader is.
+
+  Hextra has no native doc versioning; this is the custom mechanism for
+  AAASM-2754. The dropdown is pure CSS (hover + focus-within) so it needs no
+  additional theme JavaScript.
+*/ -}}
+{{- $versions := .Site.Data.versions.versions -}}
+{{- /*
+  Version subpaths are absolute from the Pages site root. Because each version
+  is built with its own baseURL (e.g. .../go-sdk/latest/), relLangURL would drop
+  the repo path prefix and link to the wrong host root. Prepend the configured
+  Pages root path (params.versionsBasePath, e.g. "/go-sdk") so links resolve
+  across versions.
+*/ -}}
+{{- $base := .Site.Params.versionsBasePath | default "" -}}
+{{- $base = strings.TrimSuffix "/" $base -}}
+{{- if $versions -}}
+  {{- /* Determine the active version from the current URL path. */ -}}
+  {{- $relPath := .RelPermalink -}}
+  {{- $current := "" -}}
+  {{- range $versions -}}
+    {{- if in $relPath (printf "/%s/" .version) -}}
+      {{- $current = .version -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if not $current -}}
+    {{- range $versions -}}
+      {{- if .default -}}{{- $current = .version -}}{{- end -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if not $current -}}{{- $current = (index $versions 0).version -}}{{- end -}}
+
+  <div class="aa-version-selector hx:relative hx:mr-4" tabindex="0">
+    <button type="button" class="aa-version-trigger hx:inline-flex hx:items-center hx:gap-1 hx:rounded-sm hx:px-2 hx:py-1 hx:text-sm hx:font-medium hx:text-gray-600 hx:dark:text-gray-300 hx:hover:bg-gray-100 hx:dark:hover:bg-gray-800" aria-haspopup="listbox" aria-label="Select documentation version">
+      <span class="aa-version-current">{{ $current }}</span>
+      <span aria-hidden="true">▾</span>
+    </button>
+    <ul class="aa-version-menu hx:absolute hx:left-0 hx:mt-1 hx:min-w-[8rem] hx:rounded-md hx:border hx:border-gray-200 hx:dark:border-gray-700 hx:bg-white hx:dark:bg-dark hx:shadow-lg hx:py-1 hx:z-30" role="listbox">
+      {{- range $versions -}}
+        <li role="option" {{ if eq .version $current }}aria-selected="true"{{ end }}>
+          <a class="hx:block hx:px-3 hx:py-1.5 hx:text-sm hx:text-gray-700 hx:dark:text-gray-200 hx:hover:bg-gray-100 hx:dark:hover:bg-gray-800{{ if eq .version $current }} hx:font-semibold{{ end }}" href="{{ printf "%s%s" $base .path }}">{{ .version }}</a>
+        </li>
+      {{- end -}}
+    </ul>
+  </div>
+{{- end -}}
