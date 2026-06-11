@@ -22,3 +22,10 @@ code, pre, kbd { font-family: var(--mono-font-family); }
 /* readability measure — Hextra content is wide by default.
    Selector may need tuning during the go-sdk build (AAASM-2738). */
 .hextra-content, main article .content { max-width: 72ch; }
+
+/* Documentation version selector (AAASM-2754).
+   Pure CSS dropdown — visible on hover or keyboard focus, no theme JS. */
+.aa-version-selector .aa-version-menu { display: none; }
+.aa-version-selector:hover .aa-version-menu,
+.aa-version-selector:focus-within .aa-version-menu { display: block; }
+.aa-version-selector .aa-version-trigger { cursor: pointer; }
