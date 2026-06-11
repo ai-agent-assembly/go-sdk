@@ -1,20 +1,52 @@
-# Documentation versions for the navbar version selector.
+# Documentation versions for the navbar version selector and warning banner.
 #
 # Each entry renders one item in the version dropdown (see
-# layouts/_partials/navbar-title.html). The site is published to GitHub Pages
-# under a per-version subpath; `path` is that subpath (with leading and trailing
-# slash), relative to the Pages site root.
+# layouts/_partials/version-selector.html). The site is published to GitHub
+# Pages under a per-version (or per-channel) subpath; `path` is that subpath
+# (with leading and trailing slash), relative to the Pages site root.
 #
-# Lifecycle:
-#   * `latest` tracks master and is rebuilt on every push to master.
-#   * Frozen snapshots (e.g. `v0.1.0`) are appended here by the release workflow
-#     when a `v*` tag is pushed — the FIRST frozen snapshot is cut at v0.1.0, not
-#     now. Do not hand-add frozen versions; the release job owns that.
+# Channel model (AAASM-2754)
+# --------------------------
+# There is no separate publisher workflow for the Go SDK: a "release" is a git
+# tag push (`v0.0.1-alpha.N`, latest a release tag `vX.Y.Z`). So docs versions
+# are organised into MOVING CHANNELS plus frozen ARCHIVED snapshots:
 #
-# `latest` must remain the default (first) entry so the selector highlights it
-# while master docs are the live default.
+#   channel = "latest"       moving   tracks master            label "latest (master)"
+#   channel = "pre-release"  moving   newest pre-release tag    label "pre-release (<tag>)"
+#   channel = "stable"       moving   newest stable tag         label "stable (<tag>)"
+#   channel = "archived"     frozen   one entry per concrete    label "<tag>"
+#                                     tag, kept reachable
+#
+# Channel detection from a tag (done by the release job in docs-site.yml):
+#   ^v\d+\.\d+\.\d+$      -> stable
+#   ^v\d+\.\d+\.\d+-.+    -> pre-release
+#
+# At tag time the release job builds the concrete `/<tag>/` subpath, appends an
+# `archived` entry for it, and points the moving `stable`/`pre-release` channel
+# alias at that concrete build (alias subpath + redirect). `latest` is rebuilt
+# on every push to master.
+#
+# Fields
+#   channel  one of: latest | pre-release | stable | archived
+#   version  stable identifier used to detect the active build from the URL
+#            (the channel name for moving channels, the tag for archived)
+#   label    human-readable text shown in the selector
+#   path     Pages subpath (leading + trailing slash)
+#   tag      (moving stable/pre-release only) the concrete tag the channel
+#            currently points at — used for the composite label and the
+#            warning banner's "stable" comparison
+#   default  exactly one entry; the selector highlights it when the active
+#            version can't be derived from the URL
+#
+# Current state: only `latest` is checked in. The `pre-release` channel +
+# archived entries are appended by the release job on the next `v*` tag push;
+# the `stable` channel entry and the version warning banner appear
+# automatically at the first `vX.Y.0` tag. Do not hand-add channel or stable
+# entries — the release job owns them.
 
 [[versions]]
+  channel = "latest"
   version = "latest"
+  label = "latest (master)"
   path = "/latest/"
   default = true
