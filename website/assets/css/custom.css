@@ -22,3 +22,34 @@ code, pre, kbd { font-family: var(--mono-font-family); }
 /* readability measure — Hextra content is wide by default.
    Selector may need tuning during the go-sdk build (AAASM-2738). */
 .hextra-content, main article .content { max-width: 72ch; }
+
+/* Documentation version selector (AAASM-2754).
+   Pure CSS dropdown — visible on hover or keyboard focus, no theme JS. */
+.aa-version-selector .aa-version-menu { display: none; }
+.aa-version-selector:hover .aa-version-menu,
+.aa-version-selector:focus-within .aa-version-menu { display: block; }
+.aa-version-selector .aa-version-trigger { cursor: pointer; }
+.aa-version-selector .aa-version-heading { pointer-events: none; }
+
+/* Documentation version-warning banner (AAASM-2754).
+   Baked per-version build; shown on non-stable docs only. */
+.aa-version-banner {
+  padding: 0.6rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  text-align: center;
+  color: hsl(38 92% 20%);
+  background: hsl(48 96% 89%);
+  border-bottom: 1px solid hsl(45 93% 78%);
+}
+.dark .aa-version-banner {
+  color: hsl(48 96% 89%);
+  background: hsl(38 50% 18%);
+  border-bottom-color: hsl(38 50% 30%);
+}
+.aa-version-banner-link {
+  font-weight: 600;
+  text-decoration: underline;
+  color: inherit;
+}
+.aa-version-banner code { font-size: 0.85em; }

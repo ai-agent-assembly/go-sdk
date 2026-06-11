@@ -30,6 +30,11 @@ description = "Go SDK for AI Agent Assembly — runtime governance for AI agent 
     noClasses = false
 
 [params]
+  # Pages site-root path prefix for the documentation version selector.
+  # The site deploys to ai-agent-assembly.github.io/go-sdk/, so version
+  # subpaths (/latest/, /v0.1.0/) must be prefixed with /go-sdk to resolve
+  # correctly from any per-version baseURL. See data/versions.toml.
+  versionsBasePath = "/go-sdk"
   [params.navbar]
     displayTitle = true
     displayLogo = true
