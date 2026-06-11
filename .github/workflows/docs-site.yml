@@ -63,40 +63,101 @@ jobs:
         working-directory: website
         run: hugo mod tidy
 
-      # Determine which documentation version this run publishes.
-      #   * push to master      -> "latest" (live docs tracking master)
-      #   * push of a v* tag     -> the tag name (frozen snapshot, e.g. v0.1.0)
-      #   * PRs / dispatch       -> "latest" (preview build only, never deployed)
+      # Determine which documentation version + channel this run publishes.
+      #   * push to master      -> channel "latest" (live docs tracking master)
+      #   * push of a v* tag     -> channel detected from the tag:
+      #         ^v\d+\.\d+\.\d+$    -> "stable"      (e.g. v0.1.0)
+      #         ^v\d+\.\d+\.\d+-.+  -> "pre-release" (e.g. v0.0.1-alpha.5)
+      #     The tag is built into its concrete /<tag>/ subpath and the moving
+      #     channel alias (/stable/ or /pre-release/) is pointed at it.
+      #   * PRs / dispatch       -> channel "latest" (preview build only)
       - name: Resolve docs version
         id: version
         run: |
+          REF_NAME="${{ github.ref_name }}"
           if [ "${{ github.ref_type }}" = "tag" ]; then
-            echo "version=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-            echo "frozen=true" >> "$GITHUB_OUTPUT"
+            if printf '%s' "$REF_NAME" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+              CHANNEL="stable"
+            elif printf '%s' "$REF_NAME" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+-.+'; then
+              CHANNEL="pre-release"
+            else
+              echo "::error::Tag '$REF_NAME' is not a recognised release tag (vX.Y.Z or vX.Y.Z-...)."
+              exit 1
+            fi
+            {
+              echo "version=${REF_NAME}"
+              echo "channel=${CHANNEL}"
+              echo "frozen=true"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "version=latest" >> "$GITHUB_OUTPUT"
-            echo "frozen=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "version=latest"
+              echo "channel=latest"
+              echo "frozen=false"
+            } >> "$GITHUB_OUTPUT"
           fi
 
-      # On a release tag, append the new frozen version to the selector data
-      # file so the navbar dropdown lists it. The FIRST frozen snapshot is cut
-      # at v0.1.0 — master pushes never touch this file.
-      - name: Register frozen version in selector data
+      # On a release tag, register both the frozen archived snapshot and the
+      # moving channel alias in the selector data file. The append is guarded by
+      # frozen=true (i.e. github.ref_type == 'tag'); master pushes never touch
+      # this file. The channel alias entry is rewritten in place so re-pointing
+      # stable/pre-release to a newer tag updates rather than duplicates.
+      - name: Register frozen version + channel alias in selector data
         if: steps.version.outputs.frozen == 'true'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+          CHANNEL="${{ steps.version.outputs.channel }}"
           FILE="website/data/versions.toml"
-          if grep -q "version = \"${VERSION}\"" "$FILE"; then
-            echo "Version ${VERSION} already present in ${FILE}; skipping."
-          else
-            {
-              echo ""
-              echo "[[versions]]"
-              echo "  version = \"${VERSION}\""
-              echo "  path = \"/${VERSION}/\""
-            } >> "$FILE"
-            echo "Appended ${VERSION} to ${FILE}."
-          fi
+          python3 - "$FILE" "$VERSION" "$CHANNEL" <<'PY'
+          import sys, re
+          path, version, channel = sys.argv[1], sys.argv[2], sys.argv[3]
+          with open(path, encoding="utf-8") as fh:
+              text = fh.read()
+
+          # Drop any existing moving-channel block for this channel (re-point it).
+          blocks = re.split(r'(?m)^\[\[versions\]\]\s*$', text)
+          head = blocks[0]
+          kept = []
+          for body in blocks[1:]:
+              m = re.search(r'channel\s*=\s*"([^"]+)"', body)
+              ch = m.group(1) if m else ""
+              if ch == channel and channel in ("stable", "pre-release"):
+                  continue  # supersede the old alias for this moving channel
+              kept.append(body)
+
+          out = head.rstrip("\n") + "\n"
+          for body in kept:
+              out += "[[versions]]" + body.rstrip("\n") + "\n"
+
+          # Archived frozen snapshot for the concrete tag (idempotent).
+          if f'version = "{version}"' not in out or f'path = "/{version}/"' not in out:
+              out += "\n".join([
+                  "",
+                  "[[versions]]",
+                  '  channel = "archived"',
+                  f'  version = "{version}"',
+                  f'  label = "{version}"',
+                  f'  path = "/{version}/"',
+                  "",
+              ])
+
+          # Moving channel alias pointing at this tag.
+          label = f"{channel} ({version})"
+          out += "\n".join([
+              "[[versions]]",
+              f'  channel = "{channel}"',
+              f'  version = "{channel}"',
+              f'  label = "{label}"',
+              f'  path = "/{channel}/"',
+              f'  tag = "{version}"',
+              "",
+          ])
+
+          with open(path, "w", encoding="utf-8") as fh:
+              fh.write(out)
+          print(f"Registered {version} (archived) + {channel} alias -> {version}.")
+          print(open(path, encoding="utf-8").read())
+          PY
 
       - name: Build site
         working-directory: website
@@ -105,28 +166,63 @@ jobs:
           HUGO_ENV: production
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+          CHANNEL="${{ steps.version.outputs.channel }}"
+          # Build the version under publication into its own subpath. On a tag
+          # this is the concrete /<tag>/; on master it is /latest/.
           hugo --gc --minify \
             --baseURL "${PAGES_BASE}/${VERSION}/" \
             --destination "public/${VERSION}"
+          # On a release tag, also build the moving channel alias subpath
+          # (/stable/ or /pre-release/) pointing at the same content, so
+          # .../go-sdk/<channel>/ resolves to this concrete build. The selector
+          # data already lists the alias, so its baked links stay correct.
+          if [ "${{ steps.version.outputs.frozen }}" = "true" ] && [ "$VERSION" != "$CHANNEL" ]; then
+            hugo --gc --minify \
+              --baseURL "${PAGES_BASE}/${CHANNEL}/" \
+              --destination "public/${CHANNEL}"
+          fi
 
       # Assemble the Pages artifact. Existing version subpaths must NOT be
       # wiped: a single deploy-pages artifact replaces the whole site, so a
       # release that cuts a new frozen snapshot must also re-include the
       # previously-published versions.
       #
-      # NOTE (release-time aggregation): this job currently builds only the
-      # version under publication ("latest" on master, or the tagged snapshot).
-      # Master pushes correctly republish "latest" each time. Cutting the first
-      # frozen v0.1.0 snapshot additionally requires re-materialising the live
-      # "latest" subpath alongside the new version in the same artifact (e.g.
-      # rebuild "latest" from master in this job, or fetch the deployed site).
-      # That aggregation is the v0.1.0 release step and is intentionally left
-      # for the release window rather than implemented speculatively now.
-      - name: Add site-root redirect to latest
+      # NOTE (release-time aggregation): this job builds the version under
+      # publication ("latest" on master, or the tagged snapshot + its channel
+      # alias on a tag). Master pushes republish "latest" each time. Cutting the
+      # first frozen vX.Y.Z snapshot additionally requires re-materialising the
+      # other channels/versions in the same artifact (rebuild from master or
+      # fetch the deployed site). That cross-version aggregation is the release
+      # step and is intentionally left for the release window.
+
+      # The site-root redirect lands on the best channel: stable, else
+      # pre-release, else latest. Resolve the target from versions.toml and
+      # substitute it into the redirect template so the root is never hardcoded.
+      - name: Add site-root redirect through stable -> pre-release -> latest
         if: github.event_name == 'push'
         run: |
+          DEFAULT_PATH=$(python3 - website/data/versions.toml <<'PY'
+          import sys, re
+          with open(sys.argv[1], encoding="utf-8") as fh:
+              text = fh.read()
+          paths = {}
+          for body in re.split(r'(?m)^\[\[versions\]\]\s*$', text)[1:]:
+              ch = re.search(r'channel\s*=\s*"([^"]+)"', body)
+              pa = re.search(r'path\s*=\s*"([^"]+)"', body)
+              if ch and pa:
+                  paths[ch.group(1)] = pa.group(1)
+          for channel in ("stable", "pre-release", "latest"):
+              if channel in paths:
+                  print("." + paths[channel])
+                  break
+          else:
+              print("./latest/")
+          PY
+          )
+          echo "Root redirect target: ${DEFAULT_PATH}"
           mkdir -p website/public
-          cp website/redirect/index.html website/public/index.html
+          sed "s#@@DEFAULT_PATH@@#${DEFAULT_PATH}#g" \
+            website/redirect/index.html > website/public/index.html
 
       - name: Upload Pages artifact
         if: github.event_name == 'push'
