@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<!--
+  GitHub Pages site-root redirect for versioned documentation (AAASM-2754).
+
+  Documentation is published under per-version subpaths (e.g. /latest/,
+  /v0.1.0/). This file is placed at the Pages site root by the Docs Site
+  workflow so visitors landing on the bare site URL are forwarded to the
+  live `latest` docs. Versioned snapshots are reachable via the navbar
+  version selector.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="refresh" content="0; url=./latest/" />
+  <link rel="canonical" href="./latest/" />
+  <title>Redirecting to latest documentation…</title>
+</head>
+<body>
+  <p>Redirecting to the <a href="./latest/">latest documentation</a>…</p>
+  <script>window.location.replace("./latest/" + window.location.hash);</script>
+</body>
+</html>
