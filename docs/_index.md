@@ -28,6 +28,11 @@ Concretely, the SDK is two things working together:
   `RecordResult` after. Your agent code keeps calling tools the way it always
   did; the wrapper does the governance.
 
+For the platform as a whole — what the gateway is, how policy and budgets are
+authored, and how the three interception layers fit together — see the
+[core agent-assembly documentation](https://ai-agent-assembly.github.io/agent-assembly/)
+and the shared [docs hub](https://ai-agent-assembly.github.io/agent-assembly-docs/).
+
 ## Who it's for
 
 - **Go developers** building or operating AI agents who need allow/deny, audit,
@@ -68,19 +73,19 @@ func main() {
 }
 ```
 
-[Get started in 3 steps →](quick-start/)
+[Get started in 3 steps →]({{< relref "/quick-start" >}})
 
 ## Documentation map
 
 | Section | What's inside |
 |---|---|
-| [Quick Start](quick-start/) | Install, configure, and govern your first agent's tools — copy-paste. |
-| [Core Concepts](core-concepts/) | How the SDK talks to the gateway, the client lifecycle, modes, and enforcement. |
-| [Guides](guides/) | Task-first walkthroughs: wrap an agent's tools, integrate a framework, handle allow/deny and errors. |
-| [Configuration](configuration/) | Gateway/API-key resolution, every `Init` option, enforcement modes, context helpers. |
-| [API Reference](api-reference/) | The authoritative godoc on pkg.go.dev, plus a curated summary of the key exported API. |
-| [Compatibility & Versioning](compatibility/) | Gateway protocol pin, the core↔SDK matrix, toolchain floor, and the release process. |
-| [Troubleshooting](troubleshooting/) | Typed errors, timeouts, build/transport gotchas, and where to get help. |
+| [Quick Start]({{< relref "/quick-start" >}}) | Install, configure, and govern your first agent's tools — copy-paste. |
+| [Core Concepts]({{< relref "/core-concepts" >}}) | How the SDK talks to the gateway, the client lifecycle, modes, and enforcement. |
+| [Guides]({{< relref "/guides" >}}) | Task-first walkthroughs: wrap an agent's tools, integrate a framework, handle allow/deny and errors. |
+| [Configuration]({{< relref "/configuration" >}}) | Gateway/API-key resolution, every `Init` option, enforcement modes, context helpers. |
+| [API Reference]({{< relref "/api-reference" >}}) | The authoritative godoc on pkg.go.dev, plus a curated summary of the key exported API. |
+| [Compatibility & Versioning]({{< relref "/compatibility" >}}) | Gateway protocol pin, the core↔SDK matrix, toolchain floor, and the release process. |
+| [Troubleshooting]({{< relref "/troubleshooting" >}}) | Typed errors, timeouts, build/transport gotchas, and where to get help. |
 
 > Pure-Go by default (`CGO_ENABLED=0`); the native FFI transport is opt-in via
-> `-tags aa_ffi_go`. See [Core Concepts](core-concepts/#the-ffi-transport-bridge).
+> `-tags aa_ffi_go`. See [Core Concepts]({{< relref "/core-concepts#the-ffi-transport-bridge" >}}).

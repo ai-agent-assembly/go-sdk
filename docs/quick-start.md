@@ -20,7 +20,7 @@ checked against the AI Agent Assembly gateway. The whole thing is a single
   your `PATH`).
 - For **production**: a gateway URL and, if your gateway requires auth, an API
   key. Both can come from options, environment variables, or a config file —
-  see [Configuration](../configuration/).
+  see [Configuration]({{< relref "/configuration" >}}).
 - *(Optional)* a C compiler, only if you opt into the native FFI transport with
   `-tags aa_ffi_go`. The default transport is pure-Go and needs none.
 
@@ -69,7 +69,7 @@ func main() {
 
 For **local development** you can drop both options entirely — `assembly.Init(ctx)`
 resolves the gateway from the environment, then `~/.aasm/config.yaml`, then the
-local default. See [Configuration](../configuration/#gateway-and-credential-resolution)
+local default. See [Configuration]({{< relref "/configuration#gateway-and-credential-resolution" >}})
 for the full resolution order.
 
 ## Step 3 — Wrap your tools
@@ -96,7 +96,7 @@ Passing `nil` gives you a **passthrough wrapper** — the tools run, but no
 `Check`/`RecordResult` calls are made. That's the simplest starting point and
 what the package's own runnable example uses; wire in a real client when you're
 ready to enforce policy (see
-[Handle allow/deny decisions and errors](../guides/handle-decisions-and-errors/)).
+[Handle allow/deny decisions and errors]({{< relref "/guides/handle-decisions-and-errors" >}})).
 
 Hand `governed` to your agent in place of the originals. From here on, each call
 against a governed tool is checked against the gateway policy before execution
@@ -150,14 +150,14 @@ func main() {
 
 - **`Init` succeeds** once a gateway is reachable (resolved or auto-started). If
   no gateway can be found and no `aasm` binary is on `PATH`, you'll get a typed
-  `*assembly.ConfigurationError` — see [Troubleshooting](../troubleshooting/).
+  `*assembly.ConfigurationError` — see [Troubleshooting]({{< relref "/troubleshooting" >}}).
 - **Tool calls run** and return the inner tool's result. With a real governance
   client wired in, a `deny` decision surfaces as a
   `*assembly.PolicyViolationError` and the inner tool never runs.
 
 ## Where to next
 
-- [Core Concepts](../core-concepts/) — what's actually happening inside the SDK.
-- [Guides](../guides/) — wrap a real agent, integrate a framework, handle decisions.
-- [Configuration](../configuration/) — every `Init` option, defaults, and enforcement modes.
-- [Troubleshooting](../troubleshooting/) — what to do when `Init` or a check fails.
+- [Core Concepts]({{< relref "/core-concepts" >}}) — what's actually happening inside the SDK.
+- [Guides]({{< relref "/guides" >}}) — wrap a real agent, integrate a framework, handle decisions.
+- [Configuration]({{< relref "/configuration" >}}) — every `Init` option, defaults, and enforcement modes.
+- [Troubleshooting]({{< relref "/troubleshooting" >}}) — what to do when `Init` or a check fails.

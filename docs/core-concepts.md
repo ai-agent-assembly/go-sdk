@@ -5,7 +5,7 @@ weight: 2
 
 # Core Concepts
 
-Read this after the [Quick Start](quick-start/) when you want to understand
+Read this after the [Quick Start]({{< relref "/quick-start" >}}) when you want to understand
 *how* the SDK works — how it talks to the gateway, the lifecycle of the runtime
 handle, what enforcement actually means, and how the SDK is shaped internally.
 
@@ -21,8 +21,12 @@ Every governed tool call results in two messages to the gateway:
 2. A **`RecordResult`** after the tool runs — the gateway records the outcome
    for audit, budgeting, and topology.
 
-These travel over the gateway's wire protocol (gRPC/HTTP). Your code talks to
-the gateway through one small interface, `GovernanceClient`:
+These travel over the gateway's wire protocol (gRPC/HTTP). For how the gateway
+itself is built — registry, policy engine, budgets, and the three interception
+layers the SDK is one of — see the core
+[Architecture overview](https://ai-agent-assembly.github.io/agent-assembly/).
+
+Your code talks to the gateway through one small interface, `GovernanceClient`:
 
 ```go
 type GovernanceClient interface {
@@ -44,7 +48,7 @@ handle. Its lifecycle is deliberately simple:
 
 1. **Resolve** — `Init` resolves the gateway URL and API key through a fixed
    precedence chain (option → env → config file → local default). See
-   [Configuration](configuration/#gateway-and-credential-resolution).
+   [Configuration]({{< relref "/configuration#gateway-and-credential-resolution" >}}).
 2. **Boot** — it validates the resolved options, optionally launches a managed
    sidecar (when `WithSidecarBinary` is set), connects, and registers the agent
    with the gateway, carrying any topology fields (`WithTeamID`,
@@ -100,6 +104,11 @@ reach* the gateway to get a decision:
 
 These compose: enforcement mode governs decisions the gateway *makes*; failure
 mode governs what happens when no decision *arrives*.
+
+> The SDK is the lowest-latency of three interception layers, not a trust
+> boundary on its own — the gateway is authoritative. See the core
+> [Security Model](https://ai-agent-assembly.github.io/agent-assembly/) for how
+> the SDK, sidecar proxy, and eBPF layers combine to catch bypass attempts.
 
 ## Module structure
 

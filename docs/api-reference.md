@@ -24,7 +24,7 @@ func Init(ctx context.Context, options ...Option) (*Assembly, error)
 
 Configures and boots the runtime, resolving the gateway URL and API key, then
 registering the agent with the gateway. Returns the `*Assembly` handle. See
-[Configuration](configuration/) for the resolution order.
+[Configuration]({{< relref "/configuration" >}}) for the resolution order.
 
 ```go
 type Assembly struct{ /* unexported */ }
@@ -105,7 +105,7 @@ type Option func(*runtimeOptions)
 | `WithSpawnedByTool` | `func(tool string) Option` |
 | `WithSidecarBinary` | `func(path string) Option` |
 
-See [Configuration](configuration/) for defaults and behaviour.
+See [Configuration]({{< relref "/configuration" >}}) for defaults and behaviour.
 
 ## Enforcement modes
 
@@ -151,7 +151,7 @@ type Chain interface {
 func WrapChain(a *Assembly, chain Chain) Chain
 ```
 
-See [Integrate with a framework](guides/framework-integration/).
+See [Integrate with a framework]({{< relref "/guides/framework-integration" >}}).
 
 ## Errors
 
@@ -167,8 +167,8 @@ type GatewayError          struct { Message string }         // gateway unreacha
 ```
 
 Match sentinels with `errors.Is` and structured types with `errors.As`. See
-[Handle allow/deny decisions and errors](guides/handle-decisions-and-errors/) and
-[Troubleshooting](troubleshooting/).
+[Handle allow/deny decisions and errors]({{< relref "/guides/handle-decisions-and-errors" >}}) and
+[Troubleshooting]({{< relref "/troubleshooting" >}}).
 
 ## Local preview
 
@@ -184,8 +184,8 @@ Then open
 
 ## See also
 
-- [Core Concepts](core-concepts/) — *why* these APIs are shaped the way they are.
-- [Quick Start](quick-start/) — install, init, wrap your tools.
+- [Core Concepts]({{< relref "/core-concepts" >}}) — *why* these APIs are shaped the way they are.
+- [Quick Start]({{< relref "/quick-start" >}}) — install, init, wrap your tools.
 - [Contributing](https://github.com/ai-agent-assembly/go-sdk/blob/master/CONTRIBUTING.md) —
   the conventions enforced in review (context-first, `%w` wrapping, `io.Closer`,
   functional options, `internal/` boundary).

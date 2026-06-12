@@ -145,7 +145,7 @@ the whole slice.
 
 ## Next
 
-- [Handle allow/deny decisions and errors](../handle-decisions-and-errors/) —
+- [Handle allow/deny decisions and errors]({{< relref "/guides/handle-decisions-and-errors" >}}) —
   what happens on a `deny`, a pending approval, or an unreachable gateway.
-- [Integrate with a framework](../framework-integration/) — propagate agent
+- [Integrate with a framework]({{< relref "/guides/framework-integration" >}}) — propagate agent
   lineage when one agent spawns another.

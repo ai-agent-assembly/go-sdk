@@ -70,7 +70,7 @@ a, err := assembly.Init(ctx,
 
 Pick fail-closed when an ungoverned action is unacceptable; pick fail-open when
 availability matters more than strict enforcement. The two are independent of the
-gateway's [enforcement mode](../../core-concepts/#modes-and-enforcement).
+gateway's [enforcement mode]({{< relref "/core-concepts#modes-and-enforcement" >}}).
 
 ## Initialisation errors
 
@@ -113,7 +113,7 @@ comparing error strings.
 
 ## Next
 
-- [Troubleshooting](../../troubleshooting/) — symptom → cause → fix tables for the
+- [Troubleshooting]({{< relref "/troubleshooting" >}}) — symptom → cause → fix tables for the
   errors above.
-- [Configuration](../../configuration/) — timeouts, enforcement modes, and the
+- [Configuration]({{< relref "/configuration" >}}) — timeouts, enforcement modes, and the
   resolution chain.

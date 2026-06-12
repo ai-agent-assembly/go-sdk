@@ -35,7 +35,7 @@ change ships.
 - **Transports** — the SDK talks to the gateway over **gRPC** and **HTTP**.
 - **Enforcement modes** — `EnforcementMode` mirrors `aa_core::EnforcementMode`;
   the `enforce` / `observe` / `disabled` tokens are sent verbatim on the wire.
-  See [Configuration](configuration/) for the per-agent posture.
+  See [Configuration]({{< relref "/configuration" >}}) for the per-agent posture.
 - **Identity propagation** — agent / trace / run IDs flow to the gateway on
   every `Check` and `RecordResult`; the trace ID falls back to the active
   OpenTelemetry span context when not set explicitly.

@@ -34,6 +34,11 @@ The gateway URL is resolved from, highest priority first:
    gateway answers, auto-starts a local one (`aasm start --mode local
    --foreground`).
 
+The `aasm` CLI and the gateway it manages are documented in the core
+[agent-assembly docs](https://ai-agent-assembly.github.io/agent-assembly/) —
+see there for running a gateway, authoring policy, and the full `aasm`
+command set.
+
 If every source yields an empty URL, `Init` returns `ErrInvalidGateway`.
 
 The API key follows the same chain — `WithAPIKey` → `AAASM_API_KEY` →
@@ -94,6 +99,6 @@ ctx = assembly.EnsureRunID(ctx)
 
 ## Where to next
 
-- [Quick Start](quick-start/) — install, init, wrap your tools.
-- [Troubleshooting](troubleshooting/) — what each configuration error means.
-- [Core Concepts](core-concepts/) — how options flow into the runtime.
+- [Quick Start]({{< relref "/quick-start" >}}) — install, init, wrap your tools.
+- [Troubleshooting]({{< relref "/troubleshooting" >}}) — what each configuration error means.
+- [Core Concepts]({{< relref "/core-concepts" >}}) — how options flow into the runtime.

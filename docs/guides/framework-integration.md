@@ -26,7 +26,7 @@ type Tool interface {
 If your framework's tool type already exposes a name, description, and a
 context-aware call, satisfy the interface directly. Otherwise write a one-struct
 adapter per tool and pass the adapted slice to `WrapTools`. See
-[Govern an agent's tools](../govern-an-agents-tools/) for the wrapping mechanics.
+[Govern an agent's tools]({{< relref "/guides/govern-an-agents-tools" >}}) for the wrapping mechanics.
 
 ## Wrapping chains (langchaingo-style)
 
@@ -107,11 +107,11 @@ child, err := assembly.Init(ctx,
 ```
 
 These flow to the gateway at registration and let it reconstruct the agent
-topology. See [Configuration](../../configuration/#optional-options) for the full
+topology. See [Configuration]({{< relref "/configuration#optional-options" >}}) for the full
 list.
 
 ## Next
 
-- [Handle allow/deny decisions and errors](../handle-decisions-and-errors/) —
+- [Handle allow/deny decisions and errors]({{< relref "/guides/handle-decisions-and-errors" >}}) —
   reacting to the gateway's decisions.
-- [Configuration](../../configuration/) — every option and the resolution order.
+- [Configuration]({{< relref "/configuration" >}}) — every option and the resolution order.
