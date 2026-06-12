@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<!--
+  GitHub Pages site-root redirect for versioned documentation (AAASM-2754).
+
+  Documentation is published under per-channel / per-version subpaths
+  (/latest/, /pre-release/, /stable/, /<tag>/). This file is placed at the
+  Pages site root by the Docs Site workflow so visitors landing on the bare
+  site URL are forwarded to the preferred channel.
+
+  Landing precedence: stable -> pre-release -> latest.
+  The workflow rewrites the @@DEFAULT_PATH@@ token below to the resolved
+  channel subpath (e.g. ./stable/) by reading data/versions.toml, so the root
+  always lands on the best available channel without a hardcoded version.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="refresh" content="0; url=@@DEFAULT_PATH@@" />
+  <link rel="canonical" href="@@DEFAULT_PATH@@" />
+  <title>Redirecting to documentation…</title>
+</head>
+<body>
+  <p>Redirecting to the <a href="@@DEFAULT_PATH@@">documentation</a>…</p>
+  <script>window.location.replace("@@DEFAULT_PATH@@" + window.location.hash);</script>
+</body>
+</html>

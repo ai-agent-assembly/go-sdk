@@ -1,0 +1,79 @@
+{{- /*
+  Documentation version-warning banner (AAASM-2754).
+
+  Each per-version build bakes this banner from data/versions.toml, so the
+  message is frozen correctly for the version it is built into. The active
+  version is derived from the page's .RelPermalink subpath (each build serves
+  under /<version>/), and compared to the moving `stable` channel entry.
+
+  Messages
+    * stable channel / the stable concrete tag  -> no banner
+    * latest channel (master)                    -> "in-development (master)"
+    * a stable release exists, this isn't it     -> "not the latest stable
+                                                     (<stableTag>)" + link
+    * no stable release yet (pre-release/old)    -> gentle "pre-release; no
+                                                     stable yet" note
+
+  The "go to stable" link uses versionsBasePath + the stable entry's path.
+*/ -}}
+{{- $versions := .Site.Data.versions.versions -}}
+{{- if $versions -}}
+  {{- $base := .Site.Params.versionsBasePath | default "" -}}
+  {{- $base = strings.TrimSuffix "/" $base -}}
+
+  {{- /* Resolve the stable channel entry (may be absent until first vX.Y.0). */ -}}
+  {{- $stable := "" -}}
+  {{- range $versions -}}
+    {{- if eq .channel "stable" -}}{{- $stable = . -}}{{- end -}}
+  {{- end -}}
+
+  {{- /* Identify the version this page is built into, from its URL subpath. */ -}}
+  {{- $relPath := .RelPermalink -}}
+  {{- $current := "" -}}
+  {{- range $versions -}}
+    {{- if in $relPath (printf "/%s/" .version) -}}{{- $current = . -}}{{- end -}}
+  {{- end -}}
+  {{- if not $current -}}
+    {{- range $versions -}}
+      {{- if .default -}}{{- $current = . -}}{{- end -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- if $current -}}
+    {{- $channel := $current.channel -}}
+    {{- $isStable := false -}}
+    {{- if $stable -}}
+      {{- /* On the stable channel alias, or on the concrete stable tag. */ -}}
+      {{- if or (eq $channel "stable") (eq $current.version $stable.tag) -}}
+        {{- $isStable = true -}}
+      {{- end -}}
+    {{- end -}}
+
+    {{- if not $isStable -}}
+      {{- $stableHref := "" -}}
+      {{- $stableTag := "" -}}
+      {{- if $stable -}}
+        {{- $stableHref = printf "%s%s" $base $stable.path -}}
+        {{- $stableTag = $stable.tag -}}
+      {{- end -}}
+      <div class="aa-version-banner" role="alert">
+        {{- if eq $channel "latest" -}}
+          <span class="aa-version-banner-text">
+            You are reading the <strong>in-development</strong> documentation (tracking <code>master</code>).
+            {{- if $stable }} For the released docs, see the
+              <a class="aa-version-banner-link" href="{{ $stableHref }}">latest stable ({{ $stableTag }})</a>.{{- end -}}
+          </span>
+        {{- else if $stable -}}
+          <span class="aa-version-banner-text">
+            This is <strong>not the latest stable</strong> documentation.
+            See the <a class="aa-version-banner-link" href="{{ $stableHref }}">latest stable ({{ $stableTag }})</a>.
+          </span>
+        {{- else -}}
+          <span class="aa-version-banner-text">
+            This is a <strong>pre-release</strong>; no stable release has been published yet.
+          </span>
+        {{- end -}}
+      </div>
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
