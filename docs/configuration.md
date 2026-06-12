@@ -28,7 +28,7 @@ production and omit them entirely for local development.
 The gateway URL is resolved from, highest priority first:
 
 1. `WithGatewayURL("…")` — the explicit option.
-2. The `AASM_GATEWAY_URL` environment variable.
+2. The `AAASM_GATEWAY_URL` environment variable.
 3. The `agent.gateway_url` key in `~/.aasm/config.yaml`.
 4. The local default `http://localhost:7391` — `Init` probes it and, if no
    gateway answers, auto-starts a local one (`aasm start --mode local
@@ -36,10 +36,11 @@ The gateway URL is resolved from, highest priority first:
 
 If every source yields an empty URL, `Init` returns `ErrInvalidGateway`.
 
-The API key follows the same chain — `WithAPIKey` → `AASM_API_KEY` →
+The API key follows the same chain — `WithAPIKey` → `AAASM_API_KEY` →
 `agent.api_key` in the config file — but an **empty API key is allowed**:
 local mode accepts unauthenticated calls, so no error is raised when the key
-is unset.
+is unset. `WithAPIKey` is therefore **optional**; supply it only when your
+gateway requires authentication.
 
 ```yaml
 # ~/.aasm/config.yaml
@@ -93,6 +94,6 @@ ctx = assembly.EnsureRunID(ctx)
 
 ## Where to next
 
-- [Getting Started](getting-started/) — install, init, wrap your tools.
+- [Quick Start](quick-start/) — install, init, wrap your tools.
 - [Troubleshooting](troubleshooting/) — what each configuration error means.
-- [Architecture](architecture/) — how options flow into the runtime.
+- [Core Concepts](core-concepts/) — how options flow into the runtime.
