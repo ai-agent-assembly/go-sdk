@@ -2,6 +2,11 @@ baseURL = "https://ai-agent-assembly.github.io/go-sdk/"
 title = "go-sdk · AI Agent Assembly"
 languageCode = "en-us"
 description = "Go SDK for AI Agent Assembly — runtime governance for AI agent tool calls"
+enableGitInfo = true
+
+# Fail the build on broken {{< ref >}}/{{< relref >}} targets so renamed or
+# removed pages can never ship a dead internal link again.
+refLinksErrorLevel = "ERROR"
 
 [module]
   [[module.imports]]
@@ -30,6 +35,10 @@ description = "Go SDK for AI Agent Assembly — runtime governance for AI agent 
     noClasses = false
 
 [params]
+  # Per-page git "Last updated … by <author>" line (needs enableGitInfo + full
+  # checkout history in CI). Rendered by Hextra's components/last-updated partial.
+  displayUpdatedDate = true
+  displayUpdatedAuthor = true
   # Pages site-root path prefix for the documentation version selector.
   # The site deploys to ai-agent-assembly.github.io/go-sdk/, so version
   # subpaths (/latest/, /v0.1.0/) must be prefixed with /go-sdk to resolve

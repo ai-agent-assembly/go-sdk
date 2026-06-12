@@ -21,7 +21,7 @@ Anything outside the `assembly/` package (`internal/`, `examples/`) is not part 
 ## Prerequisites
 
 - **Go ≥ 1.26** — the floor declared in `go.mod`.
-- An AAASM gateway URL and API key (operator-issued).
+- For production: an operator-issued gateway URL and API key. For local development you can skip both — `Init` discovers a gateway on `http://localhost:7391` (see [Configuration](docs/configuration.md#gateway-and-credential-resolution)).
 - *(Optional)* a C compiler — only needed if you build with `-tags aa_ffi_go` to enable the native FFI transport. The default transport is pure-Go and runs cleanly with `CGO_ENABLED=0`.
 
 ## Installation
@@ -69,11 +69,19 @@ defer a.Close()
 
 `WithAgentID` attaches the calling agent's identity to `ctx`; the SDK forwards it (and any `WithTraceID` / `WithRunID` values) to the gateway on every `Check` and `RecordResult`. See [Context Propagation](#context-propagation) below for the full set of context helpers.
 
+Then wrap your agent's tools so every call is governed:
+
+```go
+governed := assembly.WrapTools(myTools, nil)
+```
+
+The second argument is the `GovernanceClient` that talks to the gateway; passing `nil` gives a passthrough wrapper (tools run, no gateway calls) — wire in a real client when you're ready to enforce. Each call against a tool in `governed` is then checked against the gateway policy before it runs and recorded after. Hand `governed` to your agent in place of the originals. See [Quick Start](docs/quick-start.md) for the end-to-end walk-through.
+
 ## Documentation
 
 - **Live site** — [ai-agent-assembly.github.io/go-sdk](https://ai-agent-assembly.github.io/go-sdk/) (Hugo, Hextra theme; built and deployed from `master`).
 - **API reference** — [pkg.go.dev/github.com/ai-agent-assembly/go-sdk](https://pkg.go.dev/github.com/ai-agent-assembly/go-sdk) (auto-generated from godoc; preview locally with `godoc -http=:6060`).
-- **Architecture** — [docs/architecture.md](docs/architecture.md) and [docs/api-reference.md](docs/api-reference.md).
+- **Core concepts** — [docs/core-concepts.md](docs/core-concepts.md) and [docs/api-reference.md](docs/api-reference.md).
 - **Contributing** — [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## AI Agent Assembly ecosystem

@@ -5,20 +5,15 @@ weight: 3
 
 # Guides
 
-Topical how-tos and deeper explanations. Pages land here as Subtasks
-under [AAASM-316](https://lightning-dust-mite.atlassian.net/browse/AAASM-316)
-and follow-up Stories complete.
+Task-first walkthroughs that show the SDK doing real work. Each guide is
+self-contained and grounded in the actual `assembly` package API — start with
+whichever matches what you're building.
 
-## Planned
-
-- **Context propagation** — `AgentID`, `TraceID`, `RunID` flow; OpenTelemetry
-  span context fallback; `EnsureRunID` for stable run IDs.
-- **FFI transport modes** — choosing between the pure-Go UDS fallback and
-  the CGo native bridge; build-tag selection; `CGO_ENABLED=0` support.
-- **Error handling** — sentinel errors, `errors.Is` / `errors.As`, wrapping
-  with `%w`.
-- **Sidecar mode** — running with a local proxy instead of direct gateway
-  calls.
+| Guide | What you'll do |
+|---|---|
+| [Govern an agent's tools]({{< relref "/guides/govern-an-agents-tools" >}}) | Implement the `Tool` interface, wrap a tool slice, and run governed calls end to end. |
+| [Integrate with a framework]({{< relref "/guides/framework-integration" >}}) | Plug the SDK into an existing agent framework (langchaingo-style chains) and propagate agent lineage across hops. |
+| [Handle allow/deny decisions and errors]({{< relref "/guides/handle-decisions-and-errors" >}}) | Match the typed errors the SDK returns, react to deny / approval / fail-closed outcomes, and choose a failure posture. |
 
 If a topic you need isn't here yet, open an issue against the
 [go-sdk repo](https://github.com/ai-agent-assembly/go-sdk/issues).

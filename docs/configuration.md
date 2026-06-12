@@ -19,12 +19,40 @@ a, err := assembly.Init(ctx,
 )
 ```
 
-## Required options
+## Gateway and credential resolution
 
-| Option | Type | If missing |
-| --- | --- | --- |
-| `WithGatewayURL` | `string` | `Init` returns `ErrInvalidGateway` |
-| `WithAPIKey` | `string` | `Init` returns `ErrInvalidAPIKey` |
+The gateway URL and API key are **not** ordinary options — `Init` resolves each
+one through a fixed precedence chain, so you can pass them explicitly in
+production and omit them entirely for local development.
+
+The gateway URL is resolved from, highest priority first:
+
+1. `WithGatewayURL("…")` — the explicit option.
+2. The `AAASM_GATEWAY_URL` environment variable.
+3. The `agent.gateway_url` key in `~/.aasm/config.yaml`.
+4. The local default `http://localhost:7391` — `Init` probes it and, if no
+   gateway answers, auto-starts a local one (`aasm start --mode local
+   --foreground`).
+
+The `aasm` CLI and the gateway it manages are documented in the core
+[agent-assembly docs](https://ai-agent-assembly.github.io/agent-assembly/) —
+see there for running a gateway, authoring policy, and the full `aasm`
+command set.
+
+If every source yields an empty URL, `Init` returns `ErrInvalidGateway`.
+
+The API key follows the same chain — `WithAPIKey` → `AAASM_API_KEY` →
+`agent.api_key` in the config file — but an **empty API key is allowed**:
+local mode accepts unauthenticated calls, so no error is raised when the key
+is unset. `WithAPIKey` is therefore **optional**; supply it only when your
+gateway requires authentication.
+
+```yaml
+# ~/.aasm/config.yaml
+agent:
+  gateway_url: https://gateway.example.com
+  api_key: your-operator-issued-key
+```
 
 ## Optional options
 
@@ -71,6 +99,6 @@ ctx = assembly.EnsureRunID(ctx)
 
 ## Where to next
 
-- [Getting Started](getting-started/) — install, init, wrap your tools.
-- [Troubleshooting](troubleshooting/) — what each configuration error means.
-- [Architecture](architecture/) — how options flow into the runtime.
+- [Quick Start]({{< relref "/quick-start" >}}) — install, init, wrap your tools.
+- [Troubleshooting]({{< relref "/troubleshooting" >}}) — what each configuration error means.
+- [Core Concepts]({{< relref "/core-concepts" >}}) — how options flow into the runtime.
