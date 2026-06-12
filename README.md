@@ -72,16 +72,16 @@ defer a.Close()
 Then wrap your agent's tools so every call is governed:
 
 ```go
-governed := assembly.WrapTools(myTools, a)
+governed := assembly.WrapTools(myTools, nil)
 ```
 
-Each call against a tool in `governed` is checked against the gateway policy before it runs and recorded after. Hand `governed` to your agent in place of the originals. See [Getting started](docs/getting-started.md) for the end-to-end walk-through.
+The second argument is the `GovernanceClient` that talks to the gateway; passing `nil` gives a passthrough wrapper (tools run, no gateway calls) — wire in a real client when you're ready to enforce. Each call against a tool in `governed` is then checked against the gateway policy before it runs and recorded after. Hand `governed` to your agent in place of the originals. See [Quick Start](docs/quick-start.md) for the end-to-end walk-through.
 
 ## Documentation
 
 - **Live site** — [ai-agent-assembly.github.io/go-sdk](https://ai-agent-assembly.github.io/go-sdk/) (Hugo, Hextra theme; built and deployed from `master`).
 - **API reference** — [pkg.go.dev/github.com/ai-agent-assembly/go-sdk](https://pkg.go.dev/github.com/ai-agent-assembly/go-sdk) (auto-generated from godoc; preview locally with `godoc -http=:6060`).
-- **Architecture** — [docs/architecture.md](docs/architecture.md) and [docs/api-reference.md](docs/api-reference.md).
+- **Core concepts** — [docs/core-concepts.md](docs/core-concepts.md) and [docs/api-reference.md](docs/api-reference.md).
 - **Contributing** — [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## AI Agent Assembly ecosystem
