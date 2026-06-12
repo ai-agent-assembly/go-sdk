@@ -5,6 +5,11 @@ toc: false
 
 # go-sdk · AI Agent Assembly
 
+AI agents take real actions — calling APIs, running code, spending money, touching
+data. This SDK lets a team decide, in advance, which of those actions an agent is
+allowed to take, and keeps a record of every one. It is the Go on-ramp to that
+control.
+
 The **Go SDK for AI Agent Assembly** lets you put a governance checkpoint in
 front of the tools your AI agent calls — without rewriting the agent. You
 initialise the runtime once, wrap your tool slice, and from then on every tool
