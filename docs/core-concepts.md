@@ -1,18 +1,107 @@
 ---
-title: Architecture
+title: Core Concepts
 weight: 2
 ---
 
-# Architecture
+# Core Concepts
 
-This page describes how `go-sdk` is organised internally — the module layout,
-the dual-mode FFI bridge to the Rust governance library, the HTTP and gRPC
-interceptor flow, the context-propagation design, and how tool wrapping
-threads governance checks around your agent's tool calls. Read it after
-[Getting Started](getting-started/) when you want to know *why* the SDK is
-shaped the way it is.
+Read this after the [Quick Start](quick-start/) when you want to understand
+*how* the SDK works — how it talks to the gateway, the lifecycle of the runtime
+handle, what enforcement actually means, and how the SDK is shaped internally.
 
-## Module Structure
+## How the SDK talks to the gateway
+
+The SDK never makes a policy decision itself. It is a **client** of the AI Agent
+Assembly **gateway** — the policy brain that lives in the
+[agent-assembly](https://github.com/ai-agent-assembly/agent-assembly) core repo.
+Every governed tool call results in two messages to the gateway:
+
+1. A **`Check`** before the tool runs — the gateway returns a `Decision`
+   (allow, deny, or "pending approval").
+2. A **`RecordResult`** after the tool runs — the gateway records the outcome
+   for audit, budgeting, and topology.
+
+These travel over the gateway's wire protocol (gRPC/HTTP). Your code talks to
+the gateway through one small interface, `GovernanceClient`:
+
+```go
+type GovernanceClient interface {
+    Check(ctx context.Context, request CheckRequest) (Decision, error)
+    WaitForApproval(ctx context.Context, request ApprovalRequest) (Decision, error)
+    RecordResult(ctx context.Context, request RecordRequest) error
+    Close() error
+}
+```
+
+`WrapTools` takes a value of this interface as its second argument. When you
+pass `nil`, the wrapper is a passthrough — tools run, no gateway calls are made
+— which is handy for getting the integration in place before you wire policy.
+
+## The Assembly runtime and its lifecycle
+
+`assembly.Init(ctx, opts...)` returns an `*assembly.Assembly` — your runtime
+handle. Its lifecycle is deliberately simple:
+
+1. **Resolve** — `Init` resolves the gateway URL and API key through a fixed
+   precedence chain (option → env → config file → local default). See
+   [Configuration](configuration/#gateway-and-credential-resolution).
+2. **Boot** — it validates the resolved options, optionally launches a managed
+   sidecar (when `WithSidecarBinary` is set), connects, and registers the agent
+   with the gateway, carrying any topology fields (`WithTeamID`,
+   `WithParentAgentID`, …) and the enforcement mode.
+3. **Use** — you wrap tools and run your agent. The handle is safe to share.
+4. **Close** — `a.Close()` stops a managed sidecar (if any) and releases the
+   runtime. Always `defer a.Close()`.
+
+Registration is **implicit**: there is no separate `RegisterAgent` call. `Init`
+emits the registration event for you as part of boot, derived from the options
+you passed.
+
+```mermaid
+sequenceDiagram
+    participant App as Your code
+    participant Init as assembly.Init
+    participant Res as Resolver
+    participant GW as Gateway
+
+    App->>Init: Init(ctx, opts...)
+    Init->>Res: resolve gateway URL + API key
+    Res-->>Init: resolved config
+    Init->>GW: connect + register agent (topology + enforcement mode)
+    GW-->>Init: ready
+    Init-->>App: *Assembly
+    Note over App,GW: wrap tools, run agent…
+    App->>Init: a.Close()
+```
+
+## Modes and enforcement
+
+Two independent knobs decide what happens when a governed tool is called.
+
+**Enforcement mode** (`WithEnforcementMode`) is the per-agent posture the
+gateway applies to decisions:
+
+| Mode | Token | What the gateway does |
+|---|---|---|
+| `EnforcementModeEnforce` | `enforce` | Default. A `deny` blocks the action; `redact` strips secrets. |
+| `EnforcementModeObserve` | `observe` | Dry-run. Records what *would* have happened, but lets every action through. |
+| `EnforcementModeDisabled` | `disabled` | Policy evaluation skipped entirely. |
+
+When you don't set this option the field is omitted from registration and the
+gateway applies its own server-side default (live enforce).
+
+**Failure mode** (`WithFailClosed`) decides what happens when the SDK *can't
+reach* the gateway to get a decision:
+
+- `WithFailClosed(true)` — a check failure **blocks** the call (fail-closed /
+  fail-safe).
+- `WithFailClosed(false)` *(default)* — the call **proceeds** when the gateway
+  is unreachable (fail-open).
+
+These compose: enforcement mode governs decisions the gateway *makes*; failure
+mode governs what happens when no decision *arrives*.
+
+## Module structure
 
 The SDK has exactly **one public package** and one internal helper:
 
@@ -22,7 +111,7 @@ assembly/                       # public API — import this from your code
 ├── runtime.go                  # Assembly type + lifecycle
 ├── options.go                  # functional options (WithGatewayURL, …)
 ├── governance_client.go        # GovernanceClient interface
-├── gateway_client.go           # default GovernanceClient implementation
+├── gateway_client.go           # GatewayClient — transport-backed Check helper
 ├── policy_model.go             # CheckRequest / Decision / RecordRequest
 ├── governance_errors.go        # ErrRuntimeNotInitialized, PolicyViolationError
 ├── tool_wrapper.go             # AssemblyTool — single-tool governance wrapper
@@ -32,12 +121,10 @@ assembly/                       # public API — import this from your code
 ├── sidecar.go                  # local sidecar lifecycle
 └── …
 
-internal/ffi/                   # private — low-level transport, see CGo FFI Bridge below
+internal/ffi/                   # private — low-level transport, see below
 ```
 
-Anything outside `assembly/` is internal and may change without notice. The
-[Tool Wrapping](#tool-wrapping) and [Context Propagation](#context-propagation)
-sections below describe how the public types compose at runtime.
+Anything outside `assembly/` is internal and may change without notice.
 
 ```mermaid
 flowchart TB
@@ -69,33 +156,30 @@ flowchart TB
     ffi --> gw
 ```
 
-## CGo FFI Bridge
+## The FFI transport bridge
 
-`internal/ffi/` is the seam between the Go SDK and the Rust governance
-runtime. It ships **two interchangeable transport implementations** selected
-at compile time by build tags, so the rest of the SDK never has to care which
-one is in use.
+`internal/ffi/` is the seam between the Go SDK and the Rust governance runtime.
+It ships **two interchangeable transport implementations** selected at compile
+time by build tags, so the rest of the SDK never has to care which one is in
+use:
 
-| Mode | Selected when | Source file | What it does |
-|---|---|---|---|
-| **Native (CGo)** | `-tags aa_ffi_go` *and* `CGO_ENABLED=1` | `cgo_bridge.go` | Links against `libaa_ffi_go` and calls into the Rust runtime in-process. Lowest latency. |
-| **Pure-Go fallback** *(default)* | `aa_ffi_go` tag unset, *or* `CGO_ENABLED=0` | `fallback_uds_nocgo.go` | Connects to the local sidecar over a Unix domain socket. No C toolchain required. |
+| Mode | Selected when | What it does |
+|---|---|---|
+| **Native (CGo)** | `-tags aa_ffi_go` *and* `CGO_ENABLED=1` | Links against `libaa_ffi_go` and calls into the Rust runtime in-process. Lowest latency. |
+| **Pure-Go fallback** *(default)* | `aa_ffi_go` tag unset, *or* `CGO_ENABLED=0` | Connects to the local sidecar over a Unix domain socket. No C toolchain required. |
 
-The dispatch lives in the build-tag-gated `binding_select_cgo.go` and
-`binding_select_fallback.go` files. Each compilation unit picks one or the
-other depending on the active build tags, so there is exactly one symbol
-named `Client` (or whatever the active path exports) at link time.
-
-CI exercises both lanes in the matrix (`CGO_ENABLED` 0 and 1), so a change to
-either transport that breaks the other will fail before merge.
+CI exercises both lanes (`CGO_ENABLED` 0 and 1), so a change to either transport
+that breaks the other fails before merge. The fallback path is the default in
+container images and most CI lanes; reach for the native path only when the
+in-process latency saving matters.
 
 ```mermaid
 flowchart LR
     start([go build / go test])
     tag{aa_ffi_go<br/>build tag set?}
     cgo{CGO_ENABLED=1?}
-    native[cgo_bridge.go<br/>links libaa_ffi_go]
-    fallback[fallback_uds_nocgo.go<br/>UDS to sidecar]
+    native[native bridge<br/>links libaa_ffi_go]
+    fallback[UDS fallback<br/>to sidecar]
 
     start --> tag
     tag -- "yes" --> cgo
@@ -104,31 +188,21 @@ flowchart LR
     cgo -- "no" --> fallback
 ```
 
-The fallback path is the default in container images and CI lanes that
-disable CGo, which is most of them. Reach for the native path only when the
-in-process latency saving matters.
-
-## HTTP and gRPC Interceptors
+## HTTP and gRPC interceptors
 
 The interceptors in `assembly/interceptor.go` let governance-relevant metadata
-flow across process boundaries without your tool code having to know about
-it.
+flow across process boundaries without your tool code having to know about it:
 
-- **`HTTPMiddleware(next http.RoundTripper)`** wraps an outbound HTTP
-  transport. It reads `AgentID`, `TraceID`, and `RunID` from the request's
+- **`HTTPMiddleware(next http.RoundTripper)`** wraps an outbound HTTP transport.
+  It reads `AgentID`, `TraceID`, and `RunID` from the request's
   `context.Context` and writes them to outgoing headers, so the receiving
-  service can resume the chain on the other side.
+  service can resume the chain.
 - **`UnaryClientInterceptor()`** and **`StreamClientInterceptor()`** are the
-  gRPC equivalents. They attach the same identifiers as gRPC metadata.
+  gRPC equivalents, attaching the same identifiers as gRPC metadata.
 
-These run at the **outbound** edge of your process. On the **inbound** side,
-a corresponding server-side interceptor (in your service framework, not in
-this SDK) reads the metadata back into `context.Context`, which makes the
-chain usable by the next governance check.
-
-The interceptors are intentionally narrow — they only move metadata. Policy
-enforcement (deny / allow / approval) happens in `GovernanceClient.Check`,
-called by the wrapped tool, not by the interceptor.
+These run at the **outbound** edge of your process. The interceptors are
+intentionally narrow — they only move metadata. Policy enforcement happens in
+`GovernanceClient.Check`, called by the wrapped tool, not by the interceptor.
 
 ```mermaid
 sequenceDiagram
@@ -140,24 +214,20 @@ sequenceDiagram
 
     Caller->>Tool: Call(ctx, args)
     Tool->>Gov: Check(ctx, CheckRequest)
-    Gov->>GW: gRPC/HTTP Check<br/>(metadata = AgentID/TraceID/RunID)
+    Gov->>GW: Check (metadata = AgentID/TraceID/RunID)
     GW-->>Gov: Decision (allow/deny/approve)
     alt allow
         Tool->>Inner: Call(ctx, args)
         Inner-->>Tool: result
         Tool->>Gov: RecordResult(ctx, RecordRequest)
-        Gov->>GW: gRPC/HTTP Record
+        Gov->>GW: Record
     else deny
         Tool-->>Caller: PolicyViolationError
     end
     Tool-->>Caller: result or error
 ```
 
-This sequence applies to *every* call against a tool produced by `WrapTools`.
-The interceptors plus context propagation (next section) make sure the
-governance metadata follows the call across whatever wire it crosses.
-
-## Context Propagation
+## Context propagation
 
 Three identifiers travel through `context.Context` for the lifetime of a
 governed call:
@@ -166,44 +236,32 @@ governed call:
 |---|---|---|---|
 | **AgentID** | `WithAgentID(ctx, id)` | `AgentIDFromContext(ctx)` | Names the calling agent so the gateway can attribute every check + record to it. |
 | **TraceID** | `WithTraceID(ctx, id)` | `TraceIDFromContext(ctx)` | Correlates work across SDK boundaries. Falls back to the OpenTelemetry span context's trace ID when unset. |
-| **RunID** | `WithRunID(ctx, id)` | `RunIDFromContext(ctx)` | Groups calls that belong to one logical agent run. `EnsureRunID(ctx)` returns a context guaranteed to carry one (creating it if absent). |
+| **RunID** | `WithRunID(ctx, id)` | `RunIDFromContext(ctx)` | Groups calls that belong to one logical agent run. `EnsureRunID(ctx)` returns a context guaranteed to carry one. |
 
-All three are private context keys — there is no public type surface that lets
-external code accidentally collide with them. They are propagated **on the
-wire** by the interceptors (see previous section) so a downstream service
-that re-reads them sees the same identifiers the upstream caller set.
+All three are private context keys — no public type surface lets external code
+collide with them. They are propagated **on the wire** by the interceptors so a
+downstream service that re-reads them sees the same identifiers the upstream
+caller set.
 
-The fallbacks are deliberate:
+## Tool wrapping
 
-- `TraceIDFromContext` falls back to `trace.SpanContextFromContext(ctx).TraceID()`
-  so OpenTelemetry-instrumented code does not have to set the trace ID
-  twice.
-- `RunIDFromContext` returns an empty string when no run ID is present;
-  `EnsureRunID` is the helper that guarantees one.
-
-## Tool Wrapping
-
-`WrapTools` is the convenience that turns a slice of plain `Tool`s into a
-slice of `*AssemblyTool`s. Each wrapped tool runs the [interceptor sequence
-above](#http-and-grpc-interceptors): `GovernanceClient.Check` *before*
-execution, `GovernanceClient.RecordResult` *after*.
+`WrapTools` turns a slice of plain `Tool`s into a slice of governed tools. Each
+wrapped tool runs `GovernanceClient.Check` *before* execution and
+`GovernanceClient.RecordResult` *after*:
 
 ```go
 inner := []assembly.Tool{searchWebTool, runShellTool}
-wrapped := assembly.WrapTools(inner, a)  // a is the *Assembly from Init
+wrapped := assembly.WrapTools(inner, client) // client is your GovernanceClient (or nil)
 ```
 
 Two design points worth knowing:
 
-- **`WrapTools` does not enforce policy itself.** It only delegates to the
-  governance client. The client (default: `GatewayClient` in
-  `gateway_client.go`) calls the gateway, which makes the decision.
-- **Failure mode is configurable.** `WithFailClosed(true)` makes a gateway
-  failure deny the call; the default (`false`) lets the call proceed when the
-  gateway cannot be reached. Pick based on how strictly your environment
-  needs to fail-safe vs. fail-open.
+- **`WrapTools` does not enforce policy itself.** It delegates to the governance
+  client, which calls the gateway, which makes the decision.
+- **Failure mode is configurable** via `WithFailClosed` (see
+  [Modes and enforcement](#modes-and-enforcement)).
 
-The single-tool path (`AssemblyTool` + `NewAssemblyTool`) is exported for
-the rare case where you need to wrap one tool in isolation — for example,
-inside another framework's tool registry that reaches in one tool at a time.
-For everything else, prefer `WrapTools`.
+The single-tool path (`AssemblyTool` + `NewAssemblyTool`) is exported for the
+rare case where you need to wrap one tool in isolation — for example, inside
+another framework's registry that reaches in one tool at a time. For everything
+else, prefer `WrapTools`.
