@@ -1,7 +1,17 @@
 ---
 title: Cross-SDK Hugo Setup Template
 weight: 99
+excludeSearch: true
+sidebar:
+  exclude: true
 ---
+
+<!--
+This page is an internal maintainer convention reference for the docs site
+shape, not user-facing SDK documentation. It is excluded from the sidebar nav
+and site search on purpose.
+-->
+
 
 # Cross-SDK Hugo Setup Template
 
