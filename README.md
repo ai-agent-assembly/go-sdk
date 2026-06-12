@@ -1,12 +1,13 @@
 # go-sdk
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/ai-agent-assembly/go-sdk.svg)](https://pkg.go.dev/github.com/ai-agent-assembly/go-sdk)
-[![Live Docs](https://img.shields.io/badge/docs-live-blue)](https://ai-agent-assembly.github.io/go-sdk/)
-[![Go Test Matrix](https://github.com/ai-agent-assembly/go-sdk/actions/workflows/go-test.yml/badge.svg)](https://github.com/ai-agent-assembly/go-sdk/actions/workflows/go-test.yml)
-[![Lint](https://github.com/ai-agent-assembly/go-sdk/actions/workflows/lint.yml/badge.svg)](https://github.com/ai-agent-assembly/go-sdk/actions/workflows/lint.yml)
-[![Codecov](https://codecov.io/gh/ai-agent-assembly/go-sdk/graph/badge.svg)](https://codecov.io/gh/ai-agent-assembly/go-sdk)
+[![Tests](https://img.shields.io/github/actions/workflow/status/ai-agent-assembly/go-sdk/go-test.yml?branch=master&logo=githubactions&label=tests)](https://github.com/ai-agent-assembly/go-sdk/actions/workflows/go-test.yml)
+[![Lint](https://img.shields.io/github/actions/workflow/status/ai-agent-assembly/go-sdk/lint.yml?branch=master&logo=go&label=lint)](https://github.com/ai-agent-assembly/go-sdk/actions/workflows/lint.yml)
+[![Coverage](https://img.shields.io/codecov/c/github/ai-agent-assembly/go-sdk?logo=codecov)](https://codecov.io/gh/ai-agent-assembly/go-sdk)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ai-agent-assembly/go-sdk)](https://goreportcard.com/report/github.com/ai-agent-assembly/go-sdk)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Docs](https://img.shields.io/github/actions/workflow/status/ai-agent-assembly/go-sdk/docs-site.yml?branch=master&logo=readthedocs&label=docs)](https://ai-agent-assembly.github.io/go-sdk/)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue?logo=apache)](https://opensource.org/licenses/Apache-2.0)
+[![Go Version](https://img.shields.io/badge/go-%E2%89%A51.26-00ADD8?logo=go)](https://go.dev/doc/devel/release)
 
 Go SDK for [AI Agent Assembly](https://github.com/ai-agent-assembly) — runtime governance for AI agent tool calls.
 
