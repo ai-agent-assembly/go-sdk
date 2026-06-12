@@ -30,8 +30,8 @@ without re-deriving it.
 ├── CONTRIBUTING.md           # at root (GitHub convention)
 ├── docs/                     # Markdown content — browseable on GitHub
 │   ├── _index.md             # landing page
-│   ├── getting-started.md
-│   ├── architecture.md
+│   ├── quick-start.md
+│   ├── core-concepts.md
 │   ├── api-reference.md
 │   ├── guides/
 │   └── TEMPLATE.md           # this file
@@ -105,7 +105,7 @@ favicon from `design/brand/` into `website/static/images/`. Re-sync from
 
 1. Copy the `website/` directory verbatim; bump the `module` line in
    `website/go.mod` to `github.com/ai-agent-assembly/<sdk-name>/website`.
-2. Copy this `docs/` directory; replace the `_index.md`, `getting-started.md`,
+2. Copy this `docs/` directory; replace the `_index.md`, `quick-start.md`,
    and `TEMPLATE.md` to point at your SDK.
 3. Copy `.github/workflows/docs-site.yml` verbatim; no changes needed if the
    path conventions match.
