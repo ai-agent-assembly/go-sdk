@@ -5,13 +5,45 @@ toc: false
 
 # go-sdk · AI Agent Assembly
 
-Go SDK for **AI Agent Assembly** — runtime governance for AI agent tool calls, written in idiomatic Go.
+The **Go SDK for AI Agent Assembly** lets you put a governance checkpoint in
+front of the tools your AI agent calls — without rewriting the agent. You
+initialise the runtime once, wrap your tool slice, and from then on every tool
+call is checked against your gateway's policy *before* it runs and recorded
+*after* it finishes.
 
-Initialise the runtime, wrap your agent's tools, and every tool call is checked against the gateway policy before it runs and recorded after.
+It is written in idiomatic Go: functional options, context-first APIs, typed
+errors, and a pure-Go default that builds with `CGO_ENABLED=0`.
 
-## Quick start
+## What it is
+
+Concretely, the SDK is two things working together:
+
+- **A thin governance client.** It opens one connection to the AI Agent
+  Assembly **gateway** (the policy brain, which lives in the
+  [agent-assembly](https://github.com/ai-agent-assembly/agent-assembly) core
+  repo) and speaks its wire protocol over gRPC/HTTP — or, in local
+  development, auto-discovers and starts a gateway for you.
+- **An in-process interception shim.** `WrapTools` decorates your existing
+  `Tool` values so each `Call` runs a policy `Check` first and a
+  `RecordResult` after. Your agent code keeps calling tools the way it always
+  did; the wrapper does the governance.
+
+## Who it's for
+
+- **Go developers** building or operating AI agents who need allow/deny, audit,
+  budget, and topology governance over what their agents can do — and want to
+  add it as a library, not a rewrite.
+- **Platform teams** standardising agent governance across services: the same
+  gateway and policy back several languages (there are sibling
+  [Python](https://ai-agent-assembly.github.io/python-sdk/) and
+  [Node](https://ai-agent-assembly.github.io/node-sdk/) SDKs), so a Go service
+  joins the same control plane.
+
+## Quick look
 
 ```go
+package main
+
 import (
     "context"
     "log"
@@ -20,35 +52,35 @@ import (
 )
 
 func main() {
-    a, err := assembly.Init(context.Background(),
+    ctx := assembly.WithAgentID(context.Background(), "my-agent")
+
+    a, err := assembly.Init(ctx,
         assembly.WithGatewayURL("https://gateway.example.com"),
-        assembly.WithAPIKey("..."),
+        assembly.WithAPIKey("..."), // optional for local dev
     )
     if err != nil {
         log.Fatal(err)
     }
     defer a.Close()
+
+    governed := assembly.WrapTools(myTools, nil)
+    _ = governed // hand these to your agent in place of the originals
 }
 ```
 
-[Get started →](getting-started/)
+[Get started in 3 steps →](quick-start/)
 
-## What you get
+## Documentation map
 
-- **Functional options** — extend configuration via `WithGatewayURL`, `WithAPIKey`, `WithFailClosed`, etc., without breaking call sites.
-- **Context propagation** — `AgentID`, `TraceID`, and `RunID` flow through `context.Context`; OpenTelemetry-aware.
-- **Tool wrapping** — `WrapTools` adds policy `Check` and `RecordResult` to any tool slice.
-- **HTTP & gRPC interceptors** — capture parent agent metadata from incoming requests.
-- **Pure-Go by default** — works in container images with `CGO_ENABLED=0`.
-- **Native FFI opt-in** — enable the CGo bridge with `-tags aa_ffi_go` for in-process calls.
+| Section | What's inside |
+|---|---|
+| [Quick Start](quick-start/) | Install, configure, and govern your first agent's tools — copy-paste. |
+| [Core Concepts](core-concepts/) | How the SDK talks to the gateway, the client lifecycle, modes, and enforcement. |
+| [Guides](guides/) | Task-first walkthroughs: wrap an agent's tools, integrate a framework, handle allow/deny and errors. |
+| [Configuration](configuration/) | Gateway/API-key resolution, every `Init` option, enforcement modes, context helpers. |
+| [API Reference](api-reference/) | The authoritative godoc on pkg.go.dev, plus a curated summary of the key exported API. |
+| [Compatibility & Versioning](compatibility/) | Gateway protocol pin, the core↔SDK matrix, toolchain floor, and the release process. |
+| [Troubleshooting](troubleshooting/) | Typed errors, timeouts, build/transport gotchas, and where to get help. |
 
-## Where to next
-
-- [Getting started](getting-started/) — install, configure, and run a first governed call.
-- [Configuration](configuration/) — every `Init` option, defaults, enforcement modes, and context helpers.
-- [Architecture](architecture/) — module layout, FFI bridge, interceptor flow, context propagation.
-- [API reference](api-reference/) — godoc on pkg.go.dev plus local preview instructions.
-- [Troubleshooting](troubleshooting/) — typed errors, timeouts, and build/transport gotchas.
-- [Compatibility](compatibility/) — gateway protocol pin, wire contract, and toolchain floor.
-- [Release process](release-process/) — versioning and how tags become releases.
-- [Guides](guides/) — context propagation, FFI modes, error handling.
+> Pure-Go by default (`CGO_ENABLED=0`); the native FFI transport is opt-in via
+> `-tags aa_ffi_go`. See [Core Concepts](core-concepts/#the-ffi-transport-bridge).
