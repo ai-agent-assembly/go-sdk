@@ -41,6 +41,7 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
+          fetch-tags: true
           submodules: recursive
 
       - name: Setup Go
@@ -58,10 +59,6 @@ jobs:
         if: github.event_name == 'push'
         id: pages
         uses: actions/configure-pages@v6
-
-      - name: Resolve Hugo modules
-        working-directory: website
-        run: hugo mod tidy
 
       # Determine which documentation version + channel this run publishes.
       #   * push to master      -> channel "latest" (live docs tracking master)
@@ -97,63 +94,75 @@ jobs:
             } >> "$GITHUB_OUTPUT"
           fi
 
-      # On a release tag, register the frozen archived snapshot for the tag and
-      # RECOMPUTE the moving channel entries (stable / pre-release) from the FULL
-      # set of known tags. Channels are never appended incrementally: every run
-      # rebuilds them from scratch so a superseding stable correctly drops a
-      # pre-release that is now behind it (the pre-release stays reachable as an
-      # archived entry). The latest (master) entry is left untouched. The gate
-      # itself lives in website/scripts/versions_channels.py and is unit-tested.
-      - name: Register frozen version + recompute channel aliases
-        if: steps.version.outputs.frozen == 'true'
+      # Recompute versions.toml on every run (master push, tag push, PR, manual).
+      # The full known tag set is discovered from `git tag -l` so versions.toml on
+      # master no longer drifts behind the deployed site (AAASM-2830). Channels
+      # are never appended incrementally: the moving stable / pre-release entries
+      # are regenerated from scratch using versions_channels.compute_channels so a
+      # superseding stable correctly drops a pre-release that is now behind it
+      # (the pre-release stays reachable as an archived entry). The latest
+      # (master) entry is preserved from the checked-in file.
+      - name: Recompute versions.toml from git tags
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
           FILE="website/data/versions.toml"
-          python3 - "$FILE" "$VERSION" <<'PY'
+          mapfile -t TAGS < <(git tag -l 'v*')
+          # Add the tag being pushed too, in case `git tag -l` is somehow behind
+          # the ref that triggered this run.
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAGS+=("${{ github.ref_name }}")
+          fi
+          printf 'Discovered tags:\n'
+          printf '  %s\n' "${TAGS[@]}"
+          python3 - "$FILE" "${TAGS[@]}" <<'PY'
           import os, re, sys
 
           sys.path.insert(0, os.path.join("website", "scripts"))
-          from versions_channels import compute_channels  # noqa: E402
+          from versions_channels import compute_channels, parse_tag  # noqa: E402
 
-          path, version = sys.argv[1], sys.argv[2]
+          path = sys.argv[1]
+          raw_tags = sys.argv[2:]
+
           with open(path, encoding="utf-8") as fh:
               text = fh.read()
 
-          # Parse existing entries into (channel, field-dict) records.
+          # Parse existing entries so we can preserve any hand-curated "latest"
+          # metadata (label, default flag) the engineer set in the checked-in file.
           blocks = re.split(r'(?m)^\[\[versions\]\]\s*$', text)
           head = blocks[0]
-          records = []
+          existing = []
           for body in blocks[1:]:
               fields = dict(re.findall(r'(\w+)\s*=\s*"([^"]+)"', body))
               flags = dict(re.findall(r'(\w+)\s*=\s*(true|false)\b', body))
               fields.update({k: v for k, v in flags.items()})
-              records.append(fields)
+              existing.append(fields)
 
-          # The full known tag set = the tag being pushed + every archived tag +
-          # every tag a moving channel currently points at. This is what the
-          # channel gate recomputes from.
-          tags = {version}
-          for r in records:
-              if r.get("channel") == "archived" and r.get("version"):
-                  tags.add(r["version"])
-              if r.get("channel") in ("stable", "pre-release") and r.get("tag"):
-                  tags.add(r["tag"])
+          # Keep the latest (master) entry as-is. If the user removed it, fall
+          # back to a sensible default so the moving "latest" channel always
+          # renders.
+          latest = [r for r in existing if r.get("channel") == "latest"]
+          if not latest:
+              latest = [{
+                  "channel": "latest",
+                  "version": "latest",
+                  "label": "latest (master)",
+                  "path": "/latest/",
+                  "default": "true",
+              }]
 
-          # Keep only non-channel entries (latest + archived); channels are
-          # regenerated below. Re-emit latest first, then archived.
-          latest = [r for r in records if r.get("channel") == "latest"]
-          archived = [r for r in records if r.get("channel") == "archived"]
+          # De-duplicate, keep only well-formed semver tags. Drop any raw_tags
+          # entries that don't parse so a stray junk ref can't break the deploy.
+          tag_set = {t for t in raw_tags if t and parse_tag(t) is not None}
+          channels = compute_channels(sorted(tag_set))
 
-          # Ensure the pushed tag has an archived entry (idempotent).
-          if not any(r.get("version") == version for r in archived):
+          # Archived = one entry per concrete release tag, kept reachable.
+          archived = []
+          for tag in sorted(tag_set, key=lambda t: parse_tag(t).raw if parse_tag(t) else t):
               archived.append({
                   "channel": "archived",
-                  "version": version,
-                  "label": version,
-                  "path": f"/{version}/",
+                  "version": tag,
+                  "label": tag,
+                  "path": f"/{tag}/",
               })
-
-          channels = compute_channels(sorted(tags))
 
           def emit(r):
               order = ["channel", "version", "label", "path", "tag", "default"]
@@ -169,7 +178,6 @@ jobs:
                       lines.append(f'  {k} = "{v}"')
               return "\n".join(lines)
 
-          out = head.rstrip("\n") + "\n"
           out_records = list(latest)
           for channel in ("stable", "pre-release"):
               tag = channels.get(channel)
@@ -182,67 +190,34 @@ jobs:
                       "tag": tag,
                   })
           out_records.extend(archived)
+
+          out = head.rstrip("\n") + "\n"
           out += "\n" + "\n\n".join(emit(r) for r in out_records) + "\n"
 
           with open(path, "w", encoding="utf-8") as fh:
               fh.write(out)
-          print(f"Recomputed channels {channels} from tags {sorted(tags)}.")
+          print(f"Recomputed channels {channels} from {len(tag_set)} tag(s).")
           print(open(path, encoding="utf-8").read())
           PY
 
-      - name: Build site
-        working-directory: website
+      # Build EVERY subpath listed in versions.toml into the Pages artifact tree
+      # (AAASM-2830). The Pages deploy artifact is a full-site replacement, so a
+      # release that cuts a new frozen snapshot must also re-include the
+      # previously-published versions — otherwise the new artifact silently wipes
+      # them. The script walks the recomputed versions.toml and, for each entry,
+      # checks out the corresponding git ref into a temporary worktree, overlays
+      # the recomputed versions.toml so historical snapshots show the current
+      # selector dropdown, and runs Hugo into website/public/<subpath>/.
+      - name: Build every versions.toml subpath
         env:
           HUGO_ENVIRONMENT: production
           HUGO_ENV: production
+          PAGES_BASE: ${{ env.PAGES_BASE }}
+          PUBLIC_DIR: ${{ github.workspace }}/website/public
+          REPO_ROOT: ${{ github.workspace }}
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          CHANNEL="${{ steps.version.outputs.channel }}"
-          # Build the version under publication into its own subpath. On a tag
-          # this is the concrete /<tag>/; on master it is /latest/.
-          hugo --gc --minify \
-            --baseURL "${PAGES_BASE}/${VERSION}/" \
-            --destination "public/${VERSION}"
-          # On a release tag, also build the moving channel alias subpath
-          # (/stable/ or /pre-release/) pointing at the same content, so
-          # .../go-sdk/<channel>/ resolves to this concrete build. Only build the
-          # alias when the recompute step actually emitted that channel pointing
-          # at THIS tag: a pre-release tag that is behind the newest stable is
-          # gated out (no pre-release entry), so its /pre-release/ alias must not
-          # be built. The selector data lists only emitted aliases.
-          ALIAS_TAG=$(python3 - data/versions.toml "$CHANNEL" <<'PY'
-          import re, sys
-          with open(sys.argv[1], encoding="utf-8") as fh:
-              text = fh.read()
-          channel = sys.argv[2]
-          for body in re.split(r'(?m)^\[\[versions\]\]\s*$', text)[1:]:
-              ch = re.search(r'channel\s*=\s*"([^"]+)"', body)
-              tag = re.search(r'tag\s*=\s*"([^"]+)"', body)
-              if ch and ch.group(1) == channel and tag:
-                  print(tag.group(1))
-                  break
-          PY
-          )
-          if [ "${{ steps.version.outputs.frozen }}" = "true" ] && [ "$VERSION" != "$CHANNEL" ] && [ "$ALIAS_TAG" = "$VERSION" ]; then
-            hugo --gc --minify \
-              --baseURL "${PAGES_BASE}/${CHANNEL}/" \
-              --destination "public/${CHANNEL}"
-          else
-            echo "Channel '$CHANNEL' not emitted for $VERSION (gated or superseded); skipping alias build."
-          fi
-
-      # Assemble the Pages artifact. Existing version subpaths must NOT be
-      # wiped: a single deploy-pages artifact replaces the whole site, so a
-      # release that cuts a new frozen snapshot must also re-include the
-      # previously-published versions.
-      #
-      # NOTE (release-time aggregation): this job builds the version under
-      # publication ("latest" on master, or the tagged snapshot + its channel
-      # alias on a tag). Master pushes republish "latest" each time. Cutting the
-      # first frozen vX.Y.Z snapshot additionally requires re-materialising the
-      # other channels/versions in the same artifact (rebuild from master or
-      # fetch the deployed site). That cross-version aggregation is the release
-      # step and is intentionally left for the release window.
+          mkdir -p "$PUBLIC_DIR"
+          bash website/scripts/build_all_versions.sh
 
       # The site-root redirect lands on the best channel: stable, else
       # pre-release, else latest. Resolve the target from versions.toml and
