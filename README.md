@@ -91,7 +91,7 @@ The second argument is the `GovernanceClient` that talks to the gateway; passing
 - **Core runtime** — [ai-agent-assembly/agent-assembly](https://github.com/ai-agent-assembly/agent-assembly): the gateway, policy engine, proxy, and eBPF layers this SDK talks to.
 - **Protocol spec** — the gateway wire protocol this SDK is pinned to lives in the core monorepo at [docs/src/protocol](https://github.com/ai-agent-assembly/agent-assembly/tree/master/docs/src/protocol).
 - **Canonical docs** — the org-wide documentation site at [ai-agent-assembly.github.io/agent-assembly-docs](https://ai-agent-assembly.github.io/agent-assembly-docs/).
-- **Runnable examples** — [ai-agent-assembly/agent-assembly-examples](https://github.com/AI-agent-assembly/agent-assembly-examples): learn by running small, framework-specific Go (and Python/Node) samples for policy enforcement, approvals, audit, trace, and runtime workflows.
+- **Runnable examples** — [ai-agent-assembly/agent-assembly-examples](https://github.com/ai-agent-assembly/agent-assembly-examples): learn by running small, framework-specific Go (and Python/Node) samples for policy enforcement, approvals, audit, trace, and runtime workflows.
 - **Release notes** — [github.com/ai-agent-assembly/go-sdk/releases](https://github.com/ai-agent-assembly/go-sdk/releases).
 
 ## Support & Security
