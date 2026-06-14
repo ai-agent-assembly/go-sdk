@@ -87,6 +87,7 @@ func main() {
 | [Quick Start]({{< relref "/quick-start" >}}) | Install, configure, and govern your first agent's tools — copy-paste. |
 | [Core Concepts]({{< relref "/core-concepts" >}}) | How the SDK talks to the gateway, the client lifecycle, modes, and enforcement. |
 | [Guides]({{< relref "/guides" >}}) | Task-first walkthroughs: wrap an agent's tools, integrate a framework, handle allow/deny and errors. |
+| [Examples]({{< relref "/examples" >}}) | Runnable end-to-end examples: basic agent, tool-policy, LangChainGo, and `aasm` CLI runtime integration. |
 | [Configuration]({{< relref "/configuration" >}}) | Gateway/API-key resolution, every `Init` option, enforcement modes, context helpers. |
 | [API Reference]({{< relref "/api-reference" >}}) | The authoritative godoc on pkg.go.dev, plus a curated summary of the key exported API. |
 | [Compatibility & Versioning]({{< relref "/compatibility" >}}) | Gateway protocol pin, the core↔SDK matrix, toolchain floor, and the release process. |
