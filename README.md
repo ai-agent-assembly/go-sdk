@@ -1,6 +1,7 @@
 # go-sdk
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/ai-agent-assembly/go-sdk.svg)](https://pkg.go.dev/github.com/ai-agent-assembly/go-sdk)
+[![GitHub release](https://img.shields.io/github/v/tag/ai-agent-assembly/go-sdk?sort=semver&label=release&logo=github)](https://github.com/ai-agent-assembly/go-sdk/releases)
 [![Tests](https://img.shields.io/github/actions/workflow/status/ai-agent-assembly/go-sdk/go-test.yml?branch=master&logo=githubactions&label=tests)](https://github.com/ai-agent-assembly/go-sdk/actions/workflows/go-test.yml)
 [![Lint](https://img.shields.io/github/actions/workflow/status/ai-agent-assembly/go-sdk/lint.yml?branch=master&logo=go&label=lint)](https://github.com/ai-agent-assembly/go-sdk/actions/workflows/lint.yml)
 [![Coverage](https://img.shields.io/codecov/c/github/ai-agent-assembly/go-sdk?logo=codecov)](https://codecov.io/gh/ai-agent-assembly/go-sdk)
