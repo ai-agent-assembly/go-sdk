@@ -10,6 +10,7 @@ type Option func(*runtimeOptions)
 
 type runtimeOptions struct {
 	gatewayURL       string
+	controlPlaneURL  string
 	apiKey           string
 	failClosed       bool
 	timeout          time.Duration
@@ -29,6 +30,20 @@ type runtimeOptions struct {
 func WithGatewayURL(gatewayURL string) Option {
 	return func(opts *runtimeOptions) {
 		opts.gatewayURL = gatewayURL
+	}
+}
+
+// WithControlPlaneURL sets the HTTP control-plane URL. The value is stored on
+// the runtime options for future HTTP control-plane consumers; the Go SDK has
+// no HTTP control-plane caller today (lifecycle is delegated to the aasm
+// runtime). The field is filed now so the config shape stays consistent with
+// the Python and Node SDKs and is ready for the first HTTP caller.
+//
+// When this option is not set, the URL falls back to the AA_CONTROL_PLANE_URL
+// environment variable at resolution time.
+func WithControlPlaneURL(controlPlaneURL string) Option {
+	return func(opts *runtimeOptions) {
+		opts.controlPlaneURL = controlPlaneURL
 	}
 }
 
