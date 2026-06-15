@@ -13,4 +13,4 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 # mirroring node-sdk/native/aa-ffi-node and python-sdk/rust/aa-ffi-python. The
 # advisory preflight arrives transitively via aa-sdk-client's default features.
 # Keep this SHA in lockstep with the node/python shims.
-aa-sdk-client = { git = "https://github.com/ai-agent-assembly/agent-assembly.git", rev = "9cf8a033d39c870ba46a0929b62261d125a00a09", package = "aa-sdk-client" }
+aa-sdk-client = { git = "https://github.com/ai-agent-assembly/agent-assembly.git", rev = "0aa9c945511d010457535c20704f7f42d59f2126", package = "aa-sdk-client" }
