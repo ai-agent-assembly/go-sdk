@@ -1,6 +1,7 @@
 # go-sdk
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/ai-agent-assembly/go-sdk.svg)](https://pkg.go.dev/github.com/ai-agent-assembly/go-sdk)
+[![GitHub release](https://img.shields.io/github/v/tag/ai-agent-assembly/go-sdk?sort=semver&label=release&logo=github)](https://github.com/ai-agent-assembly/go-sdk/releases)
 [![Tests](https://img.shields.io/github/actions/workflow/status/ai-agent-assembly/go-sdk/go-test.yml?branch=master&logo=githubactions&label=tests)](https://github.com/ai-agent-assembly/go-sdk/actions/workflows/go-test.yml)
 [![Lint](https://img.shields.io/github/actions/workflow/status/ai-agent-assembly/go-sdk/lint.yml?branch=master&logo=go&label=lint)](https://github.com/ai-agent-assembly/go-sdk/actions/workflows/lint.yml)
 [![Coverage](https://img.shields.io/codecov/c/github/ai-agent-assembly/go-sdk?logo=codecov)](https://codecov.io/gh/ai-agent-assembly/go-sdk)
@@ -15,7 +16,7 @@ The SDK initialises in a few lines, propagates agent identity through `context.C
 
 ## Project status
 
-`go-sdk` is **pre-release**. Published tags are on the `v0.0.1-alpha` line (latest [`v0.0.1-alpha.3`](https://github.com/ai-agent-assembly/go-sdk/releases)); the [`VERSION`](VERSION) file pins the gateway **protocol version** the SDK is built against (currently `0.0.0`). The public `assembly` package API may still change between alpha tags — pin an exact tag in your `go.mod` and review the [release notes](https://github.com/ai-agent-assembly/go-sdk/releases) before upgrading. See [Core-runtime compatibility](docs/compatibility.md) for the version/protocol contract.
+`go-sdk` is **pre-release** — see the [releases page](https://github.com/ai-agent-assembly/go-sdk/releases) (or the **release** badge above) for the current published tag. The [`VERSION`](VERSION) file pins the gateway **protocol version** the SDK is built against (currently `0.0.0`). The public `assembly` package API may still change between pre-release tags — pin an exact tag in your `go.mod` and review the [release notes](https://github.com/ai-agent-assembly/go-sdk/releases) before upgrading. See [Core-runtime compatibility](docs/compatibility.md) for the version/protocol contract.
 
 Anything outside the `assembly/` package (`internal/`, `examples/`) is not part of the public API and may change without notice.
 
