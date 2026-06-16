@@ -41,13 +41,10 @@ jobs:
           go mod verify
           git diff --exit-code go.mod go.sum
 
-      - name: Install govulncheck
-        run: go install golang.org/x/vuln/cmd/govulncheck@v1.3.0
-
       - name: Run govulncheck
         run: |
           set +e
-          govulncheck ./... 2>&1 | tee /tmp/govulncheck.txt
+          go tool govulncheck ./... 2>&1 | tee /tmp/govulncheck.txt
           RC=${PIPESTATUS[0]}
           if [ "$RC" -eq 3 ]; then
             # Extract IDs of vulnerabilities that directly affect our code
