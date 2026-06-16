@@ -12,6 +12,7 @@ type Assembly struct {
 	sidecar          SidecarClient
 	sidecarConnector func(context.Context, string) (SidecarClient, error)
 	ffiClient        *ffi.Client
+	governance       GovernanceClient
 	managedSidecar   *Sidecar
 }
 
@@ -60,6 +61,9 @@ func (a *Assembly) boot(ctx context.Context) error {
 
 	if a.opts.sidecarAddress != "" && a.ffiClient != nil {
 		if err := a.ffiClient.Connect(a.opts.sidecarAddress); err == nil {
+			// The runtime is reachable: route governance checks through the
+			// native aa_query_policy primitive so a DENY blocks a tool call.
+			a.governance = newFFIGovernanceClient(a.ffiClient)
 			return a.ffiClient.SendEvent("register", buildRegistrationEvent(a.opts))
 		}
 	}
