@@ -12,13 +12,20 @@
 //! The SDK is **not** a security boundary. Authoritative credential scanning,
 //! redaction, and normalization happen at the runtime chokepoint (`aa-runtime`,
 //! AAASM-2568), which re-scans every event unconditionally. Policy decisions are
-//! server-side; this binding deliberately exposes **no** `query_policy` surface.
+//! server-side. [`aa_query_policy`] exposes the runtime's synchronous policy
+//! query, but it is **advisory and fail-open**: when the runtime is unreachable
+//! or slow it returns `ALLOW` rather than blocking, because the runtime / proxy
+//! / eBPF layers are the authoritative enforcement points (AAASM-3021).
 
 use core::ffi::c_char;
 use std::ffi::{CStr, CString};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::PathBuf;
 
+use aa_proto::assembly::common::v1::{ActionType, AgentId, Decision};
+use aa_proto::assembly::policy::v1::{
+    action_context, ActionContext, CheckActionRequest, LlmCallContext, ToolCallContext,
+};
 use aa_sdk_client::{ipc::spawn_ipc_thread, AssemblyClient, SdkClientError};
 
 /// C-ABI status code returned by every fallible entry point.
@@ -37,6 +44,22 @@ pub const AA_STATUS_CHANNEL_CLOSED: AaStatus = 6;
 /// A panic was caught at the FFI boundary (never propagated across it).
 pub const AA_STATUS_PANIC: AaStatus = 7;
 
+/// C-ABI policy decision returned by [`aa_query_policy`].
+///
+/// Mirrors `aa_proto::assembly::common::v1::Decision`. `UNSPECIFIED` is folded
+/// onto `ALLOW` so an unset/garbled decision never silently blocks.
+pub type AaDecision = i32;
+
+/// Action permitted. Also returned when the query fails open (see
+/// [`aa_query_policy`]) or the runtime returns an unspecified decision.
+pub const AA_DECISION_ALLOW: AaDecision = 0;
+/// Action blocked.
+pub const AA_DECISION_DENY: AaDecision = 1;
+/// Action held for human approval.
+pub const AA_DECISION_PENDING: AaDecision = 2;
+/// Action permitted but sensitive fields must be redacted first.
+pub const AA_DECISION_REDACT: AaDecision = 3;
+
 /// Opaque handle to an active Agent Assembly session.
 ///
 /// Wraps a shared [`AssemblyClient`]. Created by [`aa_connect`]; released by
@@ -52,6 +75,42 @@ fn status_for(err: &SdkClientError) -> AaStatus {
         SdkClientError::Shutdown => AA_STATUS_NOT_CONNECTED,
         SdkClientError::LockPoisoned => AA_STATUS_MUTEX_POISONED,
         SdkClientError::ChannelClosed => AA_STATUS_CHANNEL_CLOSED,
+        // The event paths never trigger a synchronous query, so this is
+        // unreachable for them; map it conservatively to "not connected".
+        // [`aa_query_policy`] handles `QueryFailed` itself by failing open.
+        SdkClientError::QueryFailed => AA_STATUS_NOT_CONNECTED,
+    }
+}
+
+/// Parse the C-supplied action-type string onto the proto [`ActionType`].
+///
+/// Accepts the snake_case proto names (and a couple of common aliases).
+/// Unknown values fall back to [`ActionType::ToolCall`] — the broadest action
+/// category — so a typo never silently skips policy evaluation.
+fn parse_action_type(raw: &str) -> ActionType {
+    match raw {
+        "llm_call" | "llm" => ActionType::LlmCall,
+        "tool_call" | "tool" => ActionType::ToolCall,
+        "file_operation" | "file_op" | "file" => ActionType::FileOperation,
+        "network_call" | "network" => ActionType::NetworkCall,
+        "process_exec" | "process" => ActionType::ProcessExec,
+        "agent_spawn" => ActionType::AgentSpawn,
+        "tool_result" => ActionType::ToolResult,
+        _ => ActionType::ToolCall,
+    }
+}
+
+/// Map a proto [`Decision`] code onto the stable C-ABI [`AaDecision`].
+///
+/// Any value that is not a recognized non-allow decision (including
+/// `UNSPECIFIED`) folds onto [`AA_DECISION_ALLOW`] so the binding never blocks
+/// on a decision it cannot interpret.
+fn decision_for(decision: i32) -> AaDecision {
+    match Decision::try_from(decision) {
+        Ok(Decision::Deny) => AA_DECISION_DENY,
+        Ok(Decision::Pending) => AA_DECISION_PENDING,
+        Ok(Decision::Redact) => AA_DECISION_REDACT,
+        Ok(Decision::Allow) | Ok(Decision::Unspecified) | Err(_) => AA_DECISION_ALLOW,
     }
 }
 
@@ -140,6 +199,175 @@ pub unsafe extern "C" fn aa_send_event(
         }
     }))
     .unwrap_or(AA_STATUS_PANIC)
+}
+
+/// Synchronously query the runtime for a policy decision on an action.
+///
+/// Builds a `CheckActionRequest` from the supplied inputs, sends it to the
+/// runtime over the shared session, and blocks (up to the shared client's 5 s
+/// timeout) for the decision. Delegates entirely to
+/// [`AssemblyClient::query_policy`]; this shim only marshals across the C
+/// boundary.
+///
+/// On success, `*out_decision` receives an [`AaDecision`] and `*out_reason`
+/// receives an owned, NUL-terminated reason string the caller must release with
+/// [`aa_free_string`] (always non-null on `AA_STATUS_OK`, even when empty).
+///
+/// # Fail-open
+///
+/// The SDK is **advisory, not authoritative**. If the runtime fails to return a
+/// decision — a timeout, an unreachable runtime, or a closed session — this
+/// returns `AA_STATUS_OK` with `*out_decision = AA_DECISION_ALLOW` and a reason
+/// explaining the fail-open, since an unreachable or slow runtime must never
+/// block the agent (the runtime / proxy / eBPF layers enforce authoritatively).
+/// Only an internal poisoned lock surfaces as `AA_STATUS_MUTEX_POISONED`.
+///
+/// # Arguments
+///
+/// * `agent_id` — the calling agent's own id (the `agent_id.agent_id` field).
+/// * `action_type` — snake_case proto action name (e.g. `"tool_call"`,
+///   `"llm_call"`); unknown values fall back to `tool_call`.
+/// * `tool_name` — registered tool name; may be null. Used for `tool_call` /
+///   `tool_result` actions and as the model for `llm_call`.
+/// * `args_json` — JSON-encoded argument map; may be null. Carried as the tool
+///   `args_json` bytes for tool actions.
+///
+/// # Safety
+///
+/// `client` must be a handle from [`aa_connect`] that has not been
+/// disconnected. `agent_id` and `action_type` must be valid NUL-terminated C
+/// strings. `tool_name` and `args_json` must each be a valid NUL-terminated C
+/// string or null. `out_decision` and `out_reason` must be valid, writable
+/// pointers.
+#[no_mangle]
+pub unsafe extern "C" fn aa_query_policy(
+    client: *mut aa_client_handle,
+    agent_id: *const c_char,
+    action_type: *const c_char,
+    tool_name: *const c_char,
+    args_json: *const c_char,
+    out_decision: *mut AaDecision,
+    out_reason: *mut *mut c_char,
+) -> AaStatus {
+    catch_unwind(AssertUnwindSafe(|| {
+        if client.is_null()
+            || agent_id.is_null()
+            || action_type.is_null()
+            || out_decision.is_null()
+            || out_reason.is_null()
+        {
+            return AA_STATUS_NULL_POINTER;
+        }
+
+        // SAFETY: pointers null-checked above.
+        let agent_id = match unsafe { CStr::from_ptr(agent_id) }.to_str() {
+            Ok(value) => value.to_owned(),
+            Err(_) => return AA_STATUS_INVALID_UTF8,
+        };
+        // SAFETY: pointers null-checked above.
+        let action_type = match unsafe { CStr::from_ptr(action_type) }.to_str() {
+            Ok(value) => value.to_owned(),
+            Err(_) => return AA_STATUS_INVALID_UTF8,
+        };
+        // Optional inputs: null ⇒ None. SAFETY: each is null-checked by the
+        // helper before dereferencing.
+        let tool_name = match unsafe { optional_cstr(tool_name) } {
+            Ok(value) => value,
+            Err(status) => return status,
+        };
+        let args_json = match unsafe { optional_cstr(args_json) } {
+            Ok(value) => value,
+            Err(status) => return status,
+        };
+
+        let action = parse_action_type(&action_type);
+        let context = build_context(action, tool_name, args_json);
+
+        let request = CheckActionRequest {
+            agent_id: Some(AgentId {
+                agent_id,
+                ..Default::default()
+            }),
+            action_type: action.into(),
+            context,
+            ..Default::default()
+        };
+
+        // SAFETY: `client` null-checked above; `&*` borrows the boxed handle.
+        let handle = unsafe { &*client };
+        let (decision, reason) = match handle.client.query_policy(request) {
+            Ok(resp) => (decision_for(resp.decision), resp.reason),
+            // Fail-open: the SDK is advisory, so any failure to obtain a
+            // decision from the runtime — a timeout (`QueryFailed`), an
+            // unreachable runtime whose IPC thread exited (`ChannelClosed`), or
+            // a shut-down session (`Shutdown`) — yields ALLOW rather than
+            // blocking the agent. The runtime / proxy / eBPF layers enforce
+            // authoritatively. Only a poisoned lock (an internal panic) is a
+            // hard error, since it signals the binding itself is broken.
+            Err(SdkClientError::LockPoisoned) => return AA_STATUS_MUTEX_POISONED,
+            Err(_) => (
+                AA_DECISION_ALLOW,
+                "policy query failed; failing open (SDK is advisory)".to_owned(),
+            ),
+        };
+
+        // A NUL inside the reason would truncate it; fall back to empty rather
+        // than fail the whole query over a runtime-controlled string.
+        let reason_c = CString::new(reason).unwrap_or_default();
+
+        // SAFETY: out-pointers null-checked above.
+        unsafe {
+            *out_decision = decision;
+            *out_reason = reason_c.into_raw();
+        }
+
+        AA_STATUS_OK
+    }))
+    .unwrap_or(AA_STATUS_PANIC)
+}
+
+/// Read an optional NUL-terminated C string: null ⇒ `Ok(None)`, valid UTF-8 ⇒
+/// `Ok(Some(..))`, invalid UTF-8 ⇒ `Err(AA_STATUS_INVALID_UTF8)`.
+///
+/// # Safety
+///
+/// `ptr` must be null or a valid NUL-terminated C string.
+unsafe fn optional_cstr(ptr: *const c_char) -> Result<Option<String>, AaStatus> {
+    if ptr.is_null() {
+        return Ok(None);
+    }
+    // SAFETY: `ptr` null-checked above.
+    match unsafe { CStr::from_ptr(ptr) }.to_str() {
+        Ok(value) => Ok(Some(value.to_owned())),
+        Err(_) => Err(AA_STATUS_INVALID_UTF8),
+    }
+}
+
+/// Build the typed [`ActionContext`] for `action` from the optional inputs.
+///
+/// Only `tool_call` / `tool_result` and `llm_call` carry context here; other
+/// action types submit no context (the runtime still evaluates them).
+fn build_context(
+    action: ActionType,
+    tool_name: Option<String>,
+    args_json: Option<String>,
+) -> Option<ActionContext> {
+    match action {
+        ActionType::ToolCall | ActionType::ToolResult => Some(ActionContext {
+            action: Some(action_context::Action::ToolCall(ToolCallContext {
+                tool_name: tool_name.unwrap_or_default(),
+                args_json: args_json.unwrap_or_default().into_bytes(),
+                ..Default::default()
+            })),
+        }),
+        ActionType::LlmCall => Some(ActionContext {
+            action: Some(action_context::Action::LlmCall(LlmCallContext {
+                model: tool_name.unwrap_or_default(),
+                ..Default::default()
+            })),
+        }),
+        _ => None,
+    }
 }
 
 /// Shut down the session and free the handle.
