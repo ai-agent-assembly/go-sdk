@@ -510,4 +510,177 @@ mod tests {
         // SAFETY: pointer came from CString::into_raw above.
         unsafe { aa_free_string(raw) };
     }
+
+    #[test]
+    fn query_policy_rejects_null_client() {
+        let agent = CString::new("agent-1").expect("valid");
+        let action = CString::new("tool_call").expect("valid");
+        let mut decision: AaDecision = AA_DECISION_DENY;
+        let mut reason: *mut c_char = ptr::null_mut();
+        // SAFETY: deliberate null client to validate the guard.
+        let status = unsafe {
+            aa_query_policy(
+                ptr::null_mut(),
+                agent.as_ptr(),
+                action.as_ptr(),
+                ptr::null(),
+                ptr::null(),
+                &mut decision,
+                &mut reason,
+            )
+        };
+        assert_eq!(status, AA_STATUS_NULL_POINTER);
+    }
+
+    /// A mock UDS runtime that answers the policy query with a Deny
+    /// `CheckActionResponse` drives the binding to return `AA_DECISION_DENY`.
+    ///
+    /// Mirrors `aa-sdk-client`'s `query_policy_returns_runtime_decision`: the
+    /// mock reads the heartbeat + policy-query frames, then writes a Deny
+    /// response. The FFI calls run on this thread (raw handles are not `Send`),
+    /// while the mock server runs on a background thread with its own runtime.
+    #[test]
+    fn query_policy_returns_deny_from_runtime() {
+        use std::io::{Read, Write};
+        use std::os::unix::net::UnixListener;
+
+        use aa_sdk_client::codec;
+        use prost::Message;
+
+        let socket_path = format!("/tmp/aa-ffi-go-query-deny-{}.sock", std::process::id());
+        let _ = std::fs::remove_file(&socket_path);
+        let listener = UnixListener::bind(&socket_path).expect("bind mock socket");
+
+        // Mock runtime on a plain blocking thread: read the heartbeat, then the
+        // policy-query frame, then reply with a single-byte-length-delimited
+        // Deny response. Bodies are < 128 bytes so the varint is one byte.
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("accept");
+
+            let mut tag = [0u8; 1];
+            stream.read_exact(&mut tag).expect("read heartbeat tag");
+            assert_eq!(tag[0], codec::TAG_HEARTBEAT);
+
+            stream.read_exact(&mut tag).expect("read query tag");
+            assert_eq!(tag[0], codec::TAG_POLICY_QUERY);
+            let mut len = [0u8; 1];
+            stream.read_exact(&mut len).expect("read query len");
+            if len[0] > 0 {
+                let mut body = vec![0u8; len[0] as usize];
+                stream.read_exact(&mut body).expect("read query body");
+            }
+
+            let resp = aa_proto::assembly::policy::v1::CheckActionResponse {
+                decision: Decision::Deny as i32,
+                reason: "blocked by test policy".to_owned(),
+                ..Default::default()
+            };
+            let mut buf = Vec::new();
+            resp.encode(&mut buf).expect("encode response");
+            assert!(buf.len() < 128, "test assumes a single-byte length varint");
+            stream
+                .write_all(&[codec::TAG_POLICY_RESPONSE, buf.len() as u8])
+                .expect("write resp header");
+            stream.write_all(&buf).expect("write resp body");
+            stream.flush().expect("flush");
+            // Hold the connection open long enough for the client to read.
+            std::thread::sleep(std::time::Duration::from_millis(300));
+        });
+
+        let endpoint = CString::new(socket_path.clone()).expect("valid endpoint");
+        let mut client: *mut aa_client_handle = ptr::null_mut();
+        // SAFETY: valid pointers from a controlled test context.
+        assert_eq!(
+            unsafe { aa_connect(endpoint.as_ptr(), &mut client) },
+            AA_STATUS_OK
+        );
+
+        let agent = CString::new("agent-1").expect("valid");
+        let action = CString::new("tool_call").expect("valid");
+        let tool = CString::new("web_search").expect("valid");
+        let mut decision: AaDecision = AA_DECISION_ALLOW;
+        let mut reason: *mut c_char = ptr::null_mut();
+        // SAFETY: handle from aa_connect; valid in/out pointers.
+        let status = unsafe {
+            aa_query_policy(
+                client,
+                agent.as_ptr(),
+                action.as_ptr(),
+                tool.as_ptr(),
+                ptr::null(),
+                &mut decision,
+                &mut reason,
+            )
+        };
+
+        assert_eq!(status, AA_STATUS_OK);
+        assert_eq!(decision, AA_DECISION_DENY);
+        assert!(!reason.is_null());
+        // SAFETY: reason came from CString::into_raw in aa_query_policy.
+        let reason_str = unsafe { CStr::from_ptr(reason) }
+            .to_str()
+            .expect("utf8")
+            .to_owned();
+        assert_eq!(reason_str, "blocked by test policy");
+        // SAFETY: free the reason via the crate's own allocator helper.
+        unsafe { aa_free_string(reason) };
+
+        // SAFETY: handle from aa_connect, not yet disconnected.
+        assert_eq!(unsafe { aa_disconnect(client) }, AA_STATUS_OK);
+
+        server.join().expect("mock server thread");
+        let _ = std::fs::remove_file(&socket_path);
+    }
+
+    /// With no runtime listening, the synchronous query times out; the binding
+    /// must fail **open** — return OK with `AA_DECISION_ALLOW` — so an
+    /// unreachable runtime never blocks the agent.
+    #[test]
+    fn query_policy_fails_open_with_no_server() {
+        // No server binds this path, so the background IPC thread never
+        // connects and the query times out (QueryFailed -> fail-open).
+        let endpoint = CString::new(format!(
+            "/tmp/aa-ffi-go-no-server-{}.sock",
+            std::process::id()
+        ))
+        .expect("valid endpoint");
+        let mut client: *mut aa_client_handle = ptr::null_mut();
+        // SAFETY: valid pointers from a controlled test context.
+        assert_eq!(
+            unsafe { aa_connect(endpoint.as_ptr(), &mut client) },
+            AA_STATUS_OK
+        );
+
+        let agent = CString::new("agent-1").expect("valid");
+        let action = CString::new("tool_call").expect("valid");
+        let mut decision: AaDecision = AA_DECISION_DENY;
+        let mut reason: *mut c_char = ptr::null_mut();
+        // SAFETY: handle from aa_connect; valid in/out pointers.
+        let status = unsafe {
+            aa_query_policy(
+                client,
+                agent.as_ptr(),
+                action.as_ptr(),
+                ptr::null(),
+                ptr::null(),
+                &mut decision,
+                &mut reason,
+            )
+        };
+
+        assert_eq!(
+            status, AA_STATUS_OK,
+            "fail-open returns OK, not an error status"
+        );
+        assert_eq!(
+            decision, AA_DECISION_ALLOW,
+            "unreachable runtime must fail open"
+        );
+        assert!(!reason.is_null());
+        // SAFETY: reason came from CString::into_raw in aa_query_policy.
+        unsafe { aa_free_string(reason) };
+
+        // SAFETY: handle from aa_connect, not yet disconnected.
+        assert_eq!(unsafe { aa_disconnect(client) }, AA_STATUS_OK);
+    }
 }

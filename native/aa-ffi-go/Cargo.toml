@@ -19,3 +19,10 @@ aa-sdk-client = { git = "https://github.com/ai-agent-assembly/agent-assembly.git
 # synchronous policy query (`AssemblyClient::query_policy`); aa-sdk-client does
 # not re-export aa_proto, so the shim depends on it directly.
 aa-proto = { git = "https://github.com/ai-agent-assembly/agent-assembly.git", rev = "4f9eea19c2c7e9d6730319e427861a291010fc75", package = "aa-proto" }
+
+[dev-dependencies]
+# Mock UDS runtime for the query_policy round-trip tests: a Tokio listener
+# speaks the aa-sdk-client wire codec (heartbeat + length-delimited prost) and
+# replies with a CheckActionResponse.
+tokio = { version = "1", features = ["net", "rt", "macros", "io-util", "time"] }
+prost = "0.14"
