@@ -26,3 +26,11 @@ func (fallbackUDSBridge) sendEvent(unsafe.Pointer, string, string) int32 {
 func (fallbackUDSBridge) disconnect(unsafe.Pointer) int32 {
 	return statusRuntimeUnavailable
 }
+
+// queryPolicy reports the runtime as unavailable. There is no native transport
+// to reach the runtime, so the query cannot be answered; Client.QueryPolicy
+// surfaces this as ErrRuntimeUnavailable and the tool wrapper applies its
+// configured fail-open / fail-closed policy.
+func (fallbackUDSBridge) queryPolicy(unsafe.Pointer, string, string, string, string) (int32, string, int32) {
+	return DecisionAllow, "", statusRuntimeUnavailable
+}
