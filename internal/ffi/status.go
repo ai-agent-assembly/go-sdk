@@ -20,6 +20,11 @@ const (
 	statusRuntimeUnavailable int32 = 100
 )
 
+// errWrapFormat is the shared format string for wrapping a sentinel error with
+// the originating FFI operation name. Hoisted to a const so the literal is not
+// duplicated across every statusToError branch (go:S1192).
+const errWrapFormat = "%s: %w"
+
 var (
 	// ErrNullPointer reports an FFI null-pointer guard failure.
 	ErrNullPointer = errors.New("ffi null pointer")
@@ -46,21 +51,21 @@ func statusToError(status int32, operation string) error {
 	case statusOK:
 		return nil
 	case statusNullPointer:
-		return fmt.Errorf("%s: %w", operation, ErrNullPointer)
+		return fmt.Errorf(errWrapFormat, operation, ErrNullPointer)
 	case statusInvalidUTF8:
-		return fmt.Errorf("%s: %w", operation, ErrInvalidUTF8)
+		return fmt.Errorf(errWrapFormat, operation, ErrInvalidUTF8)
 	case statusNotConnected:
-		return fmt.Errorf("%s: %w", operation, ErrNotConnected)
+		return fmt.Errorf(errWrapFormat, operation, ErrNotConnected)
 	case statusMutexPoison:
-		return fmt.Errorf("%s: %w", operation, ErrMutexPoison)
+		return fmt.Errorf(errWrapFormat, operation, ErrMutexPoison)
 	case statusIPCError:
-		return fmt.Errorf("%s: %w", operation, ErrIPC)
+		return fmt.Errorf(errWrapFormat, operation, ErrIPC)
 	case statusChannelClosed:
-		return fmt.Errorf("%s: %w", operation, ErrChannelClosed)
+		return fmt.Errorf(errWrapFormat, operation, ErrChannelClosed)
 	case statusPanic:
-		return fmt.Errorf("%s: %w", operation, ErrPanic)
+		return fmt.Errorf(errWrapFormat, operation, ErrPanic)
 	case statusRuntimeUnavailable:
-		return fmt.Errorf("%s: %w", operation, ErrRuntimeUnavailable)
+		return fmt.Errorf(errWrapFormat, operation, ErrRuntimeUnavailable)
 	default:
 		return fmt.Errorf("%s: ffi status %d", operation, status)
 	}
