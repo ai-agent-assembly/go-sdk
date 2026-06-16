@@ -40,3 +40,47 @@ func (cgoBridge) sendEvent(handle unsafe.Pointer, eventType, details string) int
 func (cgoBridge) disconnect(handle unsafe.Pointer) int32 {
 	return int32(C.aa_disconnect((*C.aa_client_handle)(handle)))
 }
+
+// queryPolicy marshals a policy query across the C boundary to aa_query_policy.
+// toolName and argsJSON are optional: an empty Go string is passed as a NULL C
+// pointer (the native shim treats both fields as nullable). On AA_STATUS_OK the
+// shim hands back an owned reason string that must be released with
+// aa_free_string. The native call is itself fail-open (see aa_query_policy).
+func (cgoBridge) queryPolicy(handle unsafe.Pointer, agentID, actionType, toolName, argsJSON string) (int32, string, int32) {
+	cAgentID := C.CString(agentID)
+	defer C.free(unsafe.Pointer(cAgentID))
+	cActionType := C.CString(actionType)
+	defer C.free(unsafe.Pointer(cActionType))
+
+	var cToolName *C.char
+	if toolName != "" {
+		cToolName = C.CString(toolName)
+		defer C.free(unsafe.Pointer(cToolName))
+	}
+
+	var cArgsJSON *C.char
+	if argsJSON != "" {
+		cArgsJSON = C.CString(argsJSON)
+		defer C.free(unsafe.Pointer(cArgsJSON))
+	}
+
+	var decision C.AaDecision
+	var reason *C.char
+	status := C.aa_query_policy(
+		(*C.aa_client_handle)(handle),
+		cAgentID,
+		cActionType,
+		cToolName,
+		cArgsJSON,
+		&decision,
+		&reason,
+	)
+
+	var reasonStr string
+	if reason != nil {
+		reasonStr = C.GoString(reason)
+		C.aa_free_string(reason)
+	}
+
+	return int32(decision), reasonStr, int32(status)
+}
