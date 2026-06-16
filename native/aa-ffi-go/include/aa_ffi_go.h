@@ -21,6 +21,14 @@ typedef struct aa_client_handle aa_client_handle;
  */
 typedef int32_t AaStatus;
 
+/*
+ C-ABI policy decision returned by [`aa_query_policy`].
+
+ Mirrors `aa_proto::assembly::common::v1::Decision`. `UNSPECIFIED` is folded
+ onto `ALLOW` so an unset/garbled decision never silently blocks.
+ */
+typedef int32_t AaDecision;
+
 #define AA_STATUS_OK 0
 
 #define AA_STATUS_NULL_POINTER 1
@@ -48,6 +56,27 @@ typedef int32_t AaStatus;
  A panic was caught at the FFI boundary (never propagated across it).
  */
 #define AA_STATUS_PANIC 7
+
+/*
+ Action permitted. Also returned when the query fails open (see
+ [`aa_query_policy`]) or the runtime returns an unspecified decision.
+ */
+#define AA_DECISION_ALLOW 0
+
+/*
+ Action blocked.
+ */
+#define AA_DECISION_DENY 1
+
+/*
+ Action held for human approval.
+ */
+#define AA_DECISION_PENDING 2
+
+/*
+ Action permitted but sensitive fields must be redacted first.
+ */
+#define AA_DECISION_REDACT 3
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,6 +108,54 @@ AaStatus aa_connect(const char *endpoint, aa_client_handle **out_client);
  strings.
  */
 AaStatus aa_send_event(aa_client_handle *client, const char *event_type, const char *details);
+
+/*
+ Synchronously query the runtime for a policy decision on an action.
+
+ Builds a `CheckActionRequest` from the supplied inputs, sends it to the
+ runtime over the shared session, and blocks (up to the shared client's 5 s
+ timeout) for the decision. Delegates entirely to
+ [`AssemblyClient::query_policy`]; this shim only marshals across the C
+ boundary.
+
+ On success, `*out_decision` receives an [`AaDecision`] and `*out_reason`
+ receives an owned, NUL-terminated reason string the caller must release with
+ [`aa_free_string`] (always non-null on `AA_STATUS_OK`, even when empty).
+
+ # Fail-open
+
+ The SDK is **advisory, not authoritative**. If the runtime fails to return a
+ decision — a timeout, an unreachable runtime, or a closed session — this
+ returns `AA_STATUS_OK` with `*out_decision = AA_DECISION_ALLOW` and a reason
+ explaining the fail-open, since an unreachable or slow runtime must never
+ block the agent (the runtime / proxy / eBPF layers enforce authoritatively).
+ Only an internal poisoned lock surfaces as `AA_STATUS_MUTEX_POISONED`.
+
+ # Arguments
+
+ * `agent_id` — the calling agent's own id (the `agent_id.agent_id` field).
+ * `action_type` — snake_case proto action name (e.g. `"tool_call"`,
+   `"llm_call"`); unknown values fall back to `tool_call`.
+ * `tool_name` — registered tool name; may be null. Used for `tool_call` /
+   `tool_result` actions and as the model for `llm_call`.
+ * `args_json` — JSON-encoded argument map; may be null. Carried as the tool
+   `args_json` bytes for tool actions.
+
+ # Safety
+
+ `client` must be a handle from [`aa_connect`] that has not been
+ disconnected. `agent_id` and `action_type` must be valid NUL-terminated C
+ strings. `tool_name` and `args_json` must each be a valid NUL-terminated C
+ string or null. `out_decision` and `out_reason` must be valid, writable
+ pointers.
+ */
+AaStatus aa_query_policy(aa_client_handle *client,
+                         const char *agent_id,
+                         const char *action_type,
+                         const char *tool_name,
+                         const char *args_json,
+                         AaDecision *out_decision,
+                         char **out_reason);
 
 /*
  Shut down the session and free the handle.

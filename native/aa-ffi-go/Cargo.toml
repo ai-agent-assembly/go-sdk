@@ -13,4 +13,16 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 # mirroring node-sdk/native/aa-ffi-node and python-sdk/rust/aa-ffi-python. The
 # advisory preflight arrives transitively via aa-sdk-client's default features.
 # Keep this SHA in lockstep with the node/python shims.
-aa-sdk-client = { git = "https://github.com/ai-agent-assembly/agent-assembly.git", rev = "0aa9c945511d010457535c20704f7f42d59f2126", package = "aa-sdk-client" }
+aa-sdk-client = { git = "https://github.com/ai-agent-assembly/agent-assembly.git", rev = "4f9eea19c2c7e9d6730319e427861a291010fc75", package = "aa-sdk-client" }
+# Generated protobuf types, pinned to the same SHA as aa-sdk-client. Needed to
+# build the `CheckActionRequest` / read the `CheckActionResponse` of the
+# synchronous policy query (`AssemblyClient::query_policy`); aa-sdk-client does
+# not re-export aa_proto, so the shim depends on it directly.
+aa-proto = { git = "https://github.com/ai-agent-assembly/agent-assembly.git", rev = "4f9eea19c2c7e9d6730319e427861a291010fc75", package = "aa-proto" }
+
+[dev-dependencies]
+# Mock UDS runtime for the query_policy round-trip tests: a Tokio listener
+# speaks the aa-sdk-client wire codec (heartbeat + length-delimited prost) and
+# replies with a CheckActionResponse.
+tokio = { version = "1", features = ["net", "rt", "macros", "io-util", "time"] }
+prost = "0.14"
