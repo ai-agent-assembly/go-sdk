@@ -54,34 +54,8 @@ func (t *AssemblyTool) Call(ctx context.Context, input string) (string, error) {
 		ctxWithRunID, runID := EnsureRunID(ctx)
 		ctx = ctxWithRunID
 
-		decision, err := t.client.Check(ctx, CheckRequest{
-			ToolName: t.inner.Name(),
-			Args:     input,
-			AgentID:  AgentIDFromContext(ctx),
-			TraceID:  TraceIDFromContext(ctx),
-			RunID:    runID,
-		})
-		if err != nil {
-			if t.opts.failClosed {
-				return "", fmt.Errorf("assembly: governance check failed: %w", err)
-			}
-		} else {
-			if decision.Denied {
-				return "", &PolicyViolationError{ToolName: t.inner.Name(), Reason: decision.Reason}
-			}
-			if decision.Pending {
-				decision, err = t.client.WaitForApproval(ctx, ApprovalRequest{
-					ToolName: t.inner.Name(),
-					TraceID:  TraceIDFromContext(ctx),
-					RunID:    RunIDFromContext(ctx),
-				})
-				if err != nil {
-					return "", fmt.Errorf("assembly: approval wait failed: %w", err)
-				}
-				if decision.Denied {
-					return "", &PolicyViolationError{ToolName: t.inner.Name(), Reason: decision.Reason}
-				}
-			}
+		if err := t.runGovernanceGate(ctx, input, runID); err != nil {
+			return "", err
 		}
 	}
 
@@ -101,6 +75,56 @@ func (t *AssemblyTool) Call(ctx context.Context, input string) (string, error) {
 	}
 
 	return result, err
+}
+
+// runGovernanceGate runs the pre-execution policy check and returns a non-nil
+// error when the call must be short-circuited (policy denial, approval failure,
+// or a fail-closed check error). A nil return means the wrapped tool may run.
+// A check transport error is swallowed (allow) unless failClosed is set, matching
+// the SDK's fail-open-on-error-by-default contract.
+func (t *AssemblyTool) runGovernanceGate(ctx context.Context, input, runID string) error {
+	decision, err := t.client.Check(ctx, CheckRequest{
+		ToolName: t.inner.Name(),
+		Args:     input,
+		AgentID:  AgentIDFromContext(ctx),
+		TraceID:  TraceIDFromContext(ctx),
+		RunID:    runID,
+	})
+	if err != nil {
+		if t.opts.failClosed {
+			return fmt.Errorf("assembly: governance check failed: %w", err)
+		}
+		return nil
+	}
+
+	if decision.Denied {
+		return t.policyViolation(decision)
+	}
+	if decision.Pending {
+		return t.resolvePending(ctx)
+	}
+	return nil
+}
+
+// resolvePending blocks on out-of-band approval and maps the resolved decision
+// to a short-circuit error, or nil when the call is approved.
+func (t *AssemblyTool) resolvePending(ctx context.Context) error {
+	decision, err := t.client.WaitForApproval(ctx, ApprovalRequest{
+		ToolName: t.inner.Name(),
+		TraceID:  TraceIDFromContext(ctx),
+		RunID:    RunIDFromContext(ctx),
+	})
+	if err != nil {
+		return fmt.Errorf("assembly: approval wait failed: %w", err)
+	}
+	if decision.Denied {
+		return t.policyViolation(decision)
+	}
+	return nil
+}
+
+func (t *AssemblyTool) policyViolation(decision Decision) error {
+	return &PolicyViolationError{ToolName: t.inner.Name(), Reason: decision.Reason}
 }
 
 var _ Tool = (*AssemblyTool)(nil)
