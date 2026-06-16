@@ -7,7 +7,10 @@
 // Resolution precedence (highest first):
 //
 //  1. Explicit option (WithGatewayURL / WithAPIKey)
-//  2. Environment variable (AAASM_GATEWAY_URL / AAASM_API_KEY)
+//  2. Environment variable: AA_GATEWAY_URL / AA_API_KEY (canonical).
+//     The legacy AAASM_GATEWAY_URL / AAASM_API_KEY variables are still
+//     honored as a deprecated fallback and emit a one-time deprecation
+//     notice; prefer the AA_* names.
 //  3. Config file (~/.aasm/config.yaml, gopkg.in/yaml.v3)
 //  4. Local default: probe http://localhost:7391, auto-start if absent
 
@@ -15,12 +18,14 @@ package assembly
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -34,9 +39,48 @@ const (
 	defaultAutoStartPollInterval = 100 * time.Millisecond
 	defaultConfigFilePath        = "~/.aasm/config.yaml"
 
-	envGatewayURL = "AAASM_GATEWAY_URL"
-	envAPIKey     = "AAASM_API_KEY"
+	// envGatewayURL / envAPIKey are the canonical AA_* environment
+	// variables consulted by the resolver chain.
+	envGatewayURL = "AA_GATEWAY_URL"
+	envAPIKey     = "AA_API_KEY"
+
+	// legacyEnvGatewayURL / legacyEnvAPIKey are the deprecated AAASM_*
+	// variables. They are honored as a fallback when the canonical AA_*
+	// variable is unset, and trigger a one-time deprecation notice.
+	legacyEnvGatewayURL = "AAASM_GATEWAY_URL"
+	legacyEnvAPIKey     = "AAASM_API_KEY"
 )
+
+// deprecationOnce guards the per-variable deprecation notice so each
+// legacy AAASM_* variable warns at most once per process.
+var deprecationOnce = struct {
+	gatewayURL sync.Once
+	apiKey     sync.Once
+}{}
+
+// warnLegacyEnv logs a deprecation notice exactly once for the given
+// legacy/canonical variable pair, telling the user to switch to the
+// canonical AA_* name.
+func warnLegacyEnv(once *sync.Once, legacyVar, canonicalVar string) {
+	once.Do(func() {
+		log.Printf("assembly: environment variable %s is deprecated; use %s instead", legacyVar, canonicalVar)
+	})
+}
+
+// resolveEnvWithLegacyFallback returns the value of the canonical AA_*
+// variable when set, otherwise falls back to the deprecated AAASM_*
+// variable — emitting a one-time deprecation notice when the legacy
+// value is used. Returns "" when neither is set.
+func resolveEnvWithLegacyFallback(canonicalVar, legacyVar string, once *sync.Once) string {
+	if v := os.Getenv(canonicalVar); v != "" {
+		return v
+	}
+	if v := os.Getenv(legacyVar); v != "" {
+		warnLegacyEnv(once, legacyVar, canonicalVar)
+		return v
+	}
+	return ""
+}
 
 // aasmAutoStartArgs is the argv tail passed to the aasm binary when
 // the resolver auto-starts a local control plane.
@@ -207,7 +251,7 @@ func resolveGatewayURL(ctx context.Context, explicit string) (string, error) {
 	if explicit != "" {
 		return explicit, nil
 	}
-	if env := os.Getenv(envGatewayURL); env != "" {
+	if env := resolveEnvWithLegacyFallback(envGatewayURL, legacyEnvGatewayURL, &deprecationOnce.gatewayURL); env != "" {
 		return env, nil
 	}
 	cfg := loadConfigFile("")
@@ -233,7 +277,7 @@ func resolveAPIKey(explicit string) string {
 	if explicit != "" {
 		return explicit
 	}
-	if env := os.Getenv(envAPIKey); env != "" {
+	if env := resolveEnvWithLegacyFallback(envAPIKey, legacyEnvAPIKey, &deprecationOnce.apiKey); env != "" {
 		return env
 	}
 	cfg := loadConfigFile("")
