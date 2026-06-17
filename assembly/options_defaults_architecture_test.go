@@ -10,8 +10,8 @@ func TestDefaultRuntimeOptions(t *testing.T) {
 	t.Parallel()
 
 	opts := defaultRuntimeOptions()
-	if opts.failClosed {
-		t.Fatal("expected failClosed default to false")
+	if !opts.failClosed {
+		t.Fatal("expected failClosed default to true (AAASM-3108)")
 	}
 	if opts.timeout != defaultGatewayTimeout {
 		t.Fatalf("expected default timeout %v, got %v", defaultGatewayTimeout, opts.timeout)
