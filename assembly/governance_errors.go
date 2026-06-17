@@ -8,6 +8,12 @@ import (
 // ErrRuntimeNotInitialized indicates runtime APIs were used before Init.
 var ErrRuntimeNotInitialized = errors.New("assembly: runtime is not initialized")
 
+// ErrGovernanceUnavailable indicates a tool was wrapped with no governance
+// client (no runtime was reachable at Init) while the fail-closed enforce
+// posture is active, so the call is denied rather than run unchecked
+// (AAASM-3109).
+var ErrGovernanceUnavailable = errors.New("assembly: governance client unavailable; denying tool call (fail-closed)")
+
 // PolicyViolationError indicates a policy decision denied tool execution.
 type PolicyViolationError struct {
 	// ToolName is the name of the tool whose execution was denied.
