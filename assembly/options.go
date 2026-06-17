@@ -55,9 +55,13 @@ func WithAPIKey(apiKey string) Option {
 	}
 }
 
-// WithFailClosed toggles gateway failure behavior. When true, a governance
-// check failure causes the tool call to be rejected. When false (the default),
-// the tool call proceeds even if the governance check fails.
+// WithFailClosed toggles gateway failure behavior. When true (the default,
+// AAASM-3108), a governance check failure — a transport error or timeout —
+// denies the tool call so an unreachable gateway cannot silently allow an
+// unchecked action. Pass false to opt into fail-open, allowing the call to
+// proceed when the check fails. The fail-open path is honored only in the
+// observe and disabled enforcement postures; in enforce mode a check error
+// always denies.
 func WithFailClosed(failClosed bool) Option {
 	return func(opts *runtimeOptions) {
 		opts.failClosed = failClosed
@@ -152,5 +156,14 @@ func WithEnforcementMode(mode EnforcementMode) Option {
 func withSidecarAddress(sidecarAddress string) Option {
 	return func(opts *runtimeOptions) {
 		opts.sidecarAddress = sidecarAddress
+	}
+}
+
+// withEnforcementMode propagates the Assembly's resolved enforcement posture
+// into a tool wrapper so the fail-closed gate (AAASM-3108) can allow on check
+// error under the observe/disabled postures while denying under enforce.
+func withEnforcementMode(mode EnforcementMode) Option {
+	return func(opts *runtimeOptions) {
+		opts.enforcementMode = mode
 	}
 }
