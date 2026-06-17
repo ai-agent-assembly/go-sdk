@@ -3,6 +3,7 @@ package assembly
 import (
 	"context"
 	"fmt"
+	"log"
 )
 
 // Tool is the minimal tool contract used by this SDK package.
@@ -50,13 +51,23 @@ func (t *AssemblyTool) Call(ctx context.Context, input string) (string, error) {
 		return "", ErrRuntimeNotInitialized
 	}
 
-	if t.client != nil {
-		ctxWithRunID, runID := EnsureRunID(ctx)
-		ctx = ctxWithRunID
-
-		if err := t.runGovernanceGate(ctx, input, runID); err != nil {
-			return "", err
+	if t.client == nil {
+		// No governance client means no runtime was reachable at Init.
+		// Under the fail-closed enforce posture, deny rather than run the
+		// tool unchecked (AAASM-3109). In observe/disabled, pass through so
+		// the proxy / eBPF layers remain authoritative.
+		if t.shouldDenyOnUnavailable() {
+			log.Printf("assembly: %v (tool=%s)", ErrGovernanceUnavailable, t.inner.Name())
+			return "", ErrGovernanceUnavailable
 		}
+		return t.inner.Call(ctx, input)
+	}
+
+	ctxWithRunID, runID := EnsureRunID(ctx)
+	ctx = ctxWithRunID
+
+	if err := t.runGovernanceGate(ctx, input, runID); err != nil {
+		return "", err
 	}
 
 	result, err := t.inner.Call(ctx, input)
@@ -80,8 +91,9 @@ func (t *AssemblyTool) Call(ctx context.Context, input string) (string, error) {
 // runGovernanceGate runs the pre-execution policy check and returns a non-nil
 // error when the call must be short-circuited (policy denial, approval failure,
 // or a fail-closed check error). A nil return means the wrapped tool may run.
-// A check transport error is swallowed (allow) unless failClosed is set, matching
-// the SDK's fail-open-on-error-by-default contract.
+// A check transport error denies the call under the fail-closed enforce posture
+// (the default, AAASM-3108); it is swallowed (allow) only when fail-open was
+// opted into or the enforcement posture is observe/disabled.
 func (t *AssemblyTool) runGovernanceGate(ctx context.Context, input, runID string) error {
 	decision, err := t.client.Check(ctx, CheckRequest{
 		ToolName: t.inner.Name(),
@@ -91,9 +103,10 @@ func (t *AssemblyTool) runGovernanceGate(ctx context.Context, input, runID strin
 		RunID:    runID,
 	})
 	if err != nil {
-		if t.opts.failClosed {
+		if t.shouldDenyOnUnavailable() {
 			return fmt.Errorf("assembly: governance check failed: %w", err)
 		}
+		log.Printf("assembly: governance check failed, allowing tool call (fail-open posture): %v (tool=%s)", err, t.inner.Name())
 		return nil
 	}
 
@@ -104,6 +117,25 @@ func (t *AssemblyTool) runGovernanceGate(ctx context.Context, input, runID strin
 		return t.resolvePending(ctx)
 	}
 	return nil
+}
+
+// shouldDenyOnUnavailable reports whether a governance check that could not
+// produce a decision — a transport error, timeout, or a missing client — must
+// deny the tool call. It denies only under the fail-closed posture and an
+// enforcing mode: the observe and disabled postures always allow so the gateway
+// can shadow-audit (observe) or skip governance entirely (disabled) without the
+// SDK short-circuiting the call. The empty enforcement mode means "gateway
+// default", which is live enforce, so it denies.
+func (t *AssemblyTool) shouldDenyOnUnavailable() bool {
+	if !t.opts.failClosed {
+		return false
+	}
+	switch t.opts.enforcementMode {
+	case EnforcementModeObserve, EnforcementModeDisabled:
+		return false
+	default:
+		return true
+	}
 }
 
 // resolvePending blocks on out-of-band approval and maps the resolved decision

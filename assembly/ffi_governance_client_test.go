@@ -157,14 +157,35 @@ func TestWrappedToolDenyBlocksInnerCall(t *testing.T) {
 	}
 }
 
-// No reachable runtime: a query error makes the default (fail-open) wrapper
-// proceed and run the inner tool.
-func TestWrappedToolFailsOpenWhenRuntimeUnreachable(t *testing.T) {
+// No reachable runtime: a query error denies the tool under the fail-closed
+// enforce default (AAASM-3108) — the unreachable runtime cannot silently allow
+// an unchecked action.
+func TestWrappedToolFailsClosedByDefaultWhenRuntimeUnreachable(t *testing.T) {
 	t.Parallel()
 
 	inner := &countingTool{name: "web_search", result: "ok"}
 	client := newFFIGovernanceClient(&fakeQuerier{err: ffi.ErrRuntimeUnavailable})
 	wrapped := NewAssemblyTool(inner, client, defaultRuntimeOptions())
+
+	_, err := wrapped.Call(context.Background(), `{"q":"x"}`)
+	if err == nil {
+		t.Fatal("expected fail-closed default to deny the tool on a query error")
+	}
+	if inner.calls != 0 {
+		t.Fatalf("inner tool was called %d times, want 0 (fail-closed must block execution)", inner.calls)
+	}
+}
+
+// Opting into fail-open: a query error proceeds and runs the inner tool when
+// WithFailClosed(false) is set in an enforcing posture.
+func TestWrappedToolFailsOpenWhenOptedOut(t *testing.T) {
+	t.Parallel()
+
+	inner := &countingTool{name: "web_search", result: "ok"}
+	opts := defaultRuntimeOptions()
+	WithFailClosed(false)(&opts)
+	client := newFFIGovernanceClient(&fakeQuerier{err: ffi.ErrRuntimeUnavailable})
+	wrapped := NewAssemblyTool(inner, client, opts)
 
 	result, err := wrapped.Call(context.Background(), `{"q":"x"}`)
 	if err != nil {

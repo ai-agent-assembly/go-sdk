@@ -28,7 +28,9 @@ func TestAssemblyToolPassthrough(t *testing.T) {
 	t.Parallel()
 
 	inner := stubTool{name: "calculator", description: "basic calculator", result: "42"}
-	wrapped := NewAssemblyTool(inner, nil, defaultRuntimeOptions())
+	opts := defaultRuntimeOptions()
+	opts.enforcementMode = EnforcementModeObserve
+	wrapped := NewAssemblyTool(inner, nil, opts)
 
 	if wrapped.Name() != inner.name {
 		t.Fatalf("expected name %q, got %q", inner.name, wrapped.Name())
@@ -37,6 +39,8 @@ func TestAssemblyToolPassthrough(t *testing.T) {
 		t.Fatalf("expected description %q, got %q", inner.description, wrapped.Description())
 	}
 
+	// Under the observe posture a nil governance client passes through; the
+	// gateway shadow-audits and the proxy / eBPF layers remain authoritative.
 	result, err := wrapped.Call(context.Background(), "6*7")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
