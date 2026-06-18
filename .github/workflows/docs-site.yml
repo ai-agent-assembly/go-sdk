@@ -51,7 +51,13 @@ jobs:
 
       - name: Install Hugo extended
         run: |
-          wget --https-only -O "$RUNNER_TEMP/hugo.deb" \
+          # githubactions:S6506 — a redirect IS required here: GitHub release
+          # download URLs (github.com/.../releases/download/...) 302 to the asset
+          # CDN (objects.githubusercontent.com). Rather than follow redirects
+          # unbounded, cap the chain to the single expected hop with
+          # --max-redirect=1, and --https-only keeps every hop on TLS so an
+          # injected Location header can't downgrade to plaintext.
+          wget --https-only --max-redirect=1 -O "$RUNNER_TEMP/hugo.deb" \
             "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb"
           sudo dpkg -i "$RUNNER_TEMP/hugo.deb"
 
