@@ -1,3 +1,11 @@
+//go:build !aa_ffi_go
+
+// Gated to the pure-Go fallback build: this test relies on the FFI client failing
+// closed (no native binding) so boot falls through to the stubbed sidecarConnector.
+// Under -tags aa_ffi_go the native client instead connects to the stub listener and
+// boot routes registration through SendEvent, so this fallback scenario never runs.
+// Line coverage is measured in the non-native build, so no credit is lost.
+
 package assembly
 
 import (
