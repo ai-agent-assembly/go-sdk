@@ -22,7 +22,7 @@ func TestDefaultClientRegisterFailsClosedWithoutCgo(t *testing.T) {
 	// Register's not-connected guard short-circuits before reaching the binding.
 	_ = client.Connect("127.0.0.1:50051")
 
-	policyID, err := client.Register("agent-001", "agent-001", "go", "")
+	policyID, err := client.Register("agent-001", "agent-001", "go", "", "", "")
 	if err == nil {
 		t.Fatal("expected the no-cgo fallback to fail closed, got nil error")
 	}
