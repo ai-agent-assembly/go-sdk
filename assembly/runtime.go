@@ -2,9 +2,14 @@ package assembly
 
 import (
 	"context"
+	"log"
 
 	"github.com/ai-agent-assembly/go-sdk/internal/ffi"
 )
+
+// frameworkGo identifies this SDK's framework to the gateway at registration,
+// mirroring the descriptive `framework` metadata the Python and Node SDKs send.
+const frameworkGo = "go"
 
 // Assembly is the runtime entrypoint for governance-enabled execution.
 type Assembly struct {
@@ -64,6 +69,7 @@ func (a *Assembly) boot(ctx context.Context) error {
 			// The runtime is reachable: route governance checks through the
 			// native aa_query_policy primitive so a DENY blocks a tool call.
 			a.governance = newFFIGovernanceClient(a.ffiClient)
+			a.registerAgent()
 			return a.ffiClient.SendEvent("register", buildRegistrationEvent(a.opts))
 		}
 	}
@@ -75,6 +81,27 @@ func (a *Assembly) boot(ctx context.Context) error {
 
 	a.sidecar = sidecar
 	return nil
+}
+
+// registerAgent registers this agent with the governance gateway over the native
+// aa_register primitive (AAASM-3401/3404) so the gateway issues a credential
+// token — stored on the shared FFI session — that authenticates every later
+// aa_query_policy check (ADR 0004). It is the SDK's only direct gateway gRPC
+// call; topology lineage (parent / team / delegation) still flows separately as
+// the SendEvent("register", ...) audit event, which aa_register does not carry.
+//
+// Registration is advisory at the SDK layer: although aa_register is fail-closed
+// at the native boundary, a failure here is logged and boot proceeds
+// unregistered, matching the Python and Node SDKs (AAASM-3402/3403). An
+// unreachable or rejecting gateway must not abort the agent — the runtime /
+// proxy / eBPF layers remain authoritative.
+func (a *Assembly) registerAgent() {
+	if a.ffiClient == nil {
+		return
+	}
+	if _, err := a.ffiClient.Register(a.opts.agentID, a.opts.agentID, frameworkGo, a.opts.gatewayURL); err != nil {
+		log.Printf("assembly: agent registration failed; proceeding unregistered: %v", err)
+	}
 }
 
 // Close shuts down runtime resources.
