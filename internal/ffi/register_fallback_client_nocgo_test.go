@@ -10,7 +10,7 @@ import (
 // TestDefaultClientRegisterFailsClosedWithoutCgo exercises the no-cgo fallback
 // through the public Client.Register surface (not just the binding method): when
 // the native shim is not linked in, the build-selected fallback binding does
-// implement the registrar capability but reports the runtime as unavailable, so
+// implement the registerer capability but reports the runtime as unavailable, so
 // Register fails closed with ErrRuntimeUnavailable. The boot path then proceeds
 // unregistered. This is the path a default `go test ./...` build actually runs.
 func TestDefaultClientRegisterFailsClosedWithoutCgo(t *testing.T) {

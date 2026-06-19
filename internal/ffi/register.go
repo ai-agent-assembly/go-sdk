@@ -2,13 +2,13 @@ package ffi
 
 import "unsafe"
 
-// registrar is an optional capability a binding may implement to register the
+// registerer is an optional capability a binding may implement to register the
 // agent with the governance gateway via the native aa_register entry point. Only
 // the real transports (cgoBridge, fallbackUDSBridge) implement it; in-memory
 // test bindings may implement it too. When a binding does not, Client.Register
 // reports the runtime as unavailable so the SDK layer can treat registration as
 // advisory and proceed unregistered.
-type registrar interface {
+type registerer interface {
 	register(handle unsafe.Pointer, agentID, name, framework, gatewayEndpoint string) (policyID string, status int32)
 }
 
@@ -29,7 +29,7 @@ func (c *Client) Register(agentID, name, framework, gatewayEndpoint string) (pol
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	reg, ok := c.binding.(registrar)
+	reg, ok := c.binding.(registerer)
 	if !ok {
 		// No native registration transport compiled in: report unavailable so
 		// the boot path proceeds unregistered.

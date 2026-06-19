@@ -45,10 +45,10 @@ func TestClientRegisterNotConnected(t *testing.T) {
 	}
 }
 
-// TestClientRegisterNoRegistrarBinding verifies a binding without the registrar
+// TestClientRegisterNoRegistererBinding verifies a binding without the registerer
 // capability reports the runtime as unavailable so the boot path proceeds
 // unregistered.
-func TestClientRegisterNoRegistrarBinding(t *testing.T) {
+func TestClientRegisterNoRegistererBinding(t *testing.T) {
 	t.Parallel()
 
 	client := NewClient(&mockBinding{})
