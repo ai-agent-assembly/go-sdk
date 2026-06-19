@@ -43,6 +43,46 @@ func (cgoBridge) disconnect(handle unsafe.Pointer) int32 {
 	return int32(C.aa_disconnect((*C.aa_client_handle)(handle)))
 }
 
+// register marshals an agent registration across the C boundary to aa_register.
+// gatewayEndpoint is optional: an empty Go string is passed as a NULL C pointer
+// so the native shim resolves the endpoint from AA_GATEWAY_ENDPOINT or its
+// default. On AA_STATUS_OK the shim hands back an owned policy-id string that
+// must be released with aa_free_string. Unlike queryPolicy, aa_register is
+// fail-closed at the native boundary (it surfaces GATEWAY_UNREACHABLE /
+// REGISTER_FAILED rather than failing open).
+func (cgoBridge) register(handle unsafe.Pointer, agentID, name, framework, gatewayEndpoint string) (string, int32) {
+	cAgentID := C.CString(agentID)
+	defer C.free(unsafe.Pointer(cAgentID))
+	cName := C.CString(name)
+	defer C.free(unsafe.Pointer(cName))
+	cFramework := C.CString(framework)
+	defer C.free(unsafe.Pointer(cFramework))
+
+	var cGatewayEndpoint *C.char
+	if gatewayEndpoint != "" {
+		cGatewayEndpoint = C.CString(gatewayEndpoint)
+		defer C.free(unsafe.Pointer(cGatewayEndpoint))
+	}
+
+	var policyID *C.char
+	status := C.aa_register(
+		(*C.aa_client_handle)(handle),
+		cAgentID,
+		cName,
+		cFramework,
+		cGatewayEndpoint,
+		&policyID,
+	)
+
+	var policyStr string
+	if policyID != nil {
+		policyStr = C.GoString(policyID)
+		C.aa_free_string(policyID)
+	}
+
+	return policyStr, int32(status)
+}
+
 // queryPolicy marshals a policy query across the C boundary to aa_query_policy.
 // toolName and argsJSON are optional: an empty Go string is passed as a NULL C
 // pointer (the native shim treats both fields as nullable). On AA_STATUS_OK the
