@@ -9,7 +9,7 @@ import "unsafe"
 // reports the runtime as unavailable so the SDK layer can treat registration as
 // advisory and proceed unregistered.
 type registerer interface {
-	register(handle unsafe.Pointer, agentID, name, framework, gatewayEndpoint string) (policyID string, status int32)
+	register(handle unsafe.Pointer, agentID, name, framework, gatewayEndpoint, teamID, parentAgentID string) (policyID string, status int32)
 }
 
 // Register registers the agent with the governance gateway over the native
@@ -24,8 +24,12 @@ type registerer interface {
 //
 // agentID is the identity to register; name and framework are descriptive
 // metadata recorded by the gateway; gatewayEndpoint may be empty to let the
-// shared client resolve it from AA_GATEWAY_ENDPOINT or its default.
-func (c *Client) Register(agentID, name, framework, gatewayEndpoint string) (policyID string, err error) {
+// shared client resolve it from AA_GATEWAY_ENDPOINT or its default. teamID and
+// parentAgentID carry the agent's lineage/team scoping to the gateway on the
+// native register (AAASM-3415): teamID drives team-budget attribution and
+// parentAgentID the topology graph. Both may be empty — an empty string is
+// passed as a NULL C pointer, leaving the agent team-unscoped / root.
+func (c *Client) Register(agentID, name, framework, gatewayEndpoint, teamID, parentAgentID string) (policyID string, err error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -40,7 +44,7 @@ func (c *Client) Register(agentID, name, framework, gatewayEndpoint string) (pol
 		return "", statusToError(statusNotConnected, "register")
 	}
 
-	policyID, status := reg.register(c.handle, agentID, name, framework, gatewayEndpoint)
+	policyID, status := reg.register(c.handle, agentID, name, framework, gatewayEndpoint, teamID, parentAgentID)
 	if err := statusToError(status, "register"); err != nil {
 		return "", err
 	}

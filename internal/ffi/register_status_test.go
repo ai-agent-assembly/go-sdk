@@ -74,7 +74,7 @@ func TestClientRegisterSurfacesRegisterFailed(t *testing.T) {
 		t.Fatalf("connect: %v", err)
 	}
 
-	policyID, err := client.Register("agent-001", "agent-001", "go", "")
+	policyID, err := client.Register("agent-001", "agent-001", "go", "", "", "")
 	if !errors.Is(err, ErrRegisterFailed) {
 		t.Fatalf("expected ErrRegisterFailed, got %v", err)
 	}
@@ -95,7 +95,7 @@ func TestClientRegisterRecordsAttemptOnFailure(t *testing.T) {
 		t.Fatalf("connect: %v", err)
 	}
 
-	if _, err := client.Register("agent-007", "agent-007", "go", "ep"); !errors.Is(err, ErrGatewayUnreachable) {
+	if _, err := client.Register("agent-007", "agent-007", "go", "ep", "", ""); !errors.Is(err, ErrGatewayUnreachable) {
 		t.Fatalf("expected ErrGatewayUnreachable, got %v", err)
 	}
 	if len(*regs) != 1 {

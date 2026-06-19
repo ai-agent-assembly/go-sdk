@@ -197,13 +197,23 @@ pub unsafe extern "C" fn aa_connect(
 /// * `gateway_endpoint` — the gRPC endpoint (e.g. `"http://127.0.0.1:50051"`);
 ///   may be null to let the shared client resolve it from `AA_GATEWAY_ENDPOINT`
 ///   or its default.
+/// * `team_id` / `parent_agent_id` — the agent's lineage/team scoping forwarded
+///   to the gateway on the native register (AAASM-3415, mirroring the pyo3/napi
+///   shims): `team_id` drives team-budget attribution and `parent_agent_id` the
+///   topology graph. Both are optional — null leaves the agent team-unscoped /
+///   root.
 ///
 /// # Safety
 ///
 /// `client` must be a handle from [`aa_connect`] that has not been
 /// disconnected. `agent_id`, `name`, and `framework` must be valid
-/// NUL-terminated C strings. `gateway_endpoint` must be a valid NUL-terminated C
-/// string or null. `out_policy_id` must be a valid, writable pointer.
+/// NUL-terminated C strings. `gateway_endpoint`, `team_id`, and
+/// `parent_agent_id` must each be a valid NUL-terminated C string or null.
+/// `out_policy_id` must be a valid, writable pointer.
+// `team_id` and `parent_agent_id` are distinct optional lineage fields crossing
+// the C boundary; bundling them into a struct would force Go callers to build
+// one, complicating the cgo call site for no benefit (mirrors the pyo3 shim).
+#[allow(clippy::too_many_arguments)]
 #[no_mangle]
 pub unsafe extern "C" fn aa_register(
     client: *mut aa_client_handle,
@@ -211,6 +221,8 @@ pub unsafe extern "C" fn aa_register(
     name: *const c_char,
     framework: *const c_char,
     gateway_endpoint: *const c_char,
+    team_id: *const c_char,
+    parent_agent_id: *const c_char,
     out_policy_id: *mut *mut c_char,
 ) -> AaStatus {
     catch_unwind(AssertUnwindSafe(|| {
@@ -244,6 +256,16 @@ pub unsafe extern "C" fn aa_register(
             Ok(value) => value,
             Err(status) => return status,
         };
+        // Optional lineage: null ⇒ None (team-unscoped / root).
+        // SAFETY: each is null-checked by the helper before dereferencing.
+        let team_id = match unsafe { optional_cstr(team_id) } {
+            Ok(value) => value,
+            Err(status) => return status,
+        };
+        let parent_agent_id = match unsafe { optional_cstr(parent_agent_id) } {
+            Ok(value) => value,
+            Err(status) => return status,
+        };
 
         let config = AssemblyConfig {
             agent_id,
@@ -251,6 +273,8 @@ pub unsafe extern "C" fn aa_register(
             // consulted here, so leave the path to default resolution.
             socket_path: None,
             gateway_endpoint,
+            team_id,
+            parent_agent_id,
         };
 
         // `register` is async (tonic). Drive the one future to completion on a
@@ -639,6 +663,8 @@ mod tests {
                 name.as_ptr(),
                 framework.as_ptr(),
                 ptr::null(),
+                ptr::null(),
+                ptr::null(),
                 &mut policy_id,
             )
         };
@@ -679,6 +705,8 @@ mod tests {
                 name.as_ptr(),
                 framework.as_ptr(),
                 gateway.as_ptr(),
+                ptr::null(),
+                ptr::null(),
                 &mut policy_id,
             )
         };
@@ -691,6 +719,56 @@ mod tests {
             policy_id.is_null(),
             "no policy id is written on a failed registration"
         );
+
+        // SAFETY: handle from aa_connect, not yet disconnected.
+        assert_eq!(unsafe { aa_disconnect(client) }, AA_STATUS_OK);
+    }
+
+    /// The lineage params (`team_id` / `parent_agent_id`) are accepted and
+    /// marshalled into `AssemblyConfig` without disturbing the fail-closed
+    /// contract: with both set and no gateway listening, `aa_register` still
+    /// surfaces `AA_STATUS_GATEWAY_UNREACHABLE` and writes no policy id. This
+    /// drives the new optional-cstr branches for non-null lineage (AAASM-3444).
+    #[test]
+    fn register_forwards_lineage_and_still_fails_closed() {
+        let endpoint = CString::new(format!(
+            "/tmp/aa-ffi-go-register-lineage-{}.sock",
+            std::process::id()
+        ))
+        .expect("valid endpoint");
+        let mut client: *mut aa_client_handle = ptr::null_mut();
+        // SAFETY: valid pointers from a controlled test context.
+        assert_eq!(
+            unsafe { aa_connect(endpoint.as_ptr(), &mut client) },
+            AA_STATUS_OK
+        );
+
+        let agent = CString::new("agent-1").expect("valid");
+        let name = CString::new("My Agent").expect("valid");
+        let framework = CString::new("langchain").expect("valid");
+        let gateway = CString::new("http://127.0.0.1:1").expect("valid");
+        let team = CString::new("team-platform").expect("valid");
+        let parent = CString::new("agent-orchestrator").expect("valid");
+        let mut policy_id: *mut c_char = ptr::null_mut();
+        // SAFETY: handle from aa_connect; valid in/out pointers, non-null lineage.
+        let status = unsafe {
+            aa_register(
+                client,
+                agent.as_ptr(),
+                name.as_ptr(),
+                framework.as_ptr(),
+                gateway.as_ptr(),
+                team.as_ptr(),
+                parent.as_ptr(),
+                &mut policy_id,
+            )
+        };
+
+        assert_eq!(
+            status, AA_STATUS_GATEWAY_UNREACHABLE,
+            "lineage params must not change the fail-closed contract"
+        );
+        assert!(policy_id.is_null());
 
         // SAFETY: handle from aa_connect, not yet disconnected.
         assert_eq!(unsafe { aa_disconnect(client) }, AA_STATUS_OK);

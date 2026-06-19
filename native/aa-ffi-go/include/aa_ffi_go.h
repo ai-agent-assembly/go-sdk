@@ -136,19 +136,27 @@ AaStatus aa_connect(const char *endpoint, aa_client_handle **out_client);
  * `gateway_endpoint` — the gRPC endpoint (e.g. `"http://127.0.0.1:50051"`);
    may be null to let the shared client resolve it from `AA_GATEWAY_ENDPOINT`
    or its default.
+ * `team_id` / `parent_agent_id` — the agent's lineage/team scoping forwarded
+   to the gateway on the native register (AAASM-3415, mirroring the pyo3/napi
+   shims): `team_id` drives team-budget attribution and `parent_agent_id` the
+   topology graph. Both are optional — null leaves the agent team-unscoped /
+   root.
 
  # Safety
 
  `client` must be a handle from [`aa_connect`] that has not been
  disconnected. `agent_id`, `name`, and `framework` must be valid
- NUL-terminated C strings. `gateway_endpoint` must be a valid NUL-terminated C
- string or null. `out_policy_id` must be a valid, writable pointer.
+ NUL-terminated C strings. `gateway_endpoint`, `team_id`, and
+ `parent_agent_id` must each be a valid NUL-terminated C string or null.
+ `out_policy_id` must be a valid, writable pointer.
  */
 AaStatus aa_register(aa_client_handle *client,
                      const char *agent_id,
                      const char *name,
                      const char *framework,
                      const char *gateway_endpoint,
+                     const char *team_id,
+                     const char *parent_agent_id,
                      char **out_policy_id);
 
 /*
