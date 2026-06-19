@@ -44,3 +44,37 @@ func TestClientRegisterNotConnected(t *testing.T) {
 		t.Fatalf("expected ErrNotConnected, got %v", err)
 	}
 }
+
+// TestClientRegisterNoRegistrarBinding verifies a binding without the registrar
+// capability reports the runtime as unavailable so the boot path proceeds
+// unregistered.
+func TestClientRegisterNoRegistrarBinding(t *testing.T) {
+	t.Parallel()
+
+	client := NewClient(&mockBinding{})
+
+	_, err := client.Register("agent-001", "agent-001", "go", "")
+	if !errors.Is(err, ErrRuntimeUnavailable) {
+		t.Fatalf("expected ErrRuntimeUnavailable, got %v", err)
+	}
+}
+
+// TestClientRegisterSurfacesFailure verifies a gateway-unreachable status from
+// the binding surfaces as ErrGatewayUnreachable (Register itself does not fail
+// open; the boot path decides to proceed advisorily).
+func TestClientRegisterSurfacesFailure(t *testing.T) {
+	t.Parallel()
+
+	client, _, _ := NewCapturingClientFailingRegister()
+	if err := client.Connect("127.0.0.1:50051"); err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+
+	policyID, err := client.Register("agent-001", "agent-001", "go", "")
+	if !errors.Is(err, ErrGatewayUnreachable) {
+		t.Fatalf("expected ErrGatewayUnreachable, got %v", err)
+	}
+	if policyID != "" {
+		t.Fatalf("policyID = %q, want empty on failure", policyID)
+	}
+}

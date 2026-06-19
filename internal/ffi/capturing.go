@@ -17,6 +17,9 @@ type capturingBinding struct {
 	handle        *byte
 	Events        []string
 	Registrations []Registration
+	// registerStatus is the status code register returns; statusOK by default.
+	// Set it to a failure code to exercise the advisory register-failure path.
+	registerStatus int32
 }
 
 func (b *capturingBinding) connect(_ string) (unsafe.Pointer, int32) {
@@ -34,7 +37,9 @@ func (b *capturingBinding) disconnect(_ unsafe.Pointer) int32 {
 }
 
 // register records the registration and returns a deterministic policy id so the
-// advisory boot-path register call succeeds in tests.
+// advisory boot-path register call succeeds in tests. When registerStatus is set
+// to a failure code it records the attempt but returns that status with no policy
+// id, exercising the advisory register-failure path.
 func (b *capturingBinding) register(_ unsafe.Pointer, agentID, name, framework, gatewayEndpoint string) (string, int32) {
 	b.Registrations = append(b.Registrations, Registration{
 		AgentID:         agentID,
@@ -42,6 +47,9 @@ func (b *capturingBinding) register(_ unsafe.Pointer, agentID, name, framework, 
 		Framework:       framework,
 		GatewayEndpoint: gatewayEndpoint,
 	})
+	if b.registerStatus != statusOK {
+		return "", b.registerStatus
+	}
 	return "policy-" + agentID, statusOK
 }
 
@@ -58,5 +66,14 @@ func NewCapturingClient() (*Client, *[]string) {
 // called on Init (AAASM-3404).
 func NewCapturingClientWithRegistrations() (*Client, *[]string, *[]Registration) {
 	b := &capturingBinding{}
+	return NewClient(b), &b.Events, &b.Registrations
+}
+
+// NewCapturingClientFailingRegister returns a capturing client whose register
+// fails with GATEWAY_UNREACHABLE so the boot path's advisory register-failure
+// branch (log + proceed unregistered) can be exercised. The captured
+// registrations and events are still exposed for assertions.
+func NewCapturingClientFailingRegister() (*Client, *[]string, *[]Registration) {
+	b := &capturingBinding{registerStatus: statusGatewayUnreachable}
 	return NewClient(b), &b.Events, &b.Registrations
 }
