@@ -42,6 +42,19 @@ jobs:
         with:
           submodules: recursive
 
+      # AAASM-3445: the cgo=1 leg also builds the vendored native/aa-ffi-go shim
+      # and runs a -tags aa_ffi_go coverage pass so the cgo bridge lines are
+      # compiled + exercised; that requires a Rust toolchain + protoc.
+      - name: Setup Rust
+        if: ${{ matrix.cgo-enabled == '1' }}
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install protoc
+        if: ${{ matrix.cgo-enabled == '1' }}
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Setup Go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
@@ -55,6 +68,24 @@ jobs:
 
       - name: Run tests with coverage
         run: go test ./... -covermode=atomic -coverprofile=$COVERAGE_FILE
+
+      # AAASM-3445: the cgo bridge (internal/ffi/cgo_bridge.go) is gated behind
+      # `cgo && aa_ffi_go` and only compiled with -tags aa_ffi_go after the native
+      # shim is built. The default pass above never sets that tag, so the bridge
+      # lines were always reported uncovered to SonarCloud, failing the new-code
+      # coverage gate on every cgo-touching PR (AAASM-3048/3404/3444). Build the
+      # native lib, run a tagged coverage pass, and merge it into the profile fed
+      # to Sonar so those lines count as covered.
+      - name: Run cgo-tagged tests with coverage and merge
+        if: ${{ matrix.cgo-enabled == '1' }}
+        run: |
+          make native
+          CGO_ENABLED=1 go test -tags aa_ffi_go ./... \
+            -covermode=atomic -coverpkg=./... \
+            -coverprofile=coverage.aacgo.out
+          go run github.com/wadey/gocovmerge@latest \
+            "$COVERAGE_FILE" coverage.aacgo.out > coverage.merged.out
+          echo "SONAR_COVERAGE_FILE=coverage.merged.out" >> "${GITHUB_ENV}"
 
       - name: Upload coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
@@ -80,7 +111,7 @@ jobs:
       - name: Build Sonar scanner arguments
         if: ${{ matrix.cgo-enabled == '1' && env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' && env.SONAR_PROJECT_KEY != '' }}
         run: |
-          scanner_args="-Dsonar.projectKey=${SONAR_PROJECT_KEY} -Dsonar.go.coverage.reportPaths=${COVERAGE_FILE} -Dsonar.test.inclusions=**/*_test.go -Dsonar.coverage.exclusions=examples/**"
+          scanner_args="-Dsonar.projectKey=${SONAR_PROJECT_KEY} -Dsonar.go.coverage.reportPaths=${SONAR_COVERAGE_FILE:-$COVERAGE_FILE} -Dsonar.test.inclusions=**/*_test.go -Dsonar.coverage.exclusions=examples/**"
           if [ -n "${SONAR_ORGANIZATION}" ]; then
             scanner_args="${scanner_args} -Dsonar.organization=${SONAR_ORGANIZATION}"
           fi
