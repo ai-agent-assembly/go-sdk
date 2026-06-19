@@ -26,7 +26,7 @@ use aa_proto::assembly::common::v1::{ActionType, AgentId, Decision};
 use aa_proto::assembly::policy::v1::{
     action_context, ActionContext, CheckActionRequest, LlmCallContext, ToolCallContext,
 };
-use aa_sdk_client::{ipc::spawn_ipc_thread, AssemblyClient, SdkClientError};
+use aa_sdk_client::{ipc::spawn_ipc_thread, AssemblyClient, AssemblyConfig, SdkClientError};
 
 /// C-ABI status code returned by every fallible entry point.
 pub type AaStatus = i32;
@@ -43,6 +43,13 @@ pub const AA_STATUS_IPC_ERROR: AaStatus = 5;
 pub const AA_STATUS_CHANNEL_CLOSED: AaStatus = 6;
 /// A panic was caught at the FFI boundary (never propagated across it).
 pub const AA_STATUS_PANIC: AaStatus = 7;
+/// The gateway gRPC endpoint could not be reached for registration. Unlike a
+/// policy query, [`aa_register`] is **fail-closed** — it surfaces this rather
+/// than silently proceeding without a credential token.
+pub const AA_STATUS_GATEWAY_UNREACHABLE: AaStatus = 8;
+/// The gateway was reached but rejected the `Register` call (e.g. an invalid
+/// `did:key`). [`aa_register`] surfaces it; registration never fails open.
+pub const AA_STATUS_REGISTER_FAILED: AaStatus = 9;
 
 /// C-ABI policy decision returned by [`aa_query_policy`].
 ///
@@ -79,6 +86,10 @@ fn status_for(err: &SdkClientError) -> AaStatus {
         // unreachable for them; map it conservatively to "not connected".
         // [`aa_query_policy`] handles `QueryFailed` itself by failing open.
         SdkClientError::QueryFailed => AA_STATUS_NOT_CONNECTED,
+        // Registration-only failures (see [`aa_register`]), surfaced verbatim
+        // so the caller can distinguish "gateway down" from "gateway said no".
+        SdkClientError::GatewayUnreachable => AA_STATUS_GATEWAY_UNREACHABLE,
+        SdkClientError::RegisterFailed(_) => AA_STATUS_REGISTER_FAILED,
     }
 }
 
@@ -152,6 +163,122 @@ pub unsafe extern "C" fn aa_connect(
         // SAFETY: `out_client` null-checked above.
         unsafe {
             *out_client = Box::into_raw(handle);
+        }
+
+        AA_STATUS_OK
+    }))
+    .unwrap_or(AA_STATUS_PANIC)
+}
+
+/// Register this agent with the governance gateway and store the issued
+/// credential token on the session.
+///
+/// Delegates to [`AssemblyClient::register`] — the SDK's only direct gateway
+/// gRPC call (ADR 0004). It hits `AgentLifecycleService.Register`; the returned
+/// `credential_token` is held by the shared client and attached to every later
+/// [`aa_query_policy`] so the gateway's `validate_credential_token` does not
+/// deny a registered agent. On success `*out_policy_id` receives the
+/// gateway-assigned policy id as an owned, NUL-terminated string the caller must
+/// release with [`aa_free_string`].
+///
+/// # Fail-closed
+///
+/// Unlike [`aa_query_policy`], registration is **not** advisory: a failure
+/// surfaces rather than failing open. `AA_STATUS_GATEWAY_UNREACHABLE` means the
+/// gateway gRPC endpoint could not be reached; `AA_STATUS_REGISTER_FAILED` means
+/// the gateway rejected the call (e.g. an invalid `did:key`). `*out_policy_id`
+/// is left untouched on any non-`AA_STATUS_OK` return.
+///
+/// # Arguments
+///
+/// * `agent_id` — the agent identity to register (derived into a `did:key` +
+///   Ed25519 public key by the shared client).
+/// * `name` / `framework` — descriptive metadata the gateway records.
+/// * `gateway_endpoint` — the gRPC endpoint (e.g. `"http://127.0.0.1:50051"`);
+///   may be null to let the shared client resolve it from `AA_GATEWAY_ENDPOINT`
+///   or its default.
+///
+/// # Safety
+///
+/// `client` must be a handle from [`aa_connect`] that has not been
+/// disconnected. `agent_id`, `name`, and `framework` must be valid
+/// NUL-terminated C strings. `gateway_endpoint` must be a valid NUL-terminated C
+/// string or null. `out_policy_id` must be a valid, writable pointer.
+#[no_mangle]
+pub unsafe extern "C" fn aa_register(
+    client: *mut aa_client_handle,
+    agent_id: *const c_char,
+    name: *const c_char,
+    framework: *const c_char,
+    gateway_endpoint: *const c_char,
+    out_policy_id: *mut *mut c_char,
+) -> AaStatus {
+    catch_unwind(AssertUnwindSafe(|| {
+        if client.is_null()
+            || agent_id.is_null()
+            || name.is_null()
+            || framework.is_null()
+            || out_policy_id.is_null()
+        {
+            return AA_STATUS_NULL_POINTER;
+        }
+
+        // SAFETY: pointers null-checked above.
+        let agent_id = match unsafe { CStr::from_ptr(agent_id) }.to_str() {
+            Ok(value) => value.to_owned(),
+            Err(_) => return AA_STATUS_INVALID_UTF8,
+        };
+        // SAFETY: pointers null-checked above.
+        let name = match unsafe { CStr::from_ptr(name) }.to_str() {
+            Ok(value) => value.to_owned(),
+            Err(_) => return AA_STATUS_INVALID_UTF8,
+        };
+        // SAFETY: pointers null-checked above.
+        let framework = match unsafe { CStr::from_ptr(framework) }.to_str() {
+            Ok(value) => value.to_owned(),
+            Err(_) => return AA_STATUS_INVALID_UTF8,
+        };
+        // Optional: null ⇒ let the shared client resolve the endpoint.
+        // SAFETY: null-checked inside the helper before dereferencing.
+        let gateway_endpoint = match unsafe { optional_cstr(gateway_endpoint) } {
+            Ok(value) => value,
+            Err(status) => return status,
+        };
+
+        let config = AssemblyConfig {
+            agent_id,
+            // Registration is a gateway gRPC call; the runtime UDS socket is not
+            // consulted here, so leave the path to default resolution.
+            socket_path: None,
+            gateway_endpoint,
+        };
+
+        // `register` is async (tonic). Drive the one future to completion on a
+        // private current-thread runtime — the C-ABI surface is synchronous.
+        let runtime = match tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+        {
+            Ok(rt) => rt,
+            Err(_) => return AA_STATUS_IPC_ERROR,
+        };
+
+        // SAFETY: `client` null-checked above; `&*` borrows the boxed handle.
+        let handle = unsafe { &*client };
+        let policy_id = match runtime.block_on(handle.client.register(&config, name, framework)) {
+            Ok(policy_id) => policy_id,
+            // Fail-closed: surface the failure instead of proceeding tokenless.
+            Err(err) => return status_for(&err),
+        };
+
+        // A NUL inside the policy id would truncate it; fall back to empty
+        // rather than fail a successful registration over a gateway-controlled
+        // string.
+        let policy_c = CString::new(policy_id).unwrap_or_default();
+
+        // SAFETY: out-pointer null-checked above.
+        unsafe {
+            *out_policy_id = policy_c.into_raw();
         }
 
         AA_STATUS_OK
@@ -496,6 +623,77 @@ mod tests {
         // SAFETY: deliberate null client to validate the guard.
         let status = unsafe { aa_disconnect(ptr::null_mut()) };
         assert_eq!(status, AA_STATUS_NULL_POINTER);
+    }
+
+    #[test]
+    fn register_rejects_null_client() {
+        let agent = CString::new("agent-1").expect("valid");
+        let name = CString::new("My Agent").expect("valid");
+        let framework = CString::new("langchain").expect("valid");
+        let mut policy_id: *mut c_char = ptr::null_mut();
+        // SAFETY: deliberate null client to validate the guard.
+        let status = unsafe {
+            aa_register(
+                ptr::null_mut(),
+                agent.as_ptr(),
+                name.as_ptr(),
+                framework.as_ptr(),
+                ptr::null(),
+                &mut policy_id,
+            )
+        };
+        assert_eq!(status, AA_STATUS_NULL_POINTER);
+        assert!(policy_id.is_null());
+    }
+
+    /// Registration is fail-closed: with no gateway listening at the supplied
+    /// endpoint, `aa_register` must surface `AA_STATUS_GATEWAY_UNREACHABLE`
+    /// rather than fail open like a policy query. `out_policy_id` stays null.
+    #[test]
+    fn register_fails_closed_when_gateway_unreachable() {
+        // Connect a session (the runtime socket need not exist; register does
+        // not consult it), then point register at a dead gateway endpoint.
+        let endpoint = CString::new(format!(
+            "/tmp/aa-ffi-go-register-{}.sock",
+            std::process::id()
+        ))
+        .expect("valid endpoint");
+        let mut client: *mut aa_client_handle = ptr::null_mut();
+        // SAFETY: valid pointers from a controlled test context.
+        assert_eq!(
+            unsafe { aa_connect(endpoint.as_ptr(), &mut client) },
+            AA_STATUS_OK
+        );
+
+        let agent = CString::new("agent-1").expect("valid");
+        let name = CString::new("My Agent").expect("valid");
+        let framework = CString::new("langchain").expect("valid");
+        // Port 1 is never a live gateway, so the gRPC connect fails fast.
+        let gateway = CString::new("http://127.0.0.1:1").expect("valid");
+        let mut policy_id: *mut c_char = ptr::null_mut();
+        // SAFETY: handle from aa_connect; valid in/out pointers.
+        let status = unsafe {
+            aa_register(
+                client,
+                agent.as_ptr(),
+                name.as_ptr(),
+                framework.as_ptr(),
+                gateway.as_ptr(),
+                &mut policy_id,
+            )
+        };
+
+        assert_eq!(
+            status, AA_STATUS_GATEWAY_UNREACHABLE,
+            "registration must fail closed, not open, when the gateway is down"
+        );
+        assert!(
+            policy_id.is_null(),
+            "no policy id is written on a failed registration"
+        );
+
+        // SAFETY: handle from aa_connect, not yet disconnected.
+        assert_eq!(unsafe { aa_disconnect(client) }, AA_STATUS_OK);
     }
 
     #[test]

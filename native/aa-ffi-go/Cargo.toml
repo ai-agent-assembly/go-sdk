@@ -13,12 +13,17 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 # mirroring node-sdk/native/aa-ffi-node and python-sdk/rust/aa-ffi-python. The
 # advisory preflight arrives transitively via aa-sdk-client's default features.
 # Keep this SHA in lockstep with the node/python shims.
-aa-sdk-client = { git = "https://github.com/ai-agent-assembly/agent-assembly.git", rev = "4f9eea19c2c7e9d6730319e427861a291010fc75", package = "aa-sdk-client" }
+aa-sdk-client = { git = "https://github.com/ai-agent-assembly/agent-assembly.git", rev = "9cde1d83e4114114bd49c9546d4fa5d86d6cbd32", package = "aa-sdk-client" }
 # Generated protobuf types, pinned to the same SHA as aa-sdk-client. Needed to
 # build the `CheckActionRequest` / read the `CheckActionResponse` of the
 # synchronous policy query (`AssemblyClient::query_policy`); aa-sdk-client does
 # not re-export aa_proto, so the shim depends on it directly.
-aa-proto = { git = "https://github.com/ai-agent-assembly/agent-assembly.git", rev = "4f9eea19c2c7e9d6730319e427861a291010fc75", package = "aa-proto" }
+aa-proto = { git = "https://github.com/ai-agent-assembly/agent-assembly.git", rev = "9cde1d83e4114114bd49c9546d4fa5d86d6cbd32", package = "aa-proto" }
+# `AssemblyClient::register` is async (tonic gRPC), but the C-ABI `aa_register`
+# surface is synchronous. The shim drives that one future to completion on a
+# private current-thread runtime — hence only the `rt` feature is needed (the
+# `query_policy` / event paths stay on the shared client's blocking channel).
+tokio = { version = "1", features = ["rt"] }
 
 [dev-dependencies]
 # Mock UDS runtime for the query_policy round-trip tests: a Tokio listener

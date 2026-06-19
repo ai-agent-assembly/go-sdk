@@ -58,6 +58,19 @@ typedef int32_t AaDecision;
 #define AA_STATUS_PANIC 7
 
 /*
+ The gateway gRPC endpoint could not be reached for registration. Unlike a
+ policy query, [`aa_register`] is **fail-closed** — it surfaces this rather
+ than silently proceeding without a credential token.
+ */
+#define AA_STATUS_GATEWAY_UNREACHABLE 8
+
+/*
+ The gateway was reached but rejected the `Register` call (e.g. an invalid
+ `did:key`). [`aa_register`] surfaces it; registration never fails open.
+ */
+#define AA_STATUS_REGISTER_FAILED 9
+
+/*
  Action permitted. Also returned when the query fails open (see
  [`aa_query_policy`]) or the runtime returns an unspecified decision.
  */
@@ -94,6 +107,49 @@ extern "C" {
  valid, writable pointer to a `*mut aa_client_handle`.
  */
 AaStatus aa_connect(const char *endpoint, aa_client_handle **out_client);
+
+/*
+ Register this agent with the governance gateway and store the issued
+ credential token on the session.
+
+ Delegates to [`AssemblyClient::register`] — the SDK's only direct gateway
+ gRPC call (ADR 0004). It hits `AgentLifecycleService.Register`; the returned
+ `credential_token` is held by the shared client and attached to every later
+ [`aa_query_policy`] so the gateway's `validate_credential_token` does not
+ deny a registered agent. On success `*out_policy_id` receives the
+ gateway-assigned policy id as an owned, NUL-terminated string the caller must
+ release with [`aa_free_string`].
+
+ # Fail-closed
+
+ Unlike [`aa_query_policy`], registration is **not** advisory: a failure
+ surfaces rather than failing open. `AA_STATUS_GATEWAY_UNREACHABLE` means the
+ gateway gRPC endpoint could not be reached; `AA_STATUS_REGISTER_FAILED` means
+ the gateway rejected the call (e.g. an invalid `did:key`). `*out_policy_id`
+ is left untouched on any non-`AA_STATUS_OK` return.
+
+ # Arguments
+
+ * `agent_id` — the agent identity to register (derived into a `did:key` +
+   Ed25519 public key by the shared client).
+ * `name` / `framework` — descriptive metadata the gateway records.
+ * `gateway_endpoint` — the gRPC endpoint (e.g. `"http://127.0.0.1:50051"`);
+   may be null to let the shared client resolve it from `AA_GATEWAY_ENDPOINT`
+   or its default.
+
+ # Safety
+
+ `client` must be a handle from [`aa_connect`] that has not been
+ disconnected. `agent_id`, `name`, and `framework` must be valid
+ NUL-terminated C strings. `gateway_endpoint` must be a valid NUL-terminated C
+ string or null. `out_policy_id` must be a valid, writable pointer.
+ */
+AaStatus aa_register(aa_client_handle *client,
+                     const char *agent_id,
+                     const char *name,
+                     const char *framework,
+                     const char *gateway_endpoint,
+                     char **out_policy_id);
 
 /*
  Report an audit event `(event_type, details)` to the runtime.
