@@ -11,6 +11,8 @@ type Registration struct {
 	Name            string
 	Framework       string
 	GatewayEndpoint string
+	TeamID          string
+	ParentAgentID   string
 }
 
 type capturingBinding struct {
@@ -40,12 +42,14 @@ func (b *capturingBinding) disconnect(_ unsafe.Pointer) int32 {
 // advisory boot-path register call succeeds in tests. When registerStatus is set
 // to a failure code it records the attempt but returns that status with no policy
 // id, exercising the advisory register-failure path.
-func (b *capturingBinding) register(_ unsafe.Pointer, agentID, name, framework, gatewayEndpoint string) (string, int32) {
+func (b *capturingBinding) register(_ unsafe.Pointer, agentID, name, framework, gatewayEndpoint, teamID, parentAgentID string) (string, int32) {
 	b.Registrations = append(b.Registrations, Registration{
 		AgentID:         agentID,
 		Name:            name,
 		Framework:       framework,
 		GatewayEndpoint: gatewayEndpoint,
+		TeamID:          teamID,
+		ParentAgentID:   parentAgentID,
 	})
 	if b.registerStatus != statusOK {
 		return "", b.registerStatus

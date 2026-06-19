@@ -50,7 +50,7 @@ func (cgoBridge) disconnect(handle unsafe.Pointer) int32 {
 // must be released with aa_free_string. Unlike queryPolicy, aa_register is
 // fail-closed at the native boundary (it surfaces GATEWAY_UNREACHABLE /
 // REGISTER_FAILED rather than failing open).
-func (cgoBridge) register(handle unsafe.Pointer, agentID, name, framework, gatewayEndpoint string) (string, int32) {
+func (cgoBridge) register(handle unsafe.Pointer, agentID, name, framework, gatewayEndpoint, teamID, parentAgentID string) (string, int32) {
 	cAgentID := C.CString(agentID)
 	defer C.free(unsafe.Pointer(cAgentID))
 	cName := C.CString(name)
@@ -64,6 +64,21 @@ func (cgoBridge) register(handle unsafe.Pointer, agentID, name, framework, gatew
 		defer C.free(unsafe.Pointer(cGatewayEndpoint))
 	}
 
+	// teamID / parentAgentID are optional lineage fields: an empty Go string is
+	// passed as a NULL C pointer so the native shim leaves the agent
+	// team-unscoped / root (AAASM-3415).
+	var cTeamID *C.char
+	if teamID != "" {
+		cTeamID = C.CString(teamID)
+		defer C.free(unsafe.Pointer(cTeamID))
+	}
+
+	var cParentAgentID *C.char
+	if parentAgentID != "" {
+		cParentAgentID = C.CString(parentAgentID)
+		defer C.free(unsafe.Pointer(cParentAgentID))
+	}
+
 	var policyID *C.char
 	status := C.aa_register(
 		(*C.aa_client_handle)(handle),
@@ -71,6 +86,8 @@ func (cgoBridge) register(handle unsafe.Pointer, agentID, name, framework, gatew
 		cName,
 		cFramework,
 		cGatewayEndpoint,
+		cTeamID,
+		cParentAgentID,
 		&policyID,
 	)
 

@@ -87,8 +87,11 @@ func (a *Assembly) boot(ctx context.Context) error {
 // aa_register primitive (AAASM-3401/3404) so the gateway issues a credential
 // token — stored on the shared FFI session — that authenticates every later
 // aa_query_policy check (ADR 0004). It is the SDK's only direct gateway gRPC
-// call; topology lineage (parent / team / delegation) still flows separately as
-// the SendEvent("register", ...) audit event, which aa_register does not carry.
+// call. The agent's team/topology lineage (teamID / parentAgentID) now rides
+// the native register itself (AAASM-3415), matching the Python and Node SDKs:
+// teamID drives team-budget attribution and parentAgentID the topology graph.
+// The remaining lineage detail (delegation reason, spawned-by tool) still flows
+// separately as the SendEvent("register", ...) audit event.
 //
 // Registration is advisory at the SDK layer: although aa_register is fail-closed
 // at the native boundary, a failure here is logged and boot proceeds
@@ -99,7 +102,14 @@ func (a *Assembly) registerAgent() {
 	if a.ffiClient == nil {
 		return
 	}
-	if _, err := a.ffiClient.Register(a.opts.agentID, a.opts.agentID, frameworkGo, a.opts.gatewayURL); err != nil {
+	if _, err := a.ffiClient.Register(
+		a.opts.agentID,
+		a.opts.agentID,
+		frameworkGo,
+		a.opts.gatewayURL,
+		a.opts.teamID,
+		a.opts.parentAgentID,
+	); err != nil {
 		log.Printf("assembly: agent registration failed; proceeding unregistered: %v", err)
 	}
 }

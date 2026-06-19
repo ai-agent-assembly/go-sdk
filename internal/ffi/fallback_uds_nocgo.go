@@ -39,6 +39,6 @@ func (fallbackUDSBridge) queryPolicy(unsafe.Pointer, string, string, string, str
 // reach the gateway, so registration cannot be performed; Client.Register
 // surfaces this as ErrRuntimeUnavailable and the boot path proceeds unregistered
 // (registration is advisory at the SDK layer).
-func (fallbackUDSBridge) register(unsafe.Pointer, string, string, string, string) (string, int32) {
+func (fallbackUDSBridge) register(unsafe.Pointer, string, string, string, string, string, string) (string, int32) {
 	return "", statusRuntimeUnavailable
 }
