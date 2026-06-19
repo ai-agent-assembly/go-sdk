@@ -34,3 +34,11 @@ func (fallbackUDSBridge) disconnect(unsafe.Pointer) int32 {
 func (fallbackUDSBridge) queryPolicy(unsafe.Pointer, string, string, string, string) (int32, string, int32) {
 	return DecisionAllow, "", statusRuntimeUnavailable
 }
+
+// register reports the runtime as unavailable. There is no native transport to
+// reach the gateway, so registration cannot be performed; Client.Register
+// surfaces this as ErrRuntimeUnavailable and the boot path proceeds unregistered
+// (registration is advisory at the SDK layer).
+func (fallbackUDSBridge) register(unsafe.Pointer, string, string, string, string) (string, int32) {
+	return "", statusRuntimeUnavailable
+}
