@@ -58,6 +58,60 @@ func (r *recordingGovernanceClient) Close() error {
 	return nil
 }
 
+func assertEndToEndCheckRequest(t *testing.T, govClient *recordingGovernanceClient) {
+	t.Helper()
+	govClient.mu.Lock()
+	defer govClient.mu.Unlock()
+	if !govClient.checkCalled {
+		t.Fatal("expected governance Check to be called")
+	}
+	if govClient.checkRequest.ToolName != "calculator" {
+		t.Fatalf("expected check tool name %q, got %q", "calculator", govClient.checkRequest.ToolName)
+	}
+	if govClient.checkRequest.Args != `{"expression":"6*7"}` {
+		t.Fatalf("expected check args %q, got %q", `{"expression":"6*7"}`, govClient.checkRequest.Args)
+	}
+	if govClient.checkRequest.AgentID != "test-agent" {
+		t.Fatalf("expected check agent id %q, got %q", "test-agent", govClient.checkRequest.AgentID)
+	}
+	if govClient.checkRequest.TraceID != "trace-integration-001" {
+		t.Fatalf("expected check trace id %q, got %q", "trace-integration-001", govClient.checkRequest.TraceID)
+	}
+	if govClient.checkRequest.RunID == "" {
+		t.Fatal("expected non-empty run id on check request")
+	}
+}
+
+func assertEndToEndRecordRequest(t *testing.T, govClient *recordingGovernanceClient) {
+	t.Helper()
+	select {
+	case <-govClient.recordDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for RecordResult call")
+	}
+
+	govClient.mu.Lock()
+	defer govClient.mu.Unlock()
+	if !govClient.recordCalled {
+		t.Fatal("expected RecordResult to be called")
+	}
+	if govClient.recordRequest.ToolName != "calculator" {
+		t.Fatalf("expected record tool name %q, got %q", "calculator", govClient.recordRequest.ToolName)
+	}
+	if govClient.recordRequest.Result != "42" {
+		t.Fatalf("expected record result %q, got %q", "42", govClient.recordRequest.Result)
+	}
+	if govClient.recordRequest.Error != "" {
+		t.Fatalf("expected empty record error, got %q", govClient.recordRequest.Error)
+	}
+	if govClient.recordRequest.TraceID != "trace-integration-001" {
+		t.Fatalf("expected record trace id %q, got %q", "trace-integration-001", govClient.recordRequest.TraceID)
+	}
+	if govClient.recordRequest.RunID == "" {
+		t.Fatal("expected non-empty run id on record request")
+	}
+}
+
 func TestEndToEnd_AgentToolCallEventCapture(t *testing.T) {
 	// Pin a deterministic in-memory FFI client so Init's transport path succeeds
 	// regardless of build tag (the default fallback is fail-closed). This test
@@ -104,54 +158,10 @@ func TestEndToEnd_AgentToolCallEventCapture(t *testing.T) {
 	}
 
 	// 5. Assert: governance Check() was called with valid payload
-	govClient.mu.Lock()
-	if !govClient.checkCalled {
-		t.Fatal("expected governance Check to be called")
-	}
-	if govClient.checkRequest.ToolName != "calculator" {
-		t.Fatalf("expected check tool name %q, got %q", "calculator", govClient.checkRequest.ToolName)
-	}
-	if govClient.checkRequest.Args != `{"expression":"6*7"}` {
-		t.Fatalf("expected check args %q, got %q", `{"expression":"6*7"}`, govClient.checkRequest.Args)
-	}
-	if govClient.checkRequest.AgentID != "test-agent" {
-		t.Fatalf("expected check agent id %q, got %q", "test-agent", govClient.checkRequest.AgentID)
-	}
-	if govClient.checkRequest.TraceID != "trace-integration-001" {
-		t.Fatalf("expected check trace id %q, got %q", "trace-integration-001", govClient.checkRequest.TraceID)
-	}
-	if govClient.checkRequest.RunID == "" {
-		t.Fatal("expected non-empty run id on check request")
-	}
-	govClient.mu.Unlock()
+	assertEndToEndCheckRequest(t, govClient)
 
 	// 6. Assert: RecordResult was called (fires in background goroutine)
-	select {
-	case <-govClient.recordDone:
-	case <-time.After(2 * time.Second):
-		t.Fatal("timed out waiting for RecordResult call")
-	}
-
-	govClient.mu.Lock()
-	if !govClient.recordCalled {
-		t.Fatal("expected RecordResult to be called")
-	}
-	if govClient.recordRequest.ToolName != "calculator" {
-		t.Fatalf("expected record tool name %q, got %q", "calculator", govClient.recordRequest.ToolName)
-	}
-	if govClient.recordRequest.Result != "42" {
-		t.Fatalf("expected record result %q, got %q", "42", govClient.recordRequest.Result)
-	}
-	if govClient.recordRequest.Error != "" {
-		t.Fatalf("expected empty record error, got %q", govClient.recordRequest.Error)
-	}
-	if govClient.recordRequest.TraceID != "trace-integration-001" {
-		t.Fatalf("expected record trace id %q, got %q", "trace-integration-001", govClient.recordRequest.TraceID)
-	}
-	if govClient.recordRequest.RunID == "" {
-		t.Fatal("expected non-empty run id on record request")
-	}
-	govClient.mu.Unlock()
+	assertEndToEndRecordRequest(t, govClient)
 
 	// 7. Close assembly
 	if err := a.Close(); err != nil {

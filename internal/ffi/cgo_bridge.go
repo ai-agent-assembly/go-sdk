@@ -10,7 +10,9 @@ package ffi
 */
 import "C"
 
-import "unsafe"
+import (
+	"unsafe"
+)
 
 // cgoBridge links the vendored native/aa-ffi-go library (a thin C-ABI over the
 // SHA-pinned aa-sdk-client) and routes events through the authoritative runtime.
