@@ -5,9 +5,11 @@ import (
 	"fmt"
 )
 
-// Status codes 0–7 mirror the aa-ffi-go C ABI (AaStatus) returned by the native
+// Status codes 0–9 mirror the aa-ffi-go C ABI (AaStatus) returned by the native
 // cgo bridge. statusRuntimeUnavailable is a Go-only sentinel used by the
-// fail-closed fallback binding (no native transport compiled in).
+// fail-closed fallback binding (no native transport compiled in). Codes 8–9 are
+// the fail-closed registration outcomes surfaced only by aa_register — unlike a
+// policy query, registration never fails open (see aa_ffi_go.h).
 const (
 	statusOK                 int32 = 0
 	statusNullPointer        int32 = 1
@@ -17,6 +19,8 @@ const (
 	statusIPCError           int32 = 5
 	statusChannelClosed      int32 = 6
 	statusPanic              int32 = 7
+	statusGatewayUnreachable int32 = 8
+	statusRegisterFailed     int32 = 9
 	statusRuntimeUnavailable int32 = 100
 )
 
@@ -40,6 +44,15 @@ var (
 	ErrChannelClosed = errors.New("ffi channel closed")
 	// ErrPanic reports a panic was caught at the native FFI boundary.
 	ErrPanic = errors.New("ffi panic at boundary")
+	// ErrGatewayUnreachable reports that aa_register could not reach the gateway
+	// gRPC endpoint. Registration is fail-closed at the native boundary; the SDK
+	// layer treats it as advisory and proceeds unregistered (the runtime / proxy
+	// / eBPF layers remain authoritative).
+	ErrGatewayUnreachable = errors.New("ffi gateway unreachable")
+	// ErrRegisterFailed reports the gateway rejected the Register call (e.g. an
+	// invalid did:key). Like ErrGatewayUnreachable it is advisory at the SDK
+	// layer.
+	ErrRegisterFailed = errors.New("ffi register rejected by gateway")
 	// ErrRuntimeUnavailable reports that no native enforcement transport is
 	// available. The SDK fails closed rather than silently allowing traffic;
 	// build with `-tags aa_ffi_go` (CGO_ENABLED=1) to enable the native binding.
@@ -64,6 +77,10 @@ func statusToError(status int32, operation string) error {
 		return fmt.Errorf(errWrapFormat, operation, ErrChannelClosed)
 	case statusPanic:
 		return fmt.Errorf(errWrapFormat, operation, ErrPanic)
+	case statusGatewayUnreachable:
+		return fmt.Errorf(errWrapFormat, operation, ErrGatewayUnreachable)
+	case statusRegisterFailed:
+		return fmt.Errorf(errWrapFormat, operation, ErrRegisterFailed)
 	case statusRuntimeUnavailable:
 		return fmt.Errorf(errWrapFormat, operation, ErrRuntimeUnavailable)
 	default:
