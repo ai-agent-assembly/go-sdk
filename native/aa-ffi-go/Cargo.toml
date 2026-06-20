@@ -13,7 +13,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 # mirroring node-sdk/native/aa-ffi-node and python-sdk/rust/aa-ffi-python. The
 # advisory preflight arrives transitively via aa-sdk-client's default features.
 # Keep this SHA in lockstep with the node/python shims.
-aa-sdk-client = { git = "https://github.com/ai-agent-assembly/agent-assembly.git", rev = "fdff8e402e83f01bda3fbbf1f3f7f831b391b62b", package = "aa-sdk-client" }
+aa-sdk-client = { git = "https://github.com/ai-agent-assembly/agent-assembly.git", rev = "ebc4d7dc9da81cdf4f265d681c138500ca6e98e7", package = "aa-sdk-client" }
 # Generated protobuf types, pinned to the same SHA as aa-sdk-client. Needed to
 # build the `CheckActionRequest` / read the `CheckActionResponse` of the
 # synchronous policy query (`AssemblyClient::query_policy`); aa-sdk-client does
