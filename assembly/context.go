@@ -16,7 +16,26 @@ const (
 	runIDContextKey         contextKey = "assembly.run_id"
 	parentAgentIDContextKey contextKey = "assembly.parent_agent_id"
 	spawnedByToolContextKey contextKey = "assembly.spawned_by_tool"
+	opIDContextKey          contextKey = "assembly.op_id"
 )
+
+// WithOpID returns a new context carrying an explicit op-control op identifier
+// ("{trace_id}:{span_id}"). An explicit op ID overrides the trace/span-derived
+// one when the tool wrapper consults the live kill switch (AAASM-3501); set it
+// only when the caller already knows the gateway's op ID for this call.
+func WithOpID(ctx context.Context, opID string) context.Context {
+	return context.WithValue(ctx, opIDContextKey, opID)
+}
+
+// opIDFromContext returns the explicit op ID set by [WithOpID], or an empty
+// string if absent.
+func opIDFromContext(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	opID, _ := ctx.Value(opIDContextKey).(string)
+	return opID
+}
 
 // WithAgentID returns a new context containing the assembly agent ID.
 func WithAgentID(ctx context.Context, agentID string) context.Context {
