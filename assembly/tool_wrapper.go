@@ -15,17 +15,21 @@ type Tool interface {
 
 // AssemblyTool wraps a Tool with governance hooks.
 type AssemblyTool struct { //nolint:revive // Keep API name aligned with AAASM-63 contract.
-	inner  Tool
-	client GovernanceClient
-	opts   runtimeOptions
+	inner     Tool
+	client    GovernanceClient
+	opts      runtimeOptions
+	opControl OpController
 }
 
-// NewAssemblyTool constructs a governance wrapper around a tool.
+// NewAssemblyTool constructs a governance wrapper around a tool. When opts
+// carries an op-control subscriber (via [WithOpControl]), the wrapper consults
+// the gateway's live kill switch before each tool call (AAASM-3501).
 func NewAssemblyTool(inner Tool, client GovernanceClient, opts runtimeOptions) *AssemblyTool {
 	return &AssemblyTool{
-		inner:  inner,
-		client: client,
-		opts:   opts,
+		inner:     inner,
+		client:    client,
+		opts:      opts,
+		opControl: opts.opControl,
 	}
 }
 
@@ -65,6 +69,15 @@ func (t *AssemblyTool) Call(ctx context.Context, input string) (string, error) {
 
 	ctxWithRunID, runID := EnsureRunID(ctx)
 	ctx = ctxWithRunID
+
+	// Consult the live op-control kill switch before the gateway Check
+	// (AAASM-3491 / AAASM-3501): a terminated op short-circuits here — the
+	// gateway is never even queried — and a paused op blocks cooperatively
+	// until the operator resumes it. Skipped when no subscriber is wired or
+	// the call carries no trace identity (so there is no tracked op).
+	if err := t.runOpControlGate(ctx); err != nil {
+		return "", err
+	}
 
 	if err := t.runGovernanceGate(ctx, input, runID); err != nil {
 		return "", err
@@ -115,6 +128,28 @@ func (t *AssemblyTool) runGovernanceGate(ctx context.Context, input, runID strin
 	}
 	if decision.Pending {
 		return t.resolvePending(ctx)
+	}
+	return nil
+}
+
+// runOpControlGate consults the live op-control kill switch (AAASM-3491 /
+// AAASM-3501) before the gateway Check and returns a non-nil error when the
+// call must be short-circuited. It returns nil — letting the call proceed to
+// the normal governance gate — when no subscriber is wired or the call carries
+// no resolvable op ID (no trace identity, so no tracked op for the kill switch
+// to address). A terminated op returns the subscriber's *OpTerminatedError
+// before the gateway is ever queried; a paused op blocks here until the gateway
+// resumes (or terminates) it.
+func (t *AssemblyTool) runOpControlGate(ctx context.Context) error {
+	if t.opControl == nil {
+		return nil
+	}
+	opID := resolveOpID(ctx)
+	if opID == "" {
+		return nil
+	}
+	if err := t.opControl.WaitForOp(ctx, opID); err != nil {
+		return fmt.Errorf("assembly: op control: %w", err)
 	}
 	return nil
 }
