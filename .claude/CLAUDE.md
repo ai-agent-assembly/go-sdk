@@ -105,7 +105,7 @@ These are load-bearing; reviewers push back on PRs that skip them.
 ## Project policy
 
 - **JIRA:** project AAASM; set **Component** (`customfield_10041`) to this repo
-  (`AI-agent-assembly/go-sdk`); Team (`customfield_10001`) = Pioneer.
+  (`ai-agent-assembly/go-sdk`); Team (`customfield_10001`) = Pioneer.
   Epic → Story → Subtask (one Subtask ≈ one commit) + a `Verify …` subtask per Story.
 - **Self-hosted deployment is out of scope** product-wide — don't propose
   Helm/Terraform/air-gapped/migration work even if the spec mentions it.
