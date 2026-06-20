@@ -11,12 +11,17 @@ package assembly
 // wrapper, so a governance check error (or a missing client) blocks the call
 // under the fail-closed enforce posture and allows it otherwise.
 func (a *Assembly) WrapTools(toolList []Tool) []Tool {
-	return WrapTools(
-		toolList,
-		a.governance,
+	options := []Option{
 		WithFailClosed(a.opts.failClosed),
 		withEnforcementMode(a.opts.enforcementMode),
-	)
+	}
+	// Propagate a live op-control subscriber (AAASM-3491 / AAASM-3501) when one
+	// was wired at Init via WithOpControl, so the gateway's kill switch reaches
+	// the wrapped tool path; the native runtime consumer is unaffected.
+	if a.opts.opControl != nil {
+		options = append(options, WithOpControl(a.opts.opControl))
+	}
+	return WrapTools(toolList, a.governance, options...)
 }
 
 // WrapTools wraps all tools with AssemblyTool governance interception.
