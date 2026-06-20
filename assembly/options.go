@@ -22,6 +22,7 @@ type runtimeOptions struct {
 	delegationReason string
 	spawnedByTool    string
 	enforcementMode  EnforcementMode
+	opControl        OpController
 	errs             []error
 }
 
@@ -156,6 +157,19 @@ func WithEnforcementMode(mode EnforcementMode) Option {
 func withSidecarAddress(sidecarAddress string) Option {
 	return func(opts *runtimeOptions) {
 		opts.sidecarAddress = sidecarAddress
+	}
+}
+
+// WithOpControl wires a live op-control consumer into the wrapped tool path so
+// the gateway's kill switch reaches a running tool (AAASM-3491 / AAASM-3501).
+// When set, each wrapped tool consults the subscriber before the gateway Check:
+// a terminated op fast-fails the call and a paused op blocks cooperatively until
+// the gateway resumes it. When unset (the default), op control only reaches the
+// agent via the native runtime's own OpControlStream consumer. The subscriber's
+// lifecycle is owned by the caller — close it when the agent shuts down.
+func WithOpControl(opControl OpController) Option {
+	return func(opts *runtimeOptions) {
+		opts.opControl = opControl
 	}
 }
 
