@@ -40,6 +40,57 @@ change ships.
   every `Check` and `RecordResult`; the trace ID falls back to the active
   OpenTelemetry span context when not set explicitly.
 
+## Framework compatibility
+
+`go-sdk` governs **AI-agent frameworks at the tool boundary**. The Go ecosystem
+coverage is deliberately narrow:
+
+| Framework | Module | Tested version line | Support |
+| --- | --- | --- | --- |
+| **LangChainGo** | `github.com/tmc/langchaingo` | **`v0.1.x`** (CI + examples pin `v0.1.14`) | First-class adapter (`WrapChain`) + tool-wrapping |
+| *Any other tool* | — | — | Generic `WrapTools` over arbitrary `tools.Tool` values |
+
+**LangChainGo is the only first-class framework adapter.** Everything else is
+covered by the framework-agnostic `WrapTools` surface — there is no
+per-framework adapter for CrewAI/Genkit/Eino-style stacks today.
+
+### No framework dependency by design
+
+The SDK takes **no framework dependency**: `go.mod` imports neither
+`langchaingo` nor any other agent framework. Governance is structural, not
+import-coupled:
+
+- `assembly.Tool` is `Name() / Description() / Call(ctx, input)` — the exact
+  shape of LangChainGo's `tools.Tool`. Any `langchaingo/tools.Tool` therefore
+  satisfies `assembly.Tool` with **no adapter**, so `assembly.WrapTools` can
+  govern an arbitrary slice of LangChainGo tools (and any other value that
+  implements the same three methods).
+- `assembly.WrapChain` adapts LangChainGo's `chains.Chain` shape
+  (`Call(ctx, map[string]any) (map[string]any, error)`) the same way, again
+  without importing the framework — it only propagates the assembly's agent ID
+  to child agents.
+
+Because the contract is satisfied structurally, you pin LangChainGo (or not) in
+**your** `go.mod`; this SDK never pulls it in. The `v0.1.14` pin above is the
+version exercised by the AAASM-3525 Go smoke driver and the
+`examples/go/langchaingo` sample, not a hard floor.
+
+### Cross-SDK index on the core docs
+
+The **Framework compatibility** section of *this* page is the **authoritative**
+source for Go — the LangChainGo adapter and `assembly.WrapTools` live in this
+SDK, so its compatibility is documented here. The core docs site hosts a
+**cross-SDK index/hub** that links to this page and to the Python/Node
+equivalents:
+
+> **<https://ai-agent-assembly.github.io/agent-assembly/stable/reference/framework-compatibility.html>**
+
+That index is the `/stable/` channel link; it **404s until GA** by design (the
+`stable` channel activates at the first `vX.Y.0` release), consistent with the
+core-side convention. Use the
+[documentation hub](https://ai-agent-assembly.github.io/agent-assembly-docs/)
+to reach the cross-SDK index in the meantime.
+
 ## Toolchain
 
 | Requirement | Value |
