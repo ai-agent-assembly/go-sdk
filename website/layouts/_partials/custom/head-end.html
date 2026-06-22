@@ -1,0 +1,50 @@
+{{- /*
+  GDPR cookie-consent gating for Google Analytics 4 (AAASM-3554).
+
+  This partial takes over GA injection from Hextra. The theme would normally
+  emit an un-gated gtag.js config hit whenever services.googleAnalytics.ID is
+  set; we removed that ID from hugo.toml (see [params.analytics] there) so the
+  theme emits nothing, and inject our own consent-gated GA here instead.
+
+  Why take over rather than inject before the theme's GA partial: Hextra's
+  head.html renders components/analytics/analytics.html (the gtag config hit)
+  BEFORE this custom/head-end hook, and offers no custom hook that runs before
+  it. Owning the whole GA snippet in a single <script> block is the only way to
+  guarantee deny-before-hit ordering. Within the block the order is fixed:
+    1. Consent Mode v2 default = denied (analytics/ad storage),
+    2. restore a stored opt-in from localStorage BEFORE any hit,
+    3. load gtag.js,
+    4. gtag('config', …, {anonymize_ip:true}).
+
+  Gated on hugo.IsProduction to match the theme's original analytics behaviour
+  (no GA on local/dev builds). Measurement ID is a public GA4 Measurement ID.
+*/ -}}
+{{- if hugo.IsProduction -}}
+{{- with site.Params.analytics.googleAnalyticsID -}}
+<!-- Google Analytics 4 with Consent Mode v2 (consent denied by default) -->
+<script>
+  // 1. Consent Mode default: deny everything before any GA hit can fire.
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('consent', 'default', {
+    'analytics_storage': 'denied',
+    'ad_storage': 'denied',
+    'ad_user_data': 'denied',
+    'ad_personalization': 'denied',
+    'wait_for_update': 500
+  });
+  // 2. Re-apply a previously stored opt-in BEFORE the first hit.
+  try {
+    if (window.localStorage &&
+        localStorage.getItem('aa-analytics-consent') === 'granted') {
+      gtag('consent', 'update', { 'analytics_storage': 'granted' });
+    }
+  } catch (e) { /* localStorage unavailable (private mode); stay denied */ }
+  gtag('js', new Date());
+  // 4. Configure GA4 (hits respect the consent state set above).
+  gtag('config', '{{ . }}', { 'anonymize_ip': true });
+</script>
+<!-- 3. Load gtag.js (after consent default is established). -->
+<script async src="https://www.googletagmanager.com/gtag/js?id={{ . }}"></script>
+{{- end -}}
+{{- end -}}
