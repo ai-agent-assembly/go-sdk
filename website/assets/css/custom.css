@@ -53,3 +53,66 @@ code, pre, kbd { font-family: var(--mono-font-family); }
   color: inherit;
 }
 .aa-version-banner code { font-size: 0.85em; }
+
+/* GDPR cookie-consent opt-in banner (AAASM-3554).
+   Non-modal, fixed at the bottom; rendered by assets/js/consent-banner.js. */
+.aa-consent-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 0.875rem 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: hsl(222 47% 11%);
+  background: hsl(0 0% 100%);
+  border-top: 1px solid hsl(220 13% 88%);
+  box-shadow: 0 -2px 12px hsl(222 47% 11% / 0.08);
+}
+.dark .aa-consent-banner {
+  color: hsl(210 40% 96%);
+  background: hsl(222 47% 11%);
+  border-top-color: hsl(217 33% 24%);
+  box-shadow: 0 -2px 12px hsl(0 0% 0% / 0.4);
+}
+.aa-consent-text {
+  margin: 0;
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+.aa-consent-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+.aa-consent-btn {
+  cursor: pointer;
+  padding: 0.4rem 0.95rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 0.375rem;
+  border: 1px solid transparent;
+}
+.aa-consent-btn:focus-visible {
+  outline: 2px solid hsl(239 84% 67%);
+  outline-offset: 2px;
+}
+.aa-consent-accept {
+  color: #fff;
+  background: hsl(239 84% 67%);
+}
+.aa-consent-accept:hover { background: hsl(239 70% 60%); }
+.aa-consent-reject {
+  color: inherit;
+  background: transparent;
+  border-color: hsl(220 13% 80%);
+}
+.aa-consent-reject:hover { background: hsl(220 14% 96%); }
+.dark .aa-consent-reject { border-color: hsl(217 33% 32%); }
+.dark .aa-consent-reject:hover { background: hsl(217 33% 18%); }

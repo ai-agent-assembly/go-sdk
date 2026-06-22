@@ -48,3 +48,15 @@
 <script async src="https://www.googletagmanager.com/gtag/js?id={{ . }}"></script>
 {{- end -}}
 {{- end -}}
+
+{{- /* Opt-in cookie-consent banner (AAASM-3554). Vanilla JS, no dependency;
+       deferred so it runs after the body is parsed. Rendered in all builds so
+       the consent UI is verifiable; it no-ops on gtag when GA is absent. */ -}}
+{{- with resources.Get "js/consent-banner.js" -}}
+  {{- if hugo.IsProduction -}}
+    {{- $js := . | minify | fingerprint -}}
+    <script defer src="{{ $js.RelPermalink }}" integrity="{{ $js.Data.Integrity }}"></script>
+  {{- else -}}
+    <script defer src="{{ .RelPermalink }}"></script>
+  {{- end -}}
+{{- end -}}
