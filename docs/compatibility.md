@@ -75,18 +75,21 @@ Because the contract is satisfied structurally, you pin LangChainGo (or not) in
 version exercised by the AAASM-3525 Go smoke driver and the
 `examples/go/langchaingo` sample, not a hard floor.
 
-### Canonical core matrix
+### Cross-SDK index on the core docs
 
-The authoritative, cross-language framework-compatibility matrix lives on the
-core docs site:
+The **Framework compatibility** section of *this* page is the **authoritative**
+source for Go — the LangChainGo adapter and `assembly.WrapTools` live in this
+SDK, so its compatibility is documented here. The core docs site hosts a
+**cross-SDK index/hub** that links to this page and to the Python/Node
+equivalents:
 
 > **<https://ai-agent-assembly.github.io/agent-assembly/stable/reference/framework-compatibility.html>**
 
-This is the `/stable/` channel link; it **404s until GA** by design (the
+That index is the `/stable/` channel link; it **404s until GA** by design (the
 `stable` channel activates at the first `vX.Y.0` release), consistent with the
 core-side convention. Use the
 [documentation hub](https://ai-agent-assembly.github.io/agent-assembly-docs/)
-for the current pre-release matrix in the meantime.
+to reach the cross-SDK index in the meantime.
 
 ## Toolchain
 

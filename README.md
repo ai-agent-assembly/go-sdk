@@ -26,7 +26,7 @@ The first-class agent-framework adapter is **[LangChainGo](https://github.com/tm
 
 The SDK requires **no framework by default** — `go.mod` imports neither `langchaingo` nor any other framework. `assembly.Tool` is structurally identical to LangChainGo's `tools.Tool` (`Name`/`Description`/`Call`), so `WrapTools` governs an arbitrary slice of `langchaingo/tools.Tool` values (or any other type with the same three methods) with no adapter. Go-side coverage is LangChainGo plus this generic tool-wrapping — there are no other per-framework adapters.
 
-For the authoritative cross-language matrix, see the canonical core matrix at **<https://ai-agent-assembly.github.io/agent-assembly/stable/reference/framework-compatibility.html>** (a `/stable/` link that 404s until GA by design) and [docs/compatibility.md](docs/compatibility.md#framework-compatibility).
+Go framework compatibility is documented authoritatively in [docs/compatibility.md](docs/compatibility.md#framework-compatibility) — the LangChainGo adapter and `WrapTools` live in this SDK. The core docs provide a cross-SDK **index/hub** that links to this page and the Python/Node equivalents at **<https://ai-agent-assembly.github.io/agent-assembly/stable/reference/framework-compatibility.html>** (a `/stable/` link that 404s until GA by design).
 
 ## Prerequisites
 
