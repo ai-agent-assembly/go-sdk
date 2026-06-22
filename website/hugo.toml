@@ -8,11 +8,20 @@ enableGitInfo = true
 # removed pages can never ship a dead internal link again.
 refLinksErrorLevel = "ERROR"
 
-# Google Analytics 4. Hextra's head partial emits the gtag.js GA4 snippet
-# whenever services.googleAnalytics.ID is set, so no extra theme toggle is
-# required. ID is a public Measurement ID.
-[services.googleAnalytics]
-  ID = "G-WMTJDD3JZ6"
+# Google Analytics 4 — GDPR Consent Mode v2 (AAASM-3554).
+#
+# We deliberately DO NOT set services.googleAnalytics.ID here. Hextra's head
+# partial would otherwise emit an un-gated gtag.js config hit (analytics
+# cookies set before opt-in — not GDPR-compliant). Instead the GA injection is
+# taken over by layouts/_partials/custom/head-end.html, which (in this exact
+# order, in one script block so ordering is guaranteed):
+#   1. sets Consent Mode v2 default = denied for analytics/ad storage,
+#   2. re-applies a stored opt-in from localStorage (aa-analytics-consent),
+#   3. loads gtag.js for the Measurement ID,
+#   4. runs gtag('config', …, {anonymize_ip:true}).
+# The public Measurement ID stays G-WMTJDD3JZ6; see params.analytics below.
+[params.analytics]
+  googleAnalyticsID = "G-WMTJDD3JZ6"
 
 [module]
   [[module.imports]]
