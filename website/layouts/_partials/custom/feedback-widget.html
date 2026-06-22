@@ -1,0 +1,27 @@
+{{- /*
+  "Was this page helpful?" page-feedback widget (AAASM-3555).
+
+  Builds on the GA4 Consent Mode v2 setup in custom/head-end.html (AAASM-3554):
+  the widget fires a gtag('event','feedback', …) hit which Consent Mode gates
+  automatically. This partial only renders the empty container and loads the
+  asset; the buttons, click handlers and the pre-filled GitHub issue link are
+  built in assets/js/feedback-widget.js (vanilla JS, createElement/textContent,
+  CodeQL-clean).
+
+  Rendered in ALL builds (not gated on hugo.IsProduction) so the widget is
+  verifiable on local/preview builds; the JS guards window.gtag with a typeof
+  check, so the analytics hit is a no-op when GA is absent and only fires on the
+  production site where head-end.html injects gtag. This mirrors how the consent
+  banner asset is rendered in every build but no-ops on gtag.
+
+  Included from layouts/single.html at the bottom of the article content.
+*/ -}}
+<div id="aa-feedback" class="aa-feedback"></div>
+{{- with resources.Get "js/feedback-widget.js" -}}
+  {{- if hugo.IsProduction -}}
+    {{- $js := . | minify | fingerprint -}}
+    <script defer src="{{ $js.RelPermalink }}" integrity="{{ $js.Data.Integrity }}"></script>
+  {{- else -}}
+    <script defer src="{{ .RelPermalink }}"></script>
+  {{- end -}}
+{{- end -}}
