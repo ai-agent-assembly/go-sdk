@@ -8,6 +8,12 @@ enableGitInfo = true
 # removed pages can never ship a dead internal link again.
 refLinksErrorLevel = "ERROR"
 
+# Google Analytics 4. Hextra's head partial emits the gtag.js GA4 snippet
+# whenever services.googleAnalytics.ID is set, so no extra theme toggle is
+# required. ID is a public Measurement ID.
+[services.googleAnalytics]
+  ID = "G-WMTJDD3JZ6"
+
 [module]
   [[module.imports]]
     path = "github.com/imfing/hextra"
