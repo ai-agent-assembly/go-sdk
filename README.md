@@ -20,6 +20,14 @@ The SDK initialises in a few lines, propagates agent identity through `context.C
 
 Anything outside the `assembly/` package (`internal/`, `examples/`) is not part of the public API and may change without notice.
 
+## Framework compatibility
+
+The first-class agent-framework adapter is **[LangChainGo](https://github.com/tmc/langchaingo)** (`github.com/tmc/langchaingo`), tested on the **`v0.1.x`** line (CI and the [`examples/go/langchaingo`](examples) sample pin `v0.1.14`). `assembly.WrapChain` governs a LangChainGo `chains.Chain`; `assembly.WrapTools` governs any tool.
+
+The SDK requires **no framework by default** — `go.mod` imports neither `langchaingo` nor any other framework. `assembly.Tool` is structurally identical to LangChainGo's `tools.Tool` (`Name`/`Description`/`Call`), so `WrapTools` governs an arbitrary slice of `langchaingo/tools.Tool` values (or any other type with the same three methods) with no adapter. Go-side coverage is LangChainGo plus this generic tool-wrapping — there are no other per-framework adapters.
+
+For the authoritative cross-language matrix, see the canonical core matrix at **<https://ai-agent-assembly.github.io/agent-assembly/stable/reference/framework-compatibility.html>** (a `/stable/` link that 404s until GA by design) and [docs/compatibility.md](docs/compatibility.md#framework-compatibility).
+
 ## Prerequisites
 
 - **Go ≥ 1.26** — the floor declared in `go.mod`.
