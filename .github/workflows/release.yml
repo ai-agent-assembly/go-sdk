@@ -1,0 +1,112 @@
+name: Release
+
+# Tag-triggered release pipeline for the Go SDK (AAASM-3568).
+#
+# Go modules are source-distributed via the module proxy + checksum DB, so
+# there is no binary to build or sign here (`.goreleaser.yaml` keeps
+# `builds: skip: true`). What a consumer cannot get from the proxy is a
+# machine-readable dependency manifest, so on every `v*` tag we generate a
+# CycloneDX SBOM for the module and attach it to the GitHub Release.
+on:
+  push:
+    tags:
+      - "v*"
+  # Lets an operator re-run the SBOM attach for an already-pushed tag
+  # (e.g. after a partial failure) without re-cutting the tag.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing v* tag to (re)generate + attach the SBOM for."
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # AAASM-3626: bind the advisory + checksum gate to the release moment.
+  # govulncheck.yml already runs this on PR/push/schedule, but not on a v*
+  # tag — so a regression between the last master push and the tag could
+  # otherwise ship. The "Verify modules" + "Run govulncheck" steps below are
+  # copied VERBATIM from govulncheck.yml (incl. the RC==3 / KNOWN_UNFIXED
+  # allowlist) so the accepted-risk list stays in lockstep; update both
+  # together. The sbom job `needs` this, so a known-vuln dependency blocks
+  # the SBOM attach and thus the release.
+  security-gate:
+    name: Govulncheck + go mod verify (release gate)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: recursive
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: "1.26.x"
+
+      - name: Verify modules
+        run: |
+          go mod download
+          go mod verify
+          git diff --exit-code go.mod go.sum
+
+      - name: Run govulncheck
+        run: |
+          set +e
+          go tool govulncheck ./... 2>&1 | tee /tmp/govulncheck.txt
+          RC=${PIPESTATUS[0]}
+          if [ "$RC" -eq 3 ]; then
+            # Extract IDs of vulnerabilities that directly affect our code
+            ALL_IDS=$(grep -E "^Vulnerability #[0-9]+: GO-" /tmp/govulncheck.txt | grep -oE "GO-[0-9]+-[0-9]+")
+            # CVEs with no fix in any released Go toolchain version
+            KNOWN_UNFIXED="GO-2026-4971"
+            UNKNOWN=$(echo "$ALL_IDS" | grep -vxF "$KNOWN_UNFIXED" | tr -d '[:space:]')
+            if [ -z "$UNKNOWN" ]; then
+              echo "::warning::Known unfixed CVE(s) with no released fix: $ALL_IDS — awaiting go1.26.3. Treating as accepted risk."
+              exit 0
+            fi
+          fi
+          exit $RC
+
+  sbom:
+    name: Generate + attach CycloneDX SBOM
+    needs: security-gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # upload the SBOM asset to the GitHub Release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: recursive
+          # On workflow_dispatch the default ref is the branch, not the tag —
+          # check out the operator-supplied tag so the SBOM matches it.
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: "1.26.x"
+
+      - name: Install cyclonedx-gomod
+        # Pinned minor; bump deliberately. Generates the CycloneDX SBOM for
+        # the Go module dependency graph.
+        run: go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@v1.9.0
+
+      - name: Generate CycloneDX SBOM
+        run: cyclonedx-gomod mod -json -output sbom.cdx.json
+
+      - name: Attach SBOM to the GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # github.ref_name is the tag on a tag push; fall back to the
+          # operator-supplied tag on workflow_dispatch.
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: gh release upload "$RELEASE_TAG" sbom.cdx.json --clobber
