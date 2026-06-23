@@ -18,6 +18,41 @@
   <meta http-equiv="refresh" content="0; url=@@DEFAULT_PATH@@" />
   <link rel="canonical" href="@@DEFAULT_PATH@@" />
   <title>Redirecting to documentation…</title>
+  <!--
+    Google Analytics 4 with Consent Mode v2 (AAASM-3559).
+
+    This bare-root stub is a static redirect (not Hugo-rendered), so it never
+    runs layouts/_partials/custom/head-end.html and would otherwise carry no GA
+    tag — Google's "Test your website" on the bare root then reports the tag as
+    not detected. Mirror the content pages' gated GA snippet here, with the same
+    deny-by-default consent posture, so the root is tagged before it redirects.
+    Measurement ID G-WMTJDD3JZ6 matches params.analytics.googleAnalyticsID in
+    website/hugo.toml.
+  -->
+  <script>
+    // 1. Consent Mode default: deny everything before any GA hit can fire.
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('consent', 'default', {
+      'analytics_storage': 'denied',
+      'ad_storage': 'denied',
+      'ad_user_data': 'denied',
+      'ad_personalization': 'denied',
+      'wait_for_update': 500
+    });
+    // 2. Re-apply a previously stored opt-in BEFORE the first hit.
+    try {
+      if (window.localStorage &&
+          localStorage.getItem('aa-analytics-consent') === 'granted') {
+        gtag('consent', 'update', { 'analytics_storage': 'granted' });
+      }
+    } catch (e) { /* localStorage unavailable (private mode); stay denied */ }
+    gtag('js', new Date());
+    // 4. Configure GA4 (hits respect the consent state set above).
+    gtag('config', 'G-WMTJDD3JZ6', { 'anonymize_ip': true });
+  </script>
+  <!-- 3. Load gtag.js (after consent default is established). -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-WMTJDD3JZ6"></script>
 </head>
 <body>
   <p>Redirecting to the <a href="@@DEFAULT_PATH@@">documentation</a>…</p>
