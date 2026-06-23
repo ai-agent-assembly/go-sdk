@@ -14,7 +14,10 @@
   production site where head-end.html injects gtag. This mirrors how the consent
   banner asset is rendered in every build but no-ops on gtag.
 
-  Included from layouts/single.html at the bottom of the article content.
+  Included at the bottom of the article content from layouts/single.html,
+  layouts/list.html and layouts/home.html so every documentation content page
+  (single pages, section-list pages and the landing page) carries the widget;
+  the dedicated layouts/404.html is intentionally excluded (AAASM-3556).
 */ -}}
 <div id="aa-feedback" class="aa-feedback"></div>
 {{- with resources.Get "js/feedback-widget.js" -}}
