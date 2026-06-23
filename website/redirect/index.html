@@ -15,7 +15,16 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="refresh" content="0; url=@@DEFAULT_PATH@@" />
+  <!--
+    No-JS fallback only (AAASM-3559). For JS-enabled browsers the redirect is
+    deferred via setTimeout in <body> so gtag.js can load and send its
+    page_view hit before the page navigates away; an instant meta-refresh here
+    would navigate before the GA hit fires (Google's tag test then reports the
+    tag as not detected). Browsers without JS still redirect immediately.
+  -->
+  <noscript>
+    <meta http-equiv="refresh" content="0; url=@@DEFAULT_PATH@@" />
+  </noscript>
   <link rel="canonical" href="@@DEFAULT_PATH@@" />
   <title>Redirecting to documentation…</title>
   <!--
@@ -56,6 +65,14 @@
 </head>
 <body>
   <p>Redirecting to the <a href="@@DEFAULT_PATH@@">documentation</a>…</p>
-  <script>window.location.replace("@@DEFAULT_PATH@@" + window.location.hash);</script>
+  <!--
+    Defer the redirect ~1.5s so gtag.js (loaded async in <head>) has time to
+    initialise and send its page_view hit before navigation (AAASM-3559).
+  -->
+  <script>
+    setTimeout(function () {
+      window.location.replace("@@DEFAULT_PATH@@" + window.location.hash);
+    }, 1500);
+  </script>
 </body>
 </html>
