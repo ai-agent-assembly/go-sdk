@@ -69,27 +69,36 @@ func TestClientRegisterForwardsLineage(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-
-			client, _, regs := NewCapturingClientWithRegistrations()
-			if err := client.Connect("127.0.0.1:50051"); err != nil {
-				t.Fatalf("connect: %v", err)
-			}
-
-			if _, err := client.Register("agent-001", "agent-001", "go", "", tc.teamID, tc.parentID); err != nil {
-				t.Fatalf("register: %v", err)
-			}
-
-			if len(*regs) != 1 {
-				t.Fatalf("registrations = %d, want 1", len(*regs))
-			}
-			got := (*regs)[0]
-			if got.TeamID != tc.wantTeam {
-				t.Fatalf("TeamID = %q, want %q", got.TeamID, tc.wantTeam)
-			}
-			if got.ParentAgentID != tc.wantParent {
-				t.Fatalf("ParentAgentID = %q, want %q", got.ParentAgentID, tc.wantParent)
-			}
+			assertRegisterForwardsLineage(t, tc.teamID, tc.parentID, tc.wantTeam, tc.wantParent)
 		})
+	}
+}
+
+// assertRegisterForwardsLineage registers an agent with the given lineage through
+// a fresh capturing binding and asserts the captured TeamID/ParentAgentID match
+// the expected forwarded values. Extracted from the table loop so the per-case
+// assertions live outside the nested subtest closure.
+func assertRegisterForwardsLineage(t *testing.T, teamID, parentID, wantTeam, wantParent string) {
+	t.Helper()
+
+	client, _, regs := NewCapturingClientWithRegistrations()
+	if err := client.Connect("127.0.0.1:50051"); err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+
+	if _, err := client.Register("agent-001", "agent-001", "go", "", teamID, parentID); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	if len(*regs) != 1 {
+		t.Fatalf("registrations = %d, want 1", len(*regs))
+	}
+	got := (*regs)[0]
+	if got.TeamID != wantTeam {
+		t.Fatalf("TeamID = %q, want %q", got.TeamID, wantTeam)
+	}
+	if got.ParentAgentID != wantParent {
+		t.Fatalf("ParentAgentID = %q, want %q", got.ParentAgentID, wantParent)
 	}
 }
 
