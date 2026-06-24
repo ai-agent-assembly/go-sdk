@@ -2,8 +2,24 @@ version: 2
 
 project_name: go-sdk
 
+# go-sdk is a Go library module — there is no main binary to ship. Releases carry
+# auto-generated notes, a source archive, and checksums (no platform binaries).
+builds:
+  - skip: true
+
 source:
   enabled: true
 
-builds:
-  - skip: true
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "Merge pull request"
+      - "Merge branch"
