@@ -19,12 +19,19 @@ type capturingBinding struct {
 	handle        *byte
 	Events        []string
 	Registrations []Registration
+	// ConnectAgentID / ConnectSDKVersion record the last connect arguments so
+	// tests can assert the Go-module version was forwarded into the handshake
+	// (AAASM-3683).
+	ConnectAgentID    string
+	ConnectSDKVersion string
 	// registerStatus is the status code register returns; statusOK by default.
 	// Set it to a failure code to exercise the advisory register-failure path.
 	registerStatus int32
 }
 
-func (b *capturingBinding) connect(_ string) (unsafe.Pointer, int32) {
+func (b *capturingBinding) connect(_, agentID, sdkVersion string) (unsafe.Pointer, int32) {
+	b.ConnectAgentID = agentID
+	b.ConnectSDKVersion = sdkVersion
 	b.handle = new(byte)
 	return unsafe.Pointer(b.handle), statusOK
 }
@@ -71,6 +78,25 @@ func NewCapturingClient() (*Client, *[]string) {
 func NewCapturingClientWithRegistrations() (*Client, *[]string, *[]Registration) {
 	b := &capturingBinding{}
 	return NewClient(b), &b.Events, &b.Registrations
+}
+
+// ConnectArgs exposes the arguments the last connect call received so a boot test
+// can assert that Init forwarded the agent id and the Go-module SDK version into
+// the runtime handshake (AAASM-3683). The fields track the capturingBinding's
+// recorded connect arguments by pointer, so they reflect the value at the time
+// of assertion.
+type ConnectArgs struct {
+	AgentID    *string
+	SDKVersion *string
+}
+
+// NewCapturingClientWithConnectArgs is like NewCapturingClient but also exposes
+// the arguments the binding's connect received, so a boot test can assert that
+// Init forwarded the agent id and the Go-module SDK version into the handshake
+// (AAASM-3683).
+func NewCapturingClientWithConnectArgs() (*Client, ConnectArgs) {
+	b := &capturingBinding{}
+	return NewClient(b), ConnectArgs{AgentID: &b.ConnectAgentID, SDKVersion: &b.ConnectSDKVersion}
 }
 
 // NewCapturingClientFailingRegister returns a capturing client whose register

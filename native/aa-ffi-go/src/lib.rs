@@ -20,7 +20,6 @@
 use core::ffi::c_char;
 use std::ffi::{CStr, CString};
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::path::PathBuf;
 
 use aa_proto::assembly::common::v1::{ActionType, AgentId, Decision};
 use aa_proto::assembly::policy::v1::{
@@ -130,13 +129,23 @@ fn decision_for(decision: i32) -> AaDecision {
 /// On success, `*out_client` receives an owned handle that must be released
 /// with [`aa_disconnect`].
 ///
+/// `agent_id` is the agent identity the background thread signs the runtime
+/// session handshake with (AAASM-3587); it may be null. `sdk_version` is the
+/// user-facing Go-module SDK version the binding forwards so it — not the shared
+/// `aa-sdk-client` crate version — is what gets signed into the handshake proof
+/// (AAASM-3683); null falls back to the crate version (no regression vs
+/// AAASM-3666).
+///
 /// # Safety
 ///
-/// `endpoint` must be a valid NUL-terminated C string; `out_client` must be a
-/// valid, writable pointer to a `*mut aa_client_handle`.
+/// `endpoint` must be a valid NUL-terminated C string; `agent_id` and
+/// `sdk_version` must each be a valid NUL-terminated C string or null;
+/// `out_client` must be a valid, writable pointer to a `*mut aa_client_handle`.
 #[no_mangle]
 pub unsafe extern "C" fn aa_connect(
     endpoint: *const c_char,
+    agent_id: *const c_char,
+    sdk_version: *const c_char,
     out_client: *mut *mut aa_client_handle,
 ) -> AaStatus {
     catch_unwind(AssertUnwindSafe(|| {
@@ -146,12 +155,34 @@ pub unsafe extern "C" fn aa_connect(
 
         // SAFETY: `endpoint` null-checked above.
         let endpoint = match unsafe { CStr::from_ptr(endpoint) }.to_str() {
-            Ok(value) => value,
+            Ok(value) => value.to_owned(),
             Err(_) => return AA_STATUS_INVALID_UTF8,
+        };
+        // Optional: null ⇒ None. SAFETY: each is null-checked by the helper.
+        let agent_id = match unsafe { optional_cstr(agent_id) } {
+            Ok(value) => value,
+            Err(status) => return status,
+        };
+        let sdk_version = match unsafe { optional_cstr(sdk_version) } {
+            Ok(value) => value,
+            Err(status) => return status,
+        };
+
+        let config = AssemblyConfig {
+            agent_id: agent_id.unwrap_or_default(),
+            socket_path: Some(endpoint),
+            gateway_endpoint: None,
+            team_id: None,
+            parent_agent_id: None,
+            sdk_version,
         };
 
         // All transport lives in aa-sdk-client; we only spawn + own the client.
-        let ipc = match spawn_ipc_thread(PathBuf::from(endpoint)) {
+        let ipc = match spawn_ipc_thread(
+            config.resolve_socket_path(),
+            config.agent_id.clone(),
+            config.resolved_sdk_version(),
+        ) {
             Ok(handle) => handle,
             Err(_) => return AA_STATUS_IPC_ERROR,
         };
@@ -275,6 +306,9 @@ pub unsafe extern "C" fn aa_register(
             gateway_endpoint,
             team_id,
             parent_agent_id,
+            // The version is signed at IPC-handshake time (`aa_connect`), not on
+            // the gateway register, so it is not needed for this config.
+            sdk_version: None,
         };
 
         // `register` is async (tonic). Drive the one future to completion on a
@@ -594,6 +628,76 @@ mod tests {
     use super::*;
     use std::ptr;
 
+    /// The agent id the mock-server test handshakes as.
+    const TEST_AGENT_ID: &str = "agent-1";
+
+    /// A distinctive Go-module SDK version forwarded into `aa_connect`, so the
+    /// mock-server test asserts the FFI-passed version (not the crate version)
+    /// reaches the signed handshake proof (AAASM-3683).
+    const TEST_SDK_VERSION: &str = "go-1.2.3";
+
+    /// Blocking server side of the AAASM-3587 session handshake the client now
+    /// performs before any heartbeat: send a nonce challenge, read the signed
+    /// proof, verify it over `nonce || sdk_version` (AAASM-3666), and return the
+    /// signed version so the caller can assert the FFI-forwarded version reached
+    /// the handshake (AAASM-3683).
+    fn server_handshake_blocking(
+        stream: &mut std::os::unix::net::UnixStream,
+        agent_id: &str,
+    ) -> String {
+        use std::io::{Read, Write};
+
+        use aa_sdk_client::codec;
+        use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+        use prost::Message;
+        use sha2::{Digest, Sha256};
+
+        // Value-returning CSPRNG so no constant literal flows into the signed
+        // nonce (CodeQL hard-coded-crypto).
+        let nonce = rand::random::<[u8; 32]>().to_vec();
+        let challenge = aa_proto::assembly::ipc::v1::HandshakeChallenge {
+            nonce: nonce.clone(),
+        };
+        let payload = challenge.encode_to_vec();
+        assert!(payload.len() < 128);
+        stream
+            .write_all(&[codec::TAG_HANDSHAKE_CHALLENGE, payload.len() as u8])
+            .expect("write challenge header");
+        stream.write_all(&payload).expect("write challenge");
+        stream.flush().expect("flush challenge");
+
+        let mut tag = [0u8; 1];
+        stream.read_exact(&mut tag).expect("read proof tag");
+        assert_eq!(tag[0], codec::TAG_HANDSHAKE_PROOF);
+        // The proof payload exceeds 127 bytes, so the length prefix is a varint.
+        let mut len: u64 = 0;
+        let mut shift = 0u32;
+        loop {
+            let mut b = [0u8; 1];
+            stream.read_exact(&mut b).expect("read proof len byte");
+            len |= ((b[0] & 0x7F) as u64) << shift;
+            if b[0] & 0x80 == 0 {
+                break;
+            }
+            shift += 7;
+        }
+        let mut buf = vec![0u8; len as usize];
+        stream.read_exact(&mut buf).expect("read proof body");
+        let proof = aa_proto::assembly::ipc::v1::HandshakeProof::decode(buf.as_ref()).unwrap();
+
+        let seed: [u8; 32] = Sha256::digest(agent_id.as_bytes()).into();
+        let vk = ed25519_dalek::SigningKey::from_bytes(&seed).verifying_key();
+        assert_eq!(proof.public_key, hex::encode(vk.to_bytes()));
+        let mut signed_payload = nonce.clone();
+        signed_payload.extend_from_slice(proof.sdk_version.as_bytes());
+        let sig: [u8; 64] = proof.signature.as_slice().try_into().unwrap();
+        let vk2 = VerifyingKey::from_bytes(&vk.to_bytes()).unwrap();
+        vk2.verify(&signed_payload, &Signature::from_bytes(&sig))
+            .expect("client handshake proof must verify");
+
+        proof.sdk_version
+    }
+
     /// connect → disconnect round-trip against a (deliberately absent) socket.
     /// `spawn_ipc_thread` returns a handle immediately; the background thread
     /// exits when it cannot reach the socket, so `disconnect` joins promptly.
@@ -603,7 +707,8 @@ mod tests {
 
         let mut client: *mut aa_client_handle = ptr::null_mut();
         // SAFETY: valid pointers from controlled test context.
-        let connect = unsafe { aa_connect(endpoint.as_ptr(), &mut client) };
+        let connect =
+            unsafe { aa_connect(endpoint.as_ptr(), ptr::null(), ptr::null(), &mut client) };
         assert_eq!(connect, AA_STATUS_OK);
         assert!(!client.is_null());
 
@@ -616,7 +721,8 @@ mod tests {
     fn connect_rejects_null_out_pointer() {
         let endpoint = CString::new("/tmp/aa.sock").expect("valid endpoint");
         // SAFETY: deliberate null out-pointer to validate the guard.
-        let status = unsafe { aa_connect(endpoint.as_ptr(), ptr::null_mut()) };
+        let status =
+            unsafe { aa_connect(endpoint.as_ptr(), ptr::null(), ptr::null(), ptr::null_mut()) };
         assert_eq!(status, AA_STATUS_NULL_POINTER);
     }
 
@@ -627,7 +733,7 @@ mod tests {
         let invalid = bytes.as_ptr().cast::<c_char>();
         let mut client: *mut aa_client_handle = ptr::null_mut();
         // SAFETY: deliberate invalid UTF-8 input for status-mapping validation.
-        let status = unsafe { aa_connect(invalid, &mut client) };
+        let status = unsafe { aa_connect(invalid, ptr::null(), ptr::null(), &mut client) };
         assert_eq!(status, AA_STATUS_INVALID_UTF8);
         assert!(client.is_null());
     }
@@ -687,7 +793,7 @@ mod tests {
         let mut client: *mut aa_client_handle = ptr::null_mut();
         // SAFETY: valid pointers from a controlled test context.
         assert_eq!(
-            unsafe { aa_connect(endpoint.as_ptr(), &mut client) },
+            unsafe { aa_connect(endpoint.as_ptr(), ptr::null(), ptr::null(), &mut client) },
             AA_STATUS_OK
         );
 
@@ -739,7 +845,7 @@ mod tests {
         let mut client: *mut aa_client_handle = ptr::null_mut();
         // SAFETY: valid pointers from a controlled test context.
         assert_eq!(
-            unsafe { aa_connect(endpoint.as_ptr(), &mut client) },
+            unsafe { aa_connect(endpoint.as_ptr(), ptr::null(), ptr::null(), &mut client) },
             AA_STATUS_OK
         );
 
@@ -833,6 +939,11 @@ mod tests {
         let server = std::thread::spawn(move || {
             let (mut stream, _) = listener.accept().expect("accept");
 
+            // AAASM-3587/3683: the client completes the signed handshake first;
+            // assert the FFI-forwarded version reaches the proof.
+            let signed_version = server_handshake_blocking(&mut stream, TEST_AGENT_ID);
+            assert_eq!(signed_version, TEST_SDK_VERSION);
+
             let mut tag = [0u8; 1];
             stream.read_exact(&mut tag).expect("read heartbeat tag");
             assert_eq!(tag[0], codec::TAG_HEARTBEAT);
@@ -864,10 +975,20 @@ mod tests {
         });
 
         let endpoint = CString::new(socket_path.clone()).expect("valid endpoint");
+        let agent_id_c = CString::new(TEST_AGENT_ID).expect("valid agent id");
+        let sdk_version_c = CString::new(TEST_SDK_VERSION).expect("valid version");
         let mut client: *mut aa_client_handle = ptr::null_mut();
-        // SAFETY: valid pointers from a controlled test context.
+        // SAFETY: valid pointers from a controlled test context. Forward the
+        // agent id + Go-module version so they are signed into the handshake.
         assert_eq!(
-            unsafe { aa_connect(endpoint.as_ptr(), &mut client) },
+            unsafe {
+                aa_connect(
+                    endpoint.as_ptr(),
+                    agent_id_c.as_ptr(),
+                    sdk_version_c.as_ptr(),
+                    &mut client,
+                )
+            },
             AA_STATUS_OK
         );
 
@@ -923,7 +1044,7 @@ mod tests {
         let mut client: *mut aa_client_handle = ptr::null_mut();
         // SAFETY: valid pointers from a controlled test context.
         assert_eq!(
-            unsafe { aa_connect(endpoint.as_ptr(), &mut client) },
+            unsafe { aa_connect(endpoint.as_ptr(), ptr::null(), ptr::null(), &mut client) },
             AA_STATUS_OK
         );
 

@@ -14,7 +14,11 @@ var ErrBindingUnavailable = errors.New("ffi binding unavailable")
 // Policy is decided server-side by the authoritative runtime, so there is no
 // query_policy surface here — the SDK only reports events (AAASM-2552).
 type binding interface {
-	connect(endpoint string) (unsafe.Pointer, int32)
+	// connect opens a session. agentID is signed into the runtime handshake
+	// (AAASM-3587) and sdkVersion (the Go-module SDK version) is signed into the
+	// handshake proof so downgrade detection reflects the installed release
+	// (AAASM-3683); an empty sdkVersion falls back to the crate version.
+	connect(endpoint, agentID, sdkVersion string) (unsafe.Pointer, int32)
 	sendEvent(handle unsafe.Pointer, eventType, details string) int32
 	disconnect(handle unsafe.Pointer) int32
 }
@@ -37,7 +41,13 @@ func NewDefaultClient() *Client {
 }
 
 // Connect establishes an FFI session with the runtime endpoint.
-func (c *Client) Connect(endpoint string) error {
+//
+// agentID is signed into the runtime session handshake (AAASM-3587); sdkVersion
+// is the user-facing Go-module SDK version forwarded so it — not the shared
+// aa-sdk-client crate version — is signed into the handshake proof for accurate
+// downgrade detection (AAASM-3683). An empty sdkVersion falls back to the crate
+// version (no regression vs AAASM-3666).
+func (c *Client) Connect(endpoint, agentID, sdkVersion string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -45,7 +55,7 @@ func (c *Client) Connect(endpoint string) error {
 		return ErrBindingUnavailable
 	}
 
-	handle, status := c.binding.connect(endpoint)
+	handle, status := c.binding.connect(endpoint, agentID, sdkVersion)
 	if err := statusToError(status, "connect"); err != nil {
 		return err
 	}

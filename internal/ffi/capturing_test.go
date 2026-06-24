@@ -9,7 +9,7 @@ func TestCapturingClientRecordsSendEventPayloads(t *testing.T) {
 
 	client, events := NewCapturingClient()
 
-	if err := client.Connect("unix:///tmp/aa-cap-test.sock"); err != nil {
+	if err := client.Connect("unix:///tmp/aa-cap-test.sock", "", ""); err != nil {
 		t.Fatalf("Connect failed: %v", err)
 	}
 
@@ -34,12 +34,32 @@ func TestCapturingClientRecordsSendEventPayloads(t *testing.T) {
 	}
 }
 
+func TestConnectForwardsAgentIDAndSDKVersion(t *testing.T) {
+	t.Parallel()
+
+	// AAASM-3683: Client.Connect must forward the agent id and the Go-module SDK
+	// version down to the binding so they are signed into the runtime handshake.
+	b := &capturingBinding{}
+	client := NewClient(b)
+
+	if err := client.Connect("unix:///tmp/aa-version-test.sock", "agent-7", "go-9.8.7"); err != nil {
+		t.Fatalf("Connect failed: %v", err)
+	}
+
+	if b.ConnectAgentID != "agent-7" {
+		t.Errorf("ConnectAgentID = %q, want %q", b.ConnectAgentID, "agent-7")
+	}
+	if b.ConnectSDKVersion != "go-9.8.7" {
+		t.Errorf("ConnectSDKVersion = %q, want %q", b.ConnectSDKVersion, "go-9.8.7")
+	}
+}
+
 func TestCapturingClientDisconnect(t *testing.T) {
 	t.Parallel()
 
 	client, _ := NewCapturingClient()
 
-	if err := client.Connect("unix:///tmp/aa-cap-test2.sock"); err != nil {
+	if err := client.Connect("unix:///tmp/aa-cap-test2.sock", "", ""); err != nil {
 		t.Fatalf("Connect failed: %v", err)
 	}
 

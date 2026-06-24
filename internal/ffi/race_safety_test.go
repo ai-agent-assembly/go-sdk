@@ -12,7 +12,7 @@ func TestConcurrentSendEventSafety(t *testing.T) {
 	binding := &raceSafeBinding{}
 	client := NewClient(binding)
 
-	if err := client.Connect("unix:///tmp/aa.sock"); err != nil {
+	if err := client.Connect("unix:///tmp/aa.sock", "", ""); err != nil {
 		t.Fatalf("connect failed: %v", err)
 	}
 
@@ -47,7 +47,7 @@ type raceSafeBinding struct {
 	sent uint64
 }
 
-func (r *raceSafeBinding) connect(string) (unsafe.Pointer, int32) {
+func (r *raceSafeBinding) connect(string, string, string) (unsafe.Pointer, int32) {
 	handle := new(byte)
 	return unsafe.Pointer(handle), statusOK
 }

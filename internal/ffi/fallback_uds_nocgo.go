@@ -15,7 +15,7 @@ import "unsafe"
 // route events through the authoritative runtime.
 type fallbackUDSBridge struct{}
 
-func (fallbackUDSBridge) connect(string) (unsafe.Pointer, int32) {
+func (fallbackUDSBridge) connect(string, string, string) (unsafe.Pointer, int32) {
 	return nil, statusRuntimeUnavailable
 }
 

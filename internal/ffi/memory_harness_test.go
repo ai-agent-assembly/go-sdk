@@ -15,7 +15,7 @@ func TestMemoryRegressionHarness(t *testing.T) {
 
 	binding := &memoryHarnessBinding{}
 	client := NewClient(binding)
-	if err := client.Connect("unix:///tmp/aa.sock"); err != nil {
+	if err := client.Connect("unix:///tmp/aa.sock", "", ""); err != nil {
 		t.Fatalf("connect failed: %v", err)
 	}
 
@@ -42,7 +42,7 @@ func TestMemoryRegressionHarness(t *testing.T) {
 
 type memoryHarnessBinding struct{}
 
-func (m *memoryHarnessBinding) connect(string) (unsafe.Pointer, int32) {
+func (m *memoryHarnessBinding) connect(string, string, string) (unsafe.Pointer, int32) {
 	handle := new(byte)
 	return unsafe.Pointer(handle), statusOK
 }

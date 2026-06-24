@@ -12,7 +12,7 @@ func TestQueryPolicyFailsOpenWithoutPolicyQuerier(t *testing.T) {
 	t.Parallel()
 
 	client := NewClient(&mockBinding{})
-	if err := client.Connect("unix:///tmp/aa.sock"); err != nil {
+	if err := client.Connect("unix:///tmp/aa.sock", "", ""); err != nil {
 		t.Fatalf("connect failed: %v", err)
 	}
 
@@ -35,7 +35,7 @@ func TestQueryPolicyDelegatesToPolicyQuerier(t *testing.T) {
 
 	binding := &queryingBinding{decision: DecisionDeny, reason: "blocked by policy", status: statusOK}
 	client := NewClient(binding)
-	if err := client.Connect("unix:///tmp/aa.sock"); err != nil {
+	if err := client.Connect("unix:///tmp/aa.sock", "", ""); err != nil {
 		t.Fatalf("connect failed: %v", err)
 	}
 
@@ -61,7 +61,7 @@ func TestQueryPolicySurfacesNonOKStatus(t *testing.T) {
 
 	binding := &queryingBinding{decision: DecisionAllow, status: statusRuntimeUnavailable}
 	client := NewClient(binding)
-	if err := client.Connect("unix:///tmp/aa.sock"); err != nil {
+	if err := client.Connect("unix:///tmp/aa.sock", "", ""); err != nil {
 		t.Fatalf("connect failed: %v", err)
 	}
 
@@ -101,7 +101,7 @@ type queryingBinding struct {
 	argsJSON   string
 }
 
-func (q *queryingBinding) connect(string) (unsafe.Pointer, int32) {
+func (q *queryingBinding) connect(string, string, string) (unsafe.Pointer, int32) {
 	handle := new(byte)
 	return unsafe.Pointer(handle), statusOK
 }

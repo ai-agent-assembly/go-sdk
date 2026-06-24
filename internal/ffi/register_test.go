@@ -11,7 +11,7 @@ func TestClientRegisterThroughCapturingBinding(t *testing.T) {
 	t.Parallel()
 
 	client, _, regs := NewCapturingClientWithRegistrations()
-	if err := client.Connect("127.0.0.1:50051"); err != nil {
+	if err := client.Connect("127.0.0.1:50051", "", ""); err != nil {
 		t.Fatalf("connect: %v", err)
 	}
 
@@ -82,7 +82,7 @@ func assertRegisterForwardsLineage(t *testing.T, teamID, parentID, wantTeam, wan
 	t.Helper()
 
 	client, _, regs := NewCapturingClientWithRegistrations()
-	if err := client.Connect("127.0.0.1:50051"); err != nil {
+	if err := client.Connect("127.0.0.1:50051", "", ""); err != nil {
 		t.Fatalf("connect: %v", err)
 	}
 
@@ -145,7 +145,7 @@ func TestClientRegisterSurfacesFailure(t *testing.T) {
 	t.Parallel()
 
 	client, _, _ := NewCapturingClientFailingRegister()
-	if err := client.Connect("127.0.0.1:50051"); err != nil {
+	if err := client.Connect("127.0.0.1:50051", "", ""); err != nil {
 		t.Fatalf("connect: %v", err)
 	}
 

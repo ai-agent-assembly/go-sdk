@@ -20,12 +20,25 @@ import (
 // crate first so the header (CFLAGS) and library (LDFLAGS) resolve.
 type cgoBridge struct{}
 
-func (cgoBridge) connect(endpoint string) (unsafe.Pointer, int32) {
+func (cgoBridge) connect(endpoint, agentID, sdkVersion string) (unsafe.Pointer, int32) {
 	cEndpoint := C.CString(endpoint)
 	defer C.free(unsafe.Pointer(cEndpoint))
 
+	// Empty agent id / version ⇒ a NULL C pointer so the native shim treats them
+	// as absent (the version then falls back to the crate version, AAASM-3683).
+	var cAgentID *C.char
+	if agentID != "" {
+		cAgentID = C.CString(agentID)
+		defer C.free(unsafe.Pointer(cAgentID))
+	}
+	var cSdkVersion *C.char
+	if sdkVersion != "" {
+		cSdkVersion = C.CString(sdkVersion)
+		defer C.free(unsafe.Pointer(cSdkVersion))
+	}
+
 	var handle *C.aa_client_handle
-	status := C.aa_connect(cEndpoint, &handle)
+	status := C.aa_connect(cEndpoint, cAgentID, cSdkVersion, &handle)
 	return unsafe.Pointer(handle), int32(status)
 }
 
