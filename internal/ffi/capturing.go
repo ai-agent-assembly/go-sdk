@@ -19,12 +19,19 @@ type capturingBinding struct {
 	handle        *byte
 	Events        []string
 	Registrations []Registration
+	// ConnectAgentID / ConnectSDKVersion record the last connect arguments so
+	// tests can assert the Go-module version was forwarded into the handshake
+	// (AAASM-3683).
+	ConnectAgentID    string
+	ConnectSDKVersion string
 	// registerStatus is the status code register returns; statusOK by default.
 	// Set it to a failure code to exercise the advisory register-failure path.
 	registerStatus int32
 }
 
-func (b *capturingBinding) connect(_ string) (unsafe.Pointer, int32) {
+func (b *capturingBinding) connect(_, agentID, sdkVersion string) (unsafe.Pointer, int32) {
+	b.ConnectAgentID = agentID
+	b.ConnectSDKVersion = sdkVersion
 	b.handle = new(byte)
 	return unsafe.Pointer(b.handle), statusOK
 }

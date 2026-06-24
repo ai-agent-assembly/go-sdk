@@ -65,7 +65,11 @@ func (a *Assembly) boot(ctx context.Context) error {
 	}
 
 	if a.opts.sidecarAddress != "" && a.ffiClient != nil {
-		if err := a.ffiClient.Connect(a.opts.sidecarAddress); err == nil {
+		// Forward the agent id (signed into the handshake, AAASM-3587) and the
+		// Go-module SDK version (Version) so the installed package version — not
+		// the aa-sdk-client crate version — is signed into the handshake for
+		// accurate downgrade detection (AAASM-3683).
+		if err := a.ffiClient.Connect(a.opts.sidecarAddress, a.opts.agentID, Version); err == nil {
 			// The runtime is reachable: route governance checks through the
 			// native aa_query_policy primitive so a DENY blocks a tool call.
 			a.governance = newFFIGovernanceClient(a.ffiClient)
