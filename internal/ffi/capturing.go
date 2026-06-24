@@ -80,6 +80,25 @@ func NewCapturingClientWithRegistrations() (*Client, *[]string, *[]Registration)
 	return NewClient(b), &b.Events, &b.Registrations
 }
 
+// ConnectArgs exposes the arguments the last connect call received so a boot test
+// can assert that Init forwarded the agent id and the Go-module SDK version into
+// the runtime handshake (AAASM-3683). The fields track the capturingBinding's
+// recorded connect arguments by pointer, so they reflect the value at the time
+// of assertion.
+type ConnectArgs struct {
+	AgentID    *string
+	SDKVersion *string
+}
+
+// NewCapturingClientWithConnectArgs is like NewCapturingClient but also exposes
+// the arguments the binding's connect received, so a boot test can assert that
+// Init forwarded the agent id and the Go-module SDK version into the handshake
+// (AAASM-3683).
+func NewCapturingClientWithConnectArgs() (*Client, ConnectArgs) {
+	b := &capturingBinding{}
+	return NewClient(b), ConnectArgs{AgentID: &b.ConnectAgentID, SDKVersion: &b.ConnectSDKVersion}
+}
+
 // NewCapturingClientFailingRegister returns a capturing client whose register
 // fails with GATEWAY_UNREACHABLE so the boot path's advisory register-failure
 // branch (log + proceed unregistered) can be exercised. The captured
