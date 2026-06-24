@@ -101,12 +101,23 @@ extern "C" {
  On success, `*out_client` receives an owned handle that must be released
  with [`aa_disconnect`].
 
+ `agent_id` is the agent identity the background thread signs the runtime
+ session handshake with (AAASM-3587); it may be null. `sdk_version` is the
+ user-facing Go-module SDK version the binding forwards so it — not the shared
+ `aa-sdk-client` crate version — is what gets signed into the handshake proof
+ (AAASM-3683); null falls back to the crate version (no regression vs
+ AAASM-3666).
+
  # Safety
 
- `endpoint` must be a valid NUL-terminated C string; `out_client` must be a
- valid, writable pointer to a `*mut aa_client_handle`.
+ `endpoint` must be a valid NUL-terminated C string; `agent_id` and
+ `sdk_version` must each be a valid NUL-terminated C string or null;
+ `out_client` must be a valid, writable pointer to a `*mut aa_client_handle`.
  */
-AaStatus aa_connect(const char *endpoint, aa_client_handle **out_client);
+AaStatus aa_connect(const char *endpoint,
+                    const char *agent_id,
+                    const char *sdk_version,
+                    aa_client_handle **out_client);
 
 /*
  Register this agent with the governance gateway and store the issued
