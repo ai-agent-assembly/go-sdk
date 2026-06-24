@@ -2,6 +2,7 @@ package assembly
 
 import (
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -24,6 +25,23 @@ type runtimeOptions struct {
 	enforcementMode  EnforcementMode
 	opControl        OpController
 	errs             []error
+}
+
+// String renders runtimeOptions for logs/diagnostics with apiKey elided
+// (AAASM-3647). A struct printed with %v/%+v would otherwise expose the API
+// key; this Stringer shows only whether a key is set ("<redacted>" vs ""), so
+// a `log.Printf("%v", opts)` cannot leak the credential.
+func (o runtimeOptions) String() string {
+	apiKeyState := ""
+	if o.apiKey != "" {
+		apiKeyState = "<redacted>"
+	}
+	return fmt.Sprintf(
+		"runtimeOptions{gatewayURL:%q, controlPlaneURL:%q, apiKey:%s, failClosed:%t, "+
+			"agentID:%q, teamID:%q, parentAgentID:%q, enforcementMode:%q}",
+		o.gatewayURL, o.controlPlaneURL, apiKeyState, o.failClosed,
+		o.agentID, o.teamID, o.parentAgentID, o.enforcementMode,
+	)
 }
 
 // WithGatewayURL sets the governance gateway URL. This option is required;
