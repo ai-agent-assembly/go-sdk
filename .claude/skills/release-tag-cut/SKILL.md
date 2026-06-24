@@ -144,6 +144,27 @@ shim; `make test-native` runs the suite against the real cgo binding. CI does
 this in `native-ffi.yml` (the only lane that sets `-tags aa_ffi_go`); the
 default test matrix never compiles the native path.
 
+## Docs / version references
+
+go-sdk is the simplest case here. Unlike the python/node SDKs, **go-sdk has no
+in-repo pinned version strings in its docs** — install is
+`go get github.com/ai-agent-assembly/go-sdk@vX`, which resolves the module by tag,
+so there is no checked-in version literal to bump beyond the `assembly/version.go`
+`Version` const (and the `VERSION` file), which the release flow / goreleaser owns.
+
+The one place a published go-sdk version *is* pinned lives **outside this repo**:
+go-sdk's runnable **examples live in the `agent-assembly-examples` repo** and pin a
+published go-sdk version in their `go.mod` + README prerequisite tables. Those track
+the **currently-published** tag, so they must be bumped **after** this release
+publishes (the consumer-repo timing rule) — **not** as part of cutting the tag.
+Bumping them before the tag is published points `go get` at a tag that does not yet
+exist and breaks the example build.
+
+For the canonical statement of this principle, see the agent-assembly core
+`release-docs-sync` skill: a doc/example pin to the release that *ships* a feature
+is a correct forward-reference, not a stale pin — which is exactly why the example
+bump follows publication rather than preceding the tag.
+
 ## What this skill explicitly does not do
 
 - Bump the native-shim core SHA pin (separate, pre-release PR gated by
