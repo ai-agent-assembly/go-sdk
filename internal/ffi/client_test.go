@@ -42,7 +42,7 @@ func TestClientWrappers(t *testing.T) {
 	binding := &mockBinding{}
 	client := NewClient(binding)
 
-	if err := client.Connect("unix:///tmp/aa.sock"); err != nil {
+	if err := client.Connect("unix:///tmp/aa.sock", "", ""); err != nil {
 		t.Fatalf("expected connect success, got %v", err)
 	}
 	if !binding.connectCalled {
@@ -68,7 +68,7 @@ func TestClientBindingUnavailable(t *testing.T) {
 	t.Parallel()
 
 	client := NewClient(nil)
-	if err := client.Connect("unix:///tmp/aa.sock"); !errors.Is(err, ErrBindingUnavailable) {
+	if err := client.Connect("unix:///tmp/aa.sock", "", ""); !errors.Is(err, ErrBindingUnavailable) {
 		t.Fatalf("expected ErrBindingUnavailable, got %v", err)
 	}
 }
@@ -79,7 +79,7 @@ type mockBinding struct {
 	disconnectCalled bool
 }
 
-func (m *mockBinding) connect(string) (unsafe.Pointer, int32) {
+func (m *mockBinding) connect(string, string, string) (unsafe.Pointer, int32) {
 	m.connectCalled = true
 	handle := new(byte)
 	return unsafe.Pointer(handle), statusOK

@@ -70,7 +70,7 @@ func TestClientRegisterSurfacesRegisterFailed(t *testing.T) {
 	t.Parallel()
 
 	client, _, _ := NewCapturingClientWithRegisterStatus(RegisterFailedStatus)
-	if err := client.Connect("127.0.0.1:50051"); err != nil {
+	if err := client.Connect("127.0.0.1:50051", "", ""); err != nil {
 		t.Fatalf("connect: %v", err)
 	}
 
@@ -91,7 +91,7 @@ func TestClientRegisterRecordsAttemptOnFailure(t *testing.T) {
 	t.Parallel()
 
 	client, _, regs := NewCapturingClientWithRegisterStatus(GatewayUnreachableStatus)
-	if err := client.Connect("127.0.0.1:50051"); err != nil {
+	if err := client.Connect("127.0.0.1:50051", "", ""); err != nil {
 		t.Fatalf("connect: %v", err)
 	}
 

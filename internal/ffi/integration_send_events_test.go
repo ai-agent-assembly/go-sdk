@@ -11,7 +11,7 @@ func TestIntegrationSendThousandEvents(t *testing.T) {
 	binding := &countingBinding{}
 	client := NewClient(binding)
 
-	if err := client.Connect("unix:///tmp/aa.sock"); err != nil {
+	if err := client.Connect("unix:///tmp/aa.sock", "", ""); err != nil {
 		t.Fatalf("connect failed: %v", err)
 	}
 
@@ -31,7 +31,7 @@ type countingBinding struct {
 	sent uint64
 }
 
-func (c *countingBinding) connect(string) (unsafe.Pointer, int32) {
+func (c *countingBinding) connect(string, string, string) (unsafe.Pointer, int32) {
 	handle := new(byte)
 	return unsafe.Pointer(handle), statusOK
 }

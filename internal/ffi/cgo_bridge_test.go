@@ -15,7 +15,7 @@ func TestCgoBridgeConnectDisconnect(t *testing.T) {
 
 	client := NewDefaultClient()
 
-	if err := client.Connect("/tmp/aa-ffi-go-cgo-roundtrip.sock"); err != nil {
+	if err := client.Connect("/tmp/aa-ffi-go-cgo-roundtrip.sock", "", ""); err != nil {
 		t.Fatalf("connect over native binding failed: %v", err)
 	}
 

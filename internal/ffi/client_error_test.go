@@ -14,7 +14,7 @@ type statusBinding struct {
 	disconnectStatus int32
 }
 
-func (b statusBinding) connect(string) (unsafe.Pointer, int32) {
+func (b statusBinding) connect(string, string, string) (unsafe.Pointer, int32) {
 	if b.connectStatus != statusOK {
 		return nil, b.connectStatus
 	}
@@ -29,7 +29,7 @@ func TestClient_ConnectSurfacesBindingError(t *testing.T) {
 	t.Parallel()
 
 	client := NewClient(statusBinding{connectStatus: statusIPCError})
-	if err := client.Connect("unix:///tmp/aa.sock"); !errors.Is(err, ErrIPC) {
+	if err := client.Connect("unix:///tmp/aa.sock", "", ""); !errors.Is(err, ErrIPC) {
 		t.Fatalf("expected ErrIPC from connect, got %v", err)
 	}
 	// A failed connect must not leave a handle, so a later send reports
@@ -43,7 +43,7 @@ func TestClient_SendEventSurfacesBindingError(t *testing.T) {
 	t.Parallel()
 
 	client := NewClient(statusBinding{sendStatus: statusChannelClosed})
-	if err := client.Connect("unix:///tmp/aa.sock"); err != nil {
+	if err := client.Connect("unix:///tmp/aa.sock", "", ""); err != nil {
 		t.Fatalf("connect: %v", err)
 	}
 	if err := client.SendEvent("tool_call", "{}"); !errors.Is(err, ErrChannelClosed) {
@@ -55,7 +55,7 @@ func TestClient_DisconnectSurfacesBindingError(t *testing.T) {
 	t.Parallel()
 
 	client := NewClient(statusBinding{disconnectStatus: statusPanic})
-	if err := client.Connect("unix:///tmp/aa.sock"); err != nil {
+	if err := client.Connect("unix:///tmp/aa.sock", "", ""); err != nil {
 		t.Fatalf("connect: %v", err)
 	}
 	if err := client.Disconnect(); !errors.Is(err, ErrPanic) {

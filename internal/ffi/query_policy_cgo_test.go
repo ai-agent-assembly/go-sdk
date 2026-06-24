@@ -14,7 +14,7 @@ func TestCgoQueryPolicyFailsOpenWithoutRuntime(t *testing.T) {
 	}
 
 	client := NewDefaultClient()
-	if err := client.Connect("/tmp/aa-ffi-go-query-policy.sock"); err != nil {
+	if err := client.Connect("/tmp/aa-ffi-go-query-policy.sock", "", ""); err != nil {
 		t.Fatalf("connect over native binding failed: %v", err)
 	}
 	t.Cleanup(func() { _ = client.Disconnect() })

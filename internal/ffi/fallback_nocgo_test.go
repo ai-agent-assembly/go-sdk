@@ -25,7 +25,7 @@ func TestFallbackFailsClosedWithoutCGO(t *testing.T) {
 
 	client := NewDefaultClient()
 
-	err := client.Connect("unix:///tmp/aa.sock")
+	err := client.Connect("unix:///tmp/aa.sock", "", "")
 	if !errors.Is(err, ErrRuntimeUnavailable) {
 		t.Fatalf("expected ErrRuntimeUnavailable from fail-closed fallback, got %v", err)
 	}
@@ -41,7 +41,7 @@ func TestFallbackBindingReportsUnavailable(t *testing.T) {
 	t.Parallel()
 
 	b := fallbackUDSBridge{}
-	if _, status := b.connect("x"); status != statusRuntimeUnavailable {
+	if _, status := b.connect("x", "", ""); status != statusRuntimeUnavailable {
 		t.Fatalf("connect status = %d, want statusRuntimeUnavailable", status)
 	}
 	if status := b.sendEvent(nil, "t", "d"); status != statusRuntimeUnavailable {
