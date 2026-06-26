@@ -122,10 +122,11 @@ jobs:
           # AAASM-3816: derive sonar.projectVersion from the latest release tag so
           # the SonarCloud leak-period gate tracks the shipped version instead of
           # the static 0.0.0 that left it "Not computed". go-sdk is tag-versioned:
-          # strip the leading "v" and any pre-release suffix (v0.0.1-rc.1 -> 0.0.1)
-          # to get the release line. Falls back to the literal in
+          # strip only the leading "v" and keep the full version including any
+          # pre-release suffix (v0.0.1-rc.1 -> 0.0.1-rc.1) so the gate tracks the
+          # real shipped version. Falls back to the literal in
           # sonar-project.properties when no tag is reachable.
-          version="$(git describe --tags --abbrev=0 2>/dev/null | sed -E 's/^v//; s/-.*$//')"
+          version="$(git describe --tags --abbrev=0 2>/dev/null | sed -E 's/^v//')"
           if [ -n "${version}" ]; then
             scanner_args="${scanner_args} -Dsonar.projectVersion=${version}"
           fi
