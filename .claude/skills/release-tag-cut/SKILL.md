@@ -72,15 +72,24 @@ Run from a clean `master` checkout. Substitute the operator-supplied `<X>`.
    the human-facing version marker; keep it consistent with the tag literal,
    minus the leading `v`). Commit as
    `🔧 (release): Set VERSION to <X-without-v>` if changed.
-3. **Create the annotated tag** — `git tag -a "<X>" -m "go-sdk <X>"` on the
+3. **Check `sonar.projectVersion`** — `coverage.yml` derives this from the latest
+   git tag at scan time (`git describe --tags` → strip the leading `v` and any
+   pre-release suffix → release line, e.g. `v0.0.1-rc.1` → `0.0.1`), so a fresh
+   tag updates the SonarCloud version automatically once it lands. No manual edit
+   is needed when the new tag stays on the current release line. Only bump the
+   fallback literal `sonar.projectVersion` in `sonar-project.properties` when the
+   release crosses to a **new** release line (e.g. `0.0.1` → `0.1.0`); commit as
+   `🔧 (sonar): Bump projectVersion fallback to <release-line>` if changed. Never
+   leave it at `0.0.0` — that leaves the SonarCloud gate "Not computed".
+4. **Create the annotated tag** — `git tag -a "<X>" -m "go-sdk <X>"` on the
    release commit.
-4. **Push the tag** — `git push remote "<X>"`. This is tag-only and touches no
+5. **Push the tag** — `git push remote "<X>"`. This is tag-only and touches no
    branch. NEVER `--no-verify` / never force-push. The push triggers the tagged
    workflows in *What's auto-handled*.
 
 ## Post-conditions
 
-After step 4, both MUST hold:
+After step 5, both MUST hold:
 
 1. **Tag exists on remote** — `git ls-remote --tags remote "<X>"` returns it.
 2. **The tagged workflows are running** — `gh run list --workflow goreleaser.yml`
