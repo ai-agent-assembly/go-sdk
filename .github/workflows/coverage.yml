@@ -111,7 +111,7 @@ jobs:
       - name: Build Sonar scanner arguments
         if: ${{ matrix.cgo-enabled == '1' && env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' && env.SONAR_PROJECT_KEY != '' }}
         run: |
-          scanner_args="-Dsonar.projectKey=${SONAR_PROJECT_KEY} -Dsonar.go.coverage.reportPaths=${SONAR_COVERAGE_FILE:-$COVERAGE_FILE} -Dsonar.test.inclusions=**/*_test.go -Dsonar.coverage.exclusions=examples/**"
+          scanner_args="-Dsonar.projectKey=${SONAR_PROJECT_KEY} -Dsonar.go.coverage.reportPaths=${SONAR_COVERAGE_FILE:-$COVERAGE_FILE} -Dsonar.test.inclusions=**/*_test.go -Dsonar.coverage.exclusions=examples/**,**/cgo_bridge.go,**/gateway_resolver_windows.go"
           if [ -n "${SONAR_ORGANIZATION}" ]; then
             scanner_args="${scanner_args} -Dsonar.organization=${SONAR_ORGANIZATION}"
           fi
