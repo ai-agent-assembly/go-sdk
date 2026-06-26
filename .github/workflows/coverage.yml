@@ -41,6 +41,10 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: recursive
+          # AAASM-3816: fetch full history + tags so the Sonar step can derive
+          # sonar.projectVersion from the latest release tag (git describe). The
+          # default shallow checkout fetches no tags, leaving the version stuck.
+          fetch-depth: 0
 
       # AAASM-3445: the cgo=1 leg also builds the vendored native/aa-ffi-go shim
       # and runs a -tags aa_ffi_go coverage pass so the cgo bridge lines are
@@ -114,6 +118,16 @@ jobs:
           scanner_args="-Dsonar.projectKey=${SONAR_PROJECT_KEY} -Dsonar.go.coverage.reportPaths=${SONAR_COVERAGE_FILE:-$COVERAGE_FILE} -Dsonar.test.inclusions=**/*_test.go -Dsonar.coverage.exclusions=examples/**,**/cgo_bridge.go,**/gateway_resolver_windows.go"
           if [ -n "${SONAR_ORGANIZATION}" ]; then
             scanner_args="${scanner_args} -Dsonar.organization=${SONAR_ORGANIZATION}"
+          fi
+          # AAASM-3816: derive sonar.projectVersion from the latest release tag so
+          # the SonarCloud leak-period gate tracks the shipped version instead of
+          # the static 0.0.0 that left it "Not computed". go-sdk is tag-versioned:
+          # strip the leading "v" and any pre-release suffix (v0.0.1-rc.1 -> 0.0.1)
+          # to get the release line. Falls back to the literal in
+          # sonar-project.properties when no tag is reachable.
+          version="$(git describe --tags --abbrev=0 2>/dev/null | sed -E 's/^v//; s/-.*$//')"
+          if [ -n "${version}" ]; then
+            scanner_args="${scanner_args} -Dsonar.projectVersion=${version}"
           fi
           echo "SONAR_SCANNER_ARGS=${scanner_args}" >> "${GITHUB_ENV}"
 
