@@ -119,92 +119,12 @@ jobs:
           fi
           printf 'Discovered tags:\n'
           printf '  %s\n' "${TAGS[@]}"
-          python3 - "$FILE" "${TAGS[@]}" <<'PY'
-          import os, re, sys
-
-          sys.path.insert(0, os.path.join("website", "scripts"))
-          from versions_channels import compute_channels, parse_tag  # noqa: E402
-
-          path = sys.argv[1]
-          raw_tags = sys.argv[2:]
-
-          with open(path, encoding="utf-8") as fh:
-              text = fh.read()
-
-          # Parse existing entries so we can preserve any hand-curated "latest"
-          # metadata (label, default flag) the engineer set in the checked-in file.
-          blocks = re.split(r'(?m)^\[\[versions\]\]\s*$', text)
-          head = blocks[0]
-          existing = []
-          for body in blocks[1:]:
-              fields = dict(re.findall(r'(\w+)\s*=\s*"([^"]+)"', body))
-              flags = dict(re.findall(r'(\w+)\s*=\s*(true|false)\b', body))
-              fields.update({k: v for k, v in flags.items()})
-              existing.append(fields)
-
-          # Keep the latest (master) entry as-is. If the user removed it, fall
-          # back to a sensible default so the moving "latest" channel always
-          # renders.
-          latest = [r for r in existing if r.get("channel") == "latest"]
-          if not latest:
-              latest = [{
-                  "channel": "latest",
-                  "version": "latest",
-                  "label": "latest (master)",
-                  "path": "/latest/",
-                  "default": "true",
-              }]
-
-          # De-duplicate, keep only well-formed semver tags. Drop any raw_tags
-          # entries that don't parse so a stray junk ref can't break the deploy.
-          tag_set = {t for t in raw_tags if t and parse_tag(t) is not None}
-          channels = compute_channels(sorted(tag_set))
-
-          # Archived = one entry per concrete release tag, kept reachable.
-          archived = []
-          for tag in sorted(tag_set, key=lambda t: parse_tag(t).raw if parse_tag(t) else t):
-              archived.append({
-                  "channel": "archived",
-                  "version": tag,
-                  "label": tag,
-                  "path": f"/{tag}/",
-              })
-
-          def emit(r):
-              order = ["channel", "version", "label", "path", "tag", "default"]
-              keys = order + [k for k in r if k not in order]
-              lines = ["[[versions]]"]
-              for k in keys:
-                  if k not in r:
-                      continue
-                  v = r[k]
-                  if v in ("true", "false"):
-                      lines.append(f"  {k} = {v}")
-                  else:
-                      lines.append(f'  {k} = "{v}"')
-              return "\n".join(lines)
-
-          out_records = list(latest)
-          for channel in ("stable", "pre-release"):
-              tag = channels.get(channel)
-              if tag:
-                  out_records.append({
-                      "channel": channel,
-                      "version": channel,
-                      "label": f"{channel} ({tag})",
-                      "path": f"/{channel}/",
-                      "tag": tag,
-                  })
-          out_records.extend(archived)
-
-          out = head.rstrip("\n") + "\n"
-          out += "\n" + "\n\n".join(emit(r) for r in out_records) + "\n"
-
-          with open(path, "w", encoding="utf-8") as fh:
-              fh.write(out)
-          print(f"Recomputed channels {channels} from {len(tag_set)} tag(s).")
-          print(open(path, encoding="utf-8").read())
-          PY
+          # Serializer lives in website/scripts/render_versions_toml.py so the
+          # exact same logic can be reused standalone (e.g. by the docs
+          # aggregator in agent-assembly-docs) instead of being inlined here
+          # (AAASM-3760). It reads "$FILE" for the hand-curated latest entry and
+          # rewrites it in place from the full tag set.
+          python3 website/scripts/render_versions_toml.py "$FILE" "${TAGS[@]}"
 
       # Build EVERY subpath listed in versions.toml into the Pages artifact tree
       # (AAASM-2830). The Pages deploy artifact is a full-site replacement, so a
