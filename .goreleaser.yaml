@@ -10,6 +10,13 @@ builds:
 source:
   enabled: true
 
+release:
+  # Infer the GitHub Release's pre-release flag from the tag's SemVer suffix:
+  # tags like v0.0.1-rc.2 / -beta.N / -alpha.N are marked prerelease=true,
+  # while a plain GA tag (v0.0.1) stays a full release. Without this, every
+  # release defaulted to prerelease=false (AAASM-3838).
+  prerelease: auto
+
 checksum:
   name_template: "checksums.txt"
 
