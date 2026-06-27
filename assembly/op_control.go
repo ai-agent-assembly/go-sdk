@@ -28,7 +28,6 @@ import (
 	"sync"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	pb "github.com/ai-agent-assembly/go-sdk/internal/proto"
 )
@@ -77,8 +76,13 @@ type OpControlSubscriber struct {
 // subscription, and starts the background reader.
 //
 // gatewayURL is the "host:port" of the gateway's gRPC endpoint (no scheme;
-// gRPC uses its own). Uses insecure credentials by default — wrap with
-// custom DialOptions for TLS in production.
+// gRPC uses its own). The transport is secure by default: a loopback target
+// (the local dev gateway) gets plaintext, any other target gets TLS using the
+// system root CAs — the op-control stream carries the agent identity and
+// operator pause/terminate signals, so it must not travel unencrypted to a
+// remote host. To use a custom CA, mTLS, or to explicitly opt into plaintext
+// for a remote host, pass your own DialOptions; supplied opts are used verbatim
+// and bypass the secure-by-default decision. Mirrors python-sdk and node-sdk.
 func Connect(
 	ctx context.Context,
 	gatewayURL string,
@@ -86,7 +90,7 @@ func Connect(
 	opts ...grpc.DialOption,
 ) (*OpControlSubscriber, error) {
 	if len(opts) == 0 {
-		opts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+		opts = []grpc.DialOption{grpc.WithTransportCredentials(resolveOpControlCredentials(gatewayURL))}
 	}
 	conn, err := grpc.NewClient(gatewayURL, opts...)
 	if err != nil {
