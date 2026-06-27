@@ -12,4 +12,4 @@ package assembly
 // Pre-release values follow the SemVer pre-release identifier form
 // (`MAJOR.MINOR.PATCH-alpha.N`). The git tag mirrors this with a
 // leading `v` (e.g. `v0.0.1-alpha.1`).
-const Version = "0.0.1-rc.1"
+const Version = "0.0.1-rc.2"
