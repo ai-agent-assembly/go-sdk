@@ -72,15 +72,19 @@ Run from a clean `master` checkout. Substitute the operator-supplied `<X>`.
    the human-facing version marker; keep it consistent with the tag literal,
    minus the leading `v`). Commit as
    `🔧 (release): Set VERSION to <X-without-v>` if changed.
-3. **Check `sonar.projectVersion`** — `coverage.yml` derives this from the latest
-   git tag at scan time (`git describe --tags` → strip the leading `v` and any
-   pre-release suffix → release line, e.g. `v0.0.1-rc.1` → `0.0.1`), so a fresh
-   tag updates the SonarCloud version automatically once it lands. No manual edit
-   is needed when the new tag stays on the current release line. Only bump the
-   fallback literal `sonar.projectVersion` in `sonar-project.properties` when the
-   release crosses to a **new** release line (e.g. `0.0.1` → `0.1.0`); commit as
+3. **Bump `sonar.projectVersion`** — the static `sonar.projectVersion` literal in
+   `sonar-project.properties` is the source-of-truth / local-scan fallback and
+   must track the release line. `coverage.yml` overrides it dynamically at scan
+   time (`git describe --tags` → strip the leading `v` and any pre-release suffix
+   → release line, e.g. `v0.0.1-rc.1` → `0.0.1`), so a fresh tag updates the
+   SonarCloud version automatically and drift never breaks CI. Because the CI
+   override resolves to the *release line*, no manual edit is needed when the new
+   tag stays on the current line; bump the static literal in the same prep commit
+   as the `VERSION` file (step 2) whenever the release crosses to a **new**
+   release line (e.g. `0.0.1` → `0.1.0`). Commit as
    `🔧 (sonar): Bump projectVersion fallback to <release-line>` if changed. Never
-   leave it at `0.0.0` — that leaves the SonarCloud gate "Not computed".
+   leave it at `0.0.0` — that leaves the SonarCloud gate "Not computed". (Mirrors
+   the core's `release-tag-cut` automation, AAASM-3819.)
 4. **Create the annotated tag** — `git tag -a "<X>" -m "go-sdk <X>"` on the
    release commit.
 5. **Push the tag** — `git push remote "<X>"`. This is tag-only and touches no
