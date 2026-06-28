@@ -87,7 +87,12 @@ jobs:
           CGO_ENABLED=1 go test -tags aa_ffi_go ./... \
             -covermode=atomic -coverpkg=./... \
             -coverprofile=coverage.aacgo.out
-          go run github.com/wadey/gocovmerge@latest \
+          # AAASM-3896: pin gocovmerge to a commit SHA rather than @latest. This
+          # job exports CODECOV_TOKEN + SONAR_TOKEN, so a mutable @latest ref
+          # could pull a poisoned upstream HEAD into a token-bearing run. The
+          # repo publishes no tags, so a full commit SHA is the only immutable
+          # pin available (github.com/wadey/gocovmerge master @ b5bfa59).
+          go run github.com/wadey/gocovmerge@b5bfa59ec0adc420475f97f89b58045c721d761c \
             "$COVERAGE_FILE" coverage.aacgo.out > coverage.merged.out
           echo "SONAR_COVERAGE_FILE=coverage.merged.out" >> "${GITHUB_ENV}"
 
