@@ -197,14 +197,17 @@ AaStatus aa_send_event(aa_client_handle *client, const char *event_type, const c
  receives an owned, NUL-terminated reason string the caller must release with
  [`aa_free_string`] (always non-null on `AA_STATUS_OK`, even when empty).
 
- # Fail-open
+ # Fail-closed signalling
 
- The SDK is **advisory, not authoritative**. If the runtime fails to return a
- decision — a timeout, an unreachable runtime, or a closed session — this
- returns `AA_STATUS_OK` with `*out_decision = AA_DECISION_ALLOW` and a reason
- explaining the fail-open, since an unreachable or slow runtime must never
- block the agent (the runtime / proxy / eBPF layers enforce authoritatively).
- Only an internal poisoned lock surfaces as `AA_STATUS_MUTEX_POISONED`.
+ The SDK is **advisory, not authoritative**, but this shim must not silently
+ turn a failed query into an allow (AAASM-3920). If the runtime fails to return
+ a decision — a timeout, an unreachable runtime, or a closed session — this
+ returns a **non-OK status** (`AA_STATUS_NOT_CONNECTED` for a timeout or
+ shut-down session, `AA_STATUS_CHANNEL_CLOSED` for an exited IPC thread,
+ `AA_STATUS_MUTEX_POISONED` for an internal poisoned lock) and leaves the
+ out-params untouched. The Go layer maps the status to an error so the tool
+ wrapper applies its fail-open / fail-closed posture (deny under the default
+ enforce). The runtime / proxy / eBPF layers remain authoritative.
 
  # Arguments
 
