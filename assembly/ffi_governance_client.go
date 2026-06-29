@@ -25,7 +25,9 @@ type policyQuerier interface {
 //
 //	deny                          -> Decision{Denied: true, Reason}
 //	allow / redact / unspecified  -> Decision{}
-//	pending                       -> Decision{Pending: true} (wrapper waits)
+//	pending                       -> Decision{Pending: true}; the wrapper then
+//	                                 calls WaitForApproval, which denies (no
+//	                                 approval channel exists — AAASM-3920)
 //
 // The native query is fail-open: an unreachable, slow, or closed runtime
 // returns allow with a nil error, so Check never blocks the agent on a missing
@@ -68,10 +70,19 @@ func (c *ffiGovernanceClient) Check(_ context.Context, request CheckRequest) (De
 	}
 }
 
-// WaitForApproval has no native approval-polling primitive yet, so it fails open
-// and proceeds. The runtime / proxy / eBPF layers remain authoritative.
+// WaitForApproval resolves a pending (requires-approval) decision. There is no
+// native approval-polling primitive yet, so there is no channel through which an
+// operator could ever approve the held call. Returning allow here (the previous
+// behaviour) silently downgraded every requires-approval verdict to allow,
+// defeating the gateway's hold (AAASM-3920). With no way to obtain approval the
+// only safe resolution is to deny, so a pending decision blocks the tool rather
+// than running it unapproved. The runtime / proxy / eBPF layers remain
+// authoritative; this is the SDK's defence-in-depth fail-closed posture.
 func (c *ffiGovernanceClient) WaitForApproval(_ context.Context, _ ApprovalRequest) (Decision, error) {
-	return Decision{}, nil
+	return Decision{
+		Denied: true,
+		Reason: "tool call requires approval but no approval channel is available; denying (fail-closed)",
+	}, nil
 }
 
 // RecordResult is a no-op: tool results are reported to the runtime through the

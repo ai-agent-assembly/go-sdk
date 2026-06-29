@@ -5,10 +5,11 @@ import (
 	"testing"
 )
 
-// WaitForApproval and Close have no native primitive yet, so they fail open /
-// release nothing. These tests pin that contract (AAASM-3178 coverage).
+// WaitForApproval has no native approval primitive, so a pending decision can
+// never be approved; it must deny (fail-closed) rather than silently allow the
+// held call (AAASM-3920). Close still releases nothing (AAASM-3178 coverage).
 
-func TestFFIGovernanceClient_WaitForApprovalFailsOpen(t *testing.T) {
+func TestFFIGovernanceClient_WaitForApprovalDenies(t *testing.T) {
 	t.Parallel()
 
 	dec, err := newFFIGovernanceClient(&fakeQuerier{}).WaitForApproval(
@@ -16,8 +17,8 @@ func TestFFIGovernanceClient_WaitForApprovalFailsOpen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if dec.Denied || dec.Pending {
-		t.Fatalf("expected WaitForApproval to fail open with an allow decision, got %+v", dec)
+	if !dec.Denied {
+		t.Fatalf("expected WaitForApproval to deny when no approval channel exists, got %+v", dec)
 	}
 }
 

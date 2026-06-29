@@ -13,9 +13,11 @@
 //! redaction, and normalization happen at the runtime chokepoint (`aa-runtime`,
 //! AAASM-2568), which re-scans every event unconditionally. Policy decisions are
 //! server-side. [`aa_query_policy`] exposes the runtime's synchronous policy
-//! query, but it is **advisory and fail-open**: when the runtime is unreachable
-//! or slow it returns `ALLOW` rather than blocking, because the runtime / proxy
-//! / eBPF layers are the authoritative enforcement points (AAASM-3021).
+//! query. It is **advisory** — the runtime / proxy / eBPF layers are the
+//! authoritative enforcement points (AAASM-3021) — but it does **not** fail
+//! open: when the runtime is unreachable or slow it surfaces a non-OK status
+//! rather than fabricating an `ALLOW`, so the Go layer can fail closed under
+//! enforce instead of being silently downgraded (AAASM-3920).
 
 use core::ffi::c_char;
 use std::ffi::{CStr, CString};
@@ -56,8 +58,9 @@ pub const AA_STATUS_REGISTER_FAILED: AaStatus = 9;
 /// onto `ALLOW` so an unset/garbled decision never silently blocks.
 pub type AaDecision = i32;
 
-/// Action permitted. Also returned when the query fails open (see
-/// [`aa_query_policy`]) or the runtime returns an unspecified decision.
+/// Action permitted. Also returned when the runtime returns an unspecified
+/// decision. A failed query no longer maps to allow — it surfaces a non-OK
+/// status instead (see [`aa_query_policy`], AAASM-3920).
 pub const AA_DECISION_ALLOW: AaDecision = 0;
 /// Action blocked.
 pub const AA_DECISION_DENY: AaDecision = 1;
@@ -81,9 +84,9 @@ fn status_for(err: &SdkClientError) -> AaStatus {
         SdkClientError::Shutdown => AA_STATUS_NOT_CONNECTED,
         SdkClientError::LockPoisoned => AA_STATUS_MUTEX_POISONED,
         SdkClientError::ChannelClosed => AA_STATUS_CHANNEL_CLOSED,
-        // The event paths never trigger a synchronous query, so this is
-        // unreachable for them; map it conservatively to "not connected".
-        // [`aa_query_policy`] handles `QueryFailed` itself by failing open.
+        // A synchronous-query timeout. Mapped to "not connected" so
+        // [`aa_query_policy`] surfaces it as an error and the Go layer fails
+        // closed under enforce (AAASM-3920) rather than silently allowing.
         SdkClientError::QueryFailed => AA_STATUS_NOT_CONNECTED,
         // Registration-only failures (see [`aa_register`]), surfaced verbatim
         // so the caller can distinguish "gateway down" from "gateway said no".
@@ -398,14 +401,18 @@ pub unsafe extern "C" fn aa_send_event(
 /// receives an owned, NUL-terminated reason string the caller must release with
 /// [`aa_free_string`] (always non-null on `AA_STATUS_OK`, even when empty).
 ///
-/// # Fail-open
+/// # Fail-closed signalling
 ///
-/// The SDK is **advisory, not authoritative**. If the runtime fails to return a
-/// decision — a timeout, an unreachable runtime, or a closed session — this
-/// returns `AA_STATUS_OK` with `*out_decision = AA_DECISION_ALLOW` and a reason
-/// explaining the fail-open, since an unreachable or slow runtime must never
-/// block the agent (the runtime / proxy / eBPF layers enforce authoritatively).
-/// Only an internal poisoned lock surfaces as `AA_STATUS_MUTEX_POISONED`.
+/// The SDK is **advisory, not authoritative**, but this shim must not silently
+/// turn a failed query into an allow (AAASM-3920). If the runtime fails to
+/// return a decision — a timeout, an unreachable runtime, or a closed session —
+/// this returns a **non-OK status** (`AA_STATUS_NOT_CONNECTED` for a timeout or
+/// shut-down session, `AA_STATUS_CHANNEL_CLOSED` for an exited IPC thread,
+/// `AA_STATUS_MUTEX_POISONED` for an internal poisoned lock) and leaves
+/// `*out_decision` / `*out_reason` untouched. The Go layer maps the status to an
+/// error so the tool wrapper applies its fail-open / fail-closed posture (deny
+/// under the default enforce; allow only when fail-closed is disabled). The
+/// runtime / proxy / eBPF layers remain authoritative.
 ///
 /// # Arguments
 ///
@@ -482,18 +489,20 @@ pub unsafe extern "C" fn aa_query_policy(
         let handle = unsafe { &*client };
         let (decision, reason) = match handle.client.query_policy(request) {
             Ok(resp) => (decision_for(resp.decision), resp.reason),
-            // Fail-open: the SDK is advisory, so any failure to obtain a
-            // decision from the runtime — a timeout (`QueryFailed`), an
-            // unreachable runtime whose IPC thread exited (`ChannelClosed`), or
-            // a shut-down session (`Shutdown`) — yields ALLOW rather than
-            // blocking the agent. The runtime / proxy / eBPF layers enforce
-            // authoritatively. Only a poisoned lock (an internal panic) is a
-            // hard error, since it signals the binding itself is broken.
-            Err(SdkClientError::LockPoisoned) => return AA_STATUS_MUTEX_POISONED,
-            Err(_) => (
-                AA_DECISION_ALLOW,
-                "policy query failed; failing open (SDK is advisory)".to_owned(),
-            ),
+            // Fail-closed signalling (AAASM-3920): the SDK is advisory, but the
+            // shim must NOT fold a failed query onto ALLOW. Doing so let a local
+            // actor who stalls or kills the runtime downgrade enforce from
+            // deny-on-failure to allow-on-failure, because the Go `WithFailClosed`
+            // gate keys on a returned error and never saw one. Instead surface
+            // the failure as a non-OK status — a timeout (`QueryFailed`) or
+            // shut-down session (`Shutdown`) as `NOT_CONNECTED`, an exited IPC
+            // thread (`ChannelClosed`) as `CHANNEL_CLOSED`, a poisoned lock as
+            // `MUTEX_POISONED`. `QueryPolicy` maps these to an error and the tool
+            // wrapper applies its fail-open / fail-closed posture (deny under the
+            // default enforce; allow only when fail-closed is disabled, or under
+            // observe / disabled). The runtime / proxy / eBPF layers remain
+            // authoritative.
+            Err(err) => return status_for(&err),
         };
 
         // A NUL inside the reason would truncate it; fall back to empty rather
@@ -1029,13 +1038,15 @@ mod tests {
         let _ = std::fs::remove_file(&socket_path);
     }
 
-    /// With no runtime listening, the synchronous query times out; the binding
-    /// must fail **open** — return OK with `AA_DECISION_ALLOW` — so an
-    /// unreachable runtime never blocks the agent.
+    /// With no runtime listening, the synchronous query fails to obtain a
+    /// decision; the binding must fail **closed** — return a non-OK status and
+    /// leave the out-params untouched — so the Go layer surfaces an error and
+    /// denies under enforce rather than silently allowing (AAASM-3920).
     #[test]
-    fn query_policy_fails_open_with_no_server() {
+    fn query_policy_fails_closed_with_no_server() {
         // No server binds this path, so the background IPC thread never
-        // connects and the query times out (QueryFailed -> fail-open).
+        // connects and the query fails (QueryFailed / ChannelClosed), which the
+        // shim surfaces as a non-OK status rather than folding onto ALLOW.
         let endpoint = CString::new(format!(
             "/tmp/aa-ffi-go-no-server-{}.sock",
             std::process::id()
@@ -1065,17 +1076,16 @@ mod tests {
             )
         };
 
-        assert_eq!(
+        assert_ne!(
             status, AA_STATUS_OK,
-            "fail-open returns OK, not an error status"
+            "an unreachable runtime must fail closed (non-OK status), not fail open"
         );
-        assert_eq!(
-            decision, AA_DECISION_ALLOW,
-            "unreachable runtime must fail open"
+        // The out-params are left untouched on a non-OK return: no reason string
+        // was allocated, so there is nothing to free.
+        assert!(
+            reason.is_null(),
+            "out_reason must be untouched on a non-OK status"
         );
-        assert!(!reason.is_null());
-        // SAFETY: reason came from CString::into_raw in aa_query_policy.
-        unsafe { aa_free_string(reason) };
 
         // SAFETY: handle from aa_connect, not yet disconnected.
         assert_eq!(unsafe { aa_disconnect(client) }, AA_STATUS_OK);

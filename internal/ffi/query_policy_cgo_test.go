@@ -5,10 +5,11 @@ package ffi
 import "testing"
 
 // Exercises the real native aa_query_policy through the cgo binding. Without a
-// live runtime the query fails open inside the native shim, which returns
-// AA_STATUS_OK with AA_DECISION_ALLOW — proving the boundary marshals safely and
-// preserves the fail-open contract.
-func TestCgoQueryPolicyFailsOpenWithoutRuntime(t *testing.T) {
+// live runtime the query cannot obtain a decision, so the native shim surfaces a
+// non-OK status which QueryPolicy returns as an error (AAASM-3920) — proving the
+// boundary marshals safely and fails closed rather than silently allowing. The
+// caller's tool wrapper then applies its fail-open / fail-closed posture.
+func TestCgoQueryPolicyFailsClosedWithoutRuntime(t *testing.T) {
 	if !NativeBindingEnabled() {
 		t.Skip("native aa_ffi_go binding not enabled")
 	}
@@ -20,10 +21,10 @@ func TestCgoQueryPolicyFailsOpenWithoutRuntime(t *testing.T) {
 	t.Cleanup(func() { _ = client.Disconnect() })
 
 	decision, _, err := client.QueryPolicy("agent-1", "tool_call", "web_search", `{"q":"x"}`)
-	if err != nil {
-		t.Fatalf("expected fail-open nil error from native query, got %v", err)
+	if err == nil {
+		t.Fatal("expected an error from native query without a runtime (fail-closed), got nil")
 	}
 	if decision != DecisionAllow {
-		t.Fatalf("expected DecisionAllow on fail-open, got %d", decision)
+		t.Fatalf("expected DecisionAllow placeholder on error, got %d", decision)
 	}
 }
