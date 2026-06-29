@@ -131,6 +131,27 @@ func TestFFIGovernanceClientNilQuerierProceeds(t *testing.T) {
 	}
 }
 
+// PENDING round-trip: a runtime that returns pending blocks the tool — the
+// wrapper routes through WaitForApproval, which denies, so the inner tool never
+// runs (AAASM-3920). Previously pending silently fell through to allow.
+func TestWrappedToolPendingBlocksInnerCall(t *testing.T) {
+	t.Parallel()
+
+	inner := &countingTool{name: "web_search", result: "leaked"}
+	client := newFFIGovernanceClient(&fakeQuerier{decision: ffi.DecisionPending, reason: "needs approval"})
+	wrapped := NewAssemblyTool(inner, client, defaultRuntimeOptions())
+
+	_, err := wrapped.Call(context.Background(), `{"q":"secret"}`)
+
+	var violation *PolicyViolationError
+	if !errors.As(err, &violation) {
+		t.Fatalf("expected PolicyViolationError, got %v", err)
+	}
+	if inner.calls != 0 {
+		t.Fatalf("inner tool was called %d times, want 0 (pending must block execution)", inner.calls)
+	}
+}
+
 // DENY round-trip: a runtime that returns deny blocks the tool — the wrapper
 // returns PolicyViolationError and the inner tool never runs.
 func TestWrappedToolDenyBlocksInnerCall(t *testing.T) {
