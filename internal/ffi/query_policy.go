@@ -6,8 +6,10 @@ import "unsafe"
 // aa_query_policy. UNSPECIFIED is folded onto ALLOW by the native shim, so it is
 // not represented here.
 const (
-	// DecisionAllow permits the action. The native shim also returns this when
-	// the query fails open (unreachable / slow / closed runtime).
+	// DecisionAllow permits the action. It is also the placeholder decision
+	// returned alongside an error: an unreachable / slow / closed runtime
+	// surfaces a non-OK status (fail-closed, AAASM-3920) rather than a silent
+	// allow, so callers must consult the error, not just the decision.
 	DecisionAllow int32 = 0
 	// DecisionDeny blocks the action.
 	DecisionDeny int32 = 1
@@ -27,13 +29,15 @@ type policyQuerier interface {
 
 // QueryPolicy synchronously asks the runtime for a policy decision on an action.
 //
-// It delegates to the native aa_query_policy primitive (AAASM-3048), which is
-// advisory and fail-open: an unreachable, slow, or closed runtime returns
-// AA_STATUS_OK with DecisionAllow rather than an error, because the runtime /
-// proxy / eBPF layers enforce authoritatively. QueryPolicy preserves that
-// contract — and additionally fails open when no native binding is compiled in
-// or the binding cannot answer policy queries, returning DecisionAllow with a
-// nil error so the SDK never blocks on a missing transport.
+// It delegates to the native aa_query_policy primitive (AAASM-3048). The native
+// shim no longer folds an unreachable / slow / closed runtime onto an allow:
+// such a failure surfaces as a non-OK status (AAASM-3920), which QueryPolicy
+// returns as an error so the tool wrapper can apply its fail-open / fail-closed
+// posture (deny by default under enforce; allow only when WithFailClosed is
+// disabled or under observe / disabled). The decision is always DecisionAllow on
+// error so a caller that ignores the error still gets an advisory non-blocking
+// value. QueryPolicy still fails open when no native binding is compiled in or
+// the binding cannot answer policy queries (in-memory test transports).
 //
 // actionType is a snake_case proto action name (e.g. "tool_call"); toolName and
 // argsJSON may be empty.
@@ -43,8 +47,7 @@ func (c *Client) QueryPolicy(agentID, actionType, toolName, argsJSON string) (de
 
 	querier, ok := c.binding.(policyQuerier)
 	if !ok {
-		// No native policy-query transport: fail open, matching the native
-		// shim's behaviour for an unreachable runtime.
+		// No native policy-query transport (in-memory test binding): fail open.
 		return DecisionAllow, "", nil
 	}
 

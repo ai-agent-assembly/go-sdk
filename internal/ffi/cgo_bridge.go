@@ -117,7 +117,9 @@ func (cgoBridge) register(handle unsafe.Pointer, agentID, name, framework, gatew
 // toolName and argsJSON are optional: an empty Go string is passed as a NULL C
 // pointer (the native shim treats both fields as nullable). On AA_STATUS_OK the
 // shim hands back an owned reason string that must be released with
-// aa_free_string. The native call is itself fail-open (see aa_query_policy).
+// aa_free_string. A failed query (unreachable / slow / closed runtime) surfaces
+// a non-OK status — the native call fails closed, not open (see aa_query_policy,
+// AAASM-3920); the Go layer maps the status to an error.
 func (cgoBridge) queryPolicy(handle unsafe.Pointer, agentID, actionType, toolName, argsJSON string) (int32, string, int32) {
 	cAgentID := C.CString(agentID)
 	defer C.free(unsafe.Pointer(cAgentID))
