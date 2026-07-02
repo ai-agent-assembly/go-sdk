@@ -55,7 +55,10 @@ pub const AA_STATUS_REGISTER_FAILED: AaStatus = 9;
 /// C-ABI policy decision returned by [`aa_query_policy`].
 ///
 /// Mirrors `aa_proto::assembly::common::v1::Decision`. `UNSPECIFIED` is folded
-/// onto `ALLOW` so an unset/garbled decision never silently blocks.
+/// onto `ALLOW` (an unset decision is not a block), but a value this shim cannot
+/// interpret — an out-of-range code or a proto variant added after this shim was
+/// built (version skew) — folds onto `DENY` so it fails closed rather than
+/// silently allowing an unknown verdict (AAASM-4019).
 pub type AaDecision = i32;
 
 /// Action permitted. Also returned when the runtime returns an unspecified
@@ -115,15 +118,19 @@ fn parse_action_type(raw: &str) -> ActionType {
 
 /// Map a proto [`Decision`] code onto the stable C-ABI [`AaDecision`].
 ///
-/// Any value that is not a recognized non-allow decision (including
-/// `UNSPECIFIED`) folds onto [`AA_DECISION_ALLOW`] so the binding never blocks
-/// on a decision it cannot interpret.
+/// The known verdicts map through directly; `UNSPECIFIED` folds onto
+/// [`AA_DECISION_ALLOW`] (an unset decision is not a block). A value this shim
+/// cannot interpret — an out-of-range code or a proto variant added after this
+/// shim was built (version skew) — folds onto [`AA_DECISION_DENY`]: folding it
+/// onto allow would let a newer gateway's verdict silently downgrade to allow,
+/// so it fails closed instead and the Go layer denies under enforce (AAASM-4019).
 fn decision_for(decision: i32) -> AaDecision {
     match Decision::try_from(decision) {
         Ok(Decision::Deny) => AA_DECISION_DENY,
         Ok(Decision::Pending) => AA_DECISION_PENDING,
         Ok(Decision::Redact) => AA_DECISION_REDACT,
-        Ok(Decision::Allow) | Ok(Decision::Unspecified) | Err(_) => AA_DECISION_ALLOW,
+        Ok(Decision::Allow) | Ok(Decision::Unspecified) => AA_DECISION_ALLOW,
+        Err(_) => AA_DECISION_DENY,
     }
 }
 
@@ -900,6 +907,25 @@ mod tests {
         let raw = owned.into_raw();
         // SAFETY: pointer came from CString::into_raw above.
         unsafe { aa_free_string(raw) };
+    }
+
+    /// The known verdicts map through directly and UNSPECIFIED folds onto ALLOW,
+    /// but a decision code the shim cannot interpret (version skew) must fold
+    /// onto DENY, not ALLOW, so it fails closed (AAASM-4019).
+    #[test]
+    fn decision_for_folds_unknown_onto_deny() {
+        assert_eq!(decision_for(Decision::Deny as i32), AA_DECISION_DENY);
+        assert_eq!(decision_for(Decision::Pending as i32), AA_DECISION_PENDING);
+        assert_eq!(decision_for(Decision::Redact as i32), AA_DECISION_REDACT);
+        assert_eq!(decision_for(Decision::Allow as i32), AA_DECISION_ALLOW);
+        assert_eq!(
+            decision_for(Decision::Unspecified as i32),
+            AA_DECISION_ALLOW
+        );
+        // An out-of-range code (a future proto variant this shim predates) must
+        // fail closed rather than silently allow.
+        assert_eq!(decision_for(9999), AA_DECISION_DENY);
+        assert_eq!(decision_for(-1), AA_DECISION_DENY);
     }
 
     #[test]
