@@ -253,10 +253,12 @@ func TestStreamEndWakesBlockedWaiters(t *testing.T) {
 
 	select {
 	case err := <-done:
-		// Close is a normal lifecycle event, not a terminate — WaitForOp
-		// should return nil and let the caller observe StreamAlive().
-		if err != nil {
-			t.Fatalf("WaitForOp returned %v; want nil on stream end", err)
+		// The op was paused when the stream died: it can no longer be resumed,
+		// so WaitForOp fails closed with ErrOpControlUnavailable rather than
+		// yielding an allow (AAASM-4019). The caller can still observe
+		// StreamAlive() to reconnect.
+		if !errors.Is(err, ErrOpControlUnavailable) {
+			t.Fatalf("WaitForOp returned %v; want ErrOpControlUnavailable on stream end while paused", err)
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("WaitForOp did not wake on stream end")

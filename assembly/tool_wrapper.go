@@ -2,6 +2,7 @@ package assembly
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 )
@@ -148,10 +149,23 @@ func (t *AssemblyTool) runOpControlGate(ctx context.Context) error {
 	if opID == "" {
 		return nil
 	}
-	if err := t.opControl.WaitForOp(ctx, opID); err != nil {
-		return fmt.Errorf("assembly: op control: %w", err)
+	err := t.opControl.WaitForOp(ctx, opID)
+	if err == nil {
+		return nil
 	}
-	return nil
+	// A paused op whose control stream died can no longer be resumed by the
+	// operator. Treat that as continue-blocking under the fail-closed enforce
+	// posture (deny), but let observe/disabled proceed so those postures never
+	// short-circuit a tool call (AAASM-4019). A terminate or ctx cancel is not
+	// posture-gated — it always short-circuits.
+	if errors.Is(err, ErrOpControlUnavailable) {
+		if t.shouldDenyOnUnavailable() {
+			return fmt.Errorf("assembly: op control: %w", err)
+		}
+		log.Printf("assembly: op control stream unavailable, allowing tool call (fail-open posture): %v (tool=%s)", err, t.inner.Name())
+		return nil
+	}
+	return fmt.Errorf("assembly: op control: %w", err)
 }
 
 // shouldDenyOnUnavailable reports whether a governance check that could not
