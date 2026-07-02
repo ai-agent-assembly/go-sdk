@@ -96,9 +96,11 @@ jobs:
           go-version: "1.26.x"
 
       - name: Install cyclonedx-gomod
-        # Pinned minor; bump deliberately. Generates the CycloneDX SBOM for
-        # the Go module dependency graph.
-        run: go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@v1.9.0
+        # AAASM-4022: pin to the immutable commit SHA behind the v1.9.0 tag
+        # (a tag can be re-pointed; a SHA cannot) so the SBOM tool is
+        # supply-chain reproducible. SHA = tag v1.9.0; bump deliberately.
+        # Generates the CycloneDX SBOM for the Go module dependency graph.
+        run: go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@89865b67004ac1333b5ecfa085ef49e6684c473c
 
       - name: Generate CycloneDX SBOM
         run: cyclonedx-gomod mod -json -output sbom.cdx.json
