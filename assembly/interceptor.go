@@ -1,3 +1,17 @@
+// Outbound-transport hooks for the assembly package.
+//
+// The three constructors below (HTTPMiddleware, UnaryClientInterceptor,
+// StreamClientInterceptor) are **reserved pass-throughs**: they wrap outbound
+// HTTP/gRPC traffic and forward every request unmodified. They exist to reserve
+// a stable wiring seam for a future in-transport enforcement layer; they do
+// **not** themselves enforce policy, redact, or emit governance events today.
+//
+// Governance on the SDK path runs through the tool wrapper
+// ([AssemblyTool.Call] → the FFI governance client and op-control gate), not
+// through these hooks. Installing them is harmless but provides no interception —
+// do not rely on them as a security boundary. The authoritative enforcement
+// points remain the runtime, sidecar proxy, and eBPF layers.
+
 package assembly
 
 import (
@@ -7,7 +21,10 @@ import (
 	"google.golang.org/grpc"
 )
 
-// HTTPMiddleware wraps outbound HTTP transport.
+// HTTPMiddleware wraps an outbound HTTP [http.RoundTripper]. It is a reserved
+// no-op pass-through: every request is forwarded to next (or
+// [http.DefaultTransport] when next is nil) unmodified. It does not enforce
+// policy or emit events — see the package-level note on these hooks.
 func HTTPMiddleware(next http.RoundTripper) http.RoundTripper {
 	if next == nil {
 		next = http.DefaultTransport
@@ -24,7 +41,10 @@ func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
 }
 
-// UnaryClientInterceptor is the outbound unary gRPC interception hook.
+// UnaryClientInterceptor returns a reserved no-op outbound unary gRPC
+// interceptor: it invokes the RPC unmodified and performs no governance. It
+// reserves the wiring seam for future in-transport enforcement — see the
+// package-level note on these hooks.
 func UnaryClientInterceptor() grpc.UnaryClientInterceptor {
 	return func(
 		ctx context.Context,
@@ -38,7 +58,10 @@ func UnaryClientInterceptor() grpc.UnaryClientInterceptor {
 	}
 }
 
-// StreamClientInterceptor is the outbound streaming gRPC interception hook.
+// StreamClientInterceptor returns a reserved no-op outbound streaming gRPC
+// interceptor: it opens the stream unmodified and performs no governance. It
+// reserves the wiring seam for future in-transport enforcement — see the
+// package-level note on these hooks.
 func StreamClientInterceptor() grpc.StreamClientInterceptor {
 	return func(
 		ctx context.Context,
