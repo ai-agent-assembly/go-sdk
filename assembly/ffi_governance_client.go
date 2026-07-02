@@ -2,6 +2,7 @@ package assembly
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ai-agent-assembly/go-sdk/internal/ffi"
 )
@@ -63,10 +64,20 @@ func (c *ffiGovernanceClient) Check(_ context.Context, request CheckRequest) (De
 		return Decision{Denied: true, Reason: reason}, nil
 	case ffi.DecisionPending:
 		return Decision{Pending: true, Reason: reason}, nil
-	default:
-		// Allow, redact, and any unspecified/garbled decision proceed. The
-		// native shim already folds unspecified onto allow.
+	case ffi.DecisionAllow, ffi.DecisionRedact:
+		// Allow and redact proceed. DecisionAllow (0) also covers the
+		// UNSPECIFIED verdict, which the native shim folds onto allow.
 		return Decision{}, nil
+	default:
+		// A decision code this SDK does not recognise — an out-of-range value
+		// or a variant a newer gateway added after this SDK was built (version
+		// skew). Do not silently allow it: surface an error so the tool wrapper
+		// applies its fail-open / fail-closed posture (deny under the default
+		// enforce; allow only when fail-closed is disabled or under observe /
+		// disabled), exactly as it does for a transport error (AAASM-4019). The
+		// native shim already folds an unrecognised proto verdict onto deny;
+		// this is the Go-side defence-in-depth for any other querier.
+		return Decision{}, fmt.Errorf("assembly: unrecognized policy decision code %d", decision)
 	}
 }
 
