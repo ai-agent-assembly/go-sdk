@@ -14,6 +14,12 @@ on:
         required: true
         type: string
 
+# AAASM-4022: default all jobs to least privilege. goreleaser-release overrides
+# this with `contents: write` for the release upload; goreleaser-check inherits
+# read-only here.
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -39,7 +45,11 @@ jobs:
         uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2
         with:
           distribution: goreleaser
-          version: latest
+          # AAASM-4022: pin the goreleaser CLI (was floating `latest`) so the
+          # release tooling is reproducible; bump deliberately. v2.16.0 == the
+          # `latest` at pin time, so no behaviour change. (goreleaser-action's
+          # `version` takes a semver/constraint, not a git SHA.)
+          version: "v2.16.0"
           args: check
 
   # Publish a GitHub Release on a pushed v* tag, or on a manual/backfill dispatch.
@@ -68,7 +78,9 @@ jobs:
         uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2
         with:
           distribution: goreleaser
-          version: latest
+          # AAASM-4022: pinned (was floating `latest`) — keep in lockstep with
+          # the goreleaser-check job's pin above; bump deliberately.
+          version: "v2.16.0"
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
