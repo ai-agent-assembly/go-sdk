@@ -3,12 +3,23 @@
 # Both Codecov and SonarCloud consume the SAME merged Go coverage profile
 # (coverage.merged.out = cgo + non-cgo merged via gocovmerge in
 # .github/workflows/coverage.yml), so their coverage numbers must line up. The
-# ignore list below mirrors sonar.coverage.exclusions in
-# sonar-project.properties — keep the two in sync. These are source the measured
-# (non-native) coverage build can never execute:
+# ignore list below mirrors BOTH sonar.coverage.exclusions AND sonar.exclusions
+# in sonar-project.properties — keep the three lists in sync.
+#
+# Source the measured (non-native) coverage build can never execute (mirrors
+# sonar.coverage.exclusions):
 #   - examples/**                     runnable samples, not unit-tested
 #   - **/cgo_bridge.go                //go:build cgo && aa_ffi_go native shim
 #   - **/gateway_resolver_windows.go  //go:build windows, never built on ubuntu
+#
+# Generated protobuf stubs (mirrors sonar.exclusions): the aa_ffi_go coverage
+# pass instruments every package with `-coverpkg=./...`, so the machine-generated
+# internal/proto/*.pb.go land in the merged profile with near-zero coverage.
+# SonarCloud drops them via sonar.exclusions, so leaving them in Codecov's
+# denominator is what dragged Codecov to ~61% while Sonar reported ~96.7%
+# (AAASM-4006). Exclude them here so both tools measure the same file set:
+#   - **/internal/proto/**/*.pb.go
+#   - **/internal/proto/*.pb.go
 codecov:
   token: $CODECOV_TOKEN
   branch: master
@@ -29,3 +40,5 @@ ignore:
   - "examples/**"
   - "**/cgo_bridge.go"
   - "**/gateway_resolver_windows.go"
+  - "**/internal/proto/**/*.pb.go"
+  - "**/internal/proto/*.pb.go"
