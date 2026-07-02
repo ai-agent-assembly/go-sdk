@@ -102,7 +102,12 @@ jobs:
         with:
           token: ${{ env.CODECOV_TOKEN }}
           slug: ai-agent-assembly/go-sdk
-          files: ${{ env.COVERAGE_FILE }}
+          # Upload the same merged profile SonarCloud consumes so both tools
+          # report identical coverage. The cgo=1 leg sets SONAR_COVERAGE_FILE
+          # (coverage.merged.out = cgo + non-cgo merged via gocovmerge); the
+          # cgo=0 leg never runs the merge step, so it falls back to its own
+          # COVERAGE_FILE.
+          files: ${{ env.SONAR_COVERAGE_FILE || env.COVERAGE_FILE }}
           flags: unit,go-sdk,cgo-${{ matrix.cgo-enabled }}
           name: go-sdk-coverage-cgo-${{ matrix.cgo-enabled }}
           verbose: true
