@@ -190,9 +190,10 @@ func (s *OpControlSubscriber) markStreamDead() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.alive = false
-	// Wake any blocked waiters so they can re-check state via the ctx Done
-	// path. We don't set their state to terminated — close is a normal
-	// lifecycle event, not a terminate.
+	// Wake any blocked waiters. We don't set their state to terminated — a
+	// stream close is not a terminate — but a waiter still paused when it wakes
+	// fails closed via ErrOpControlUnavailable rather than resuming (AAASM-4019);
+	// a not-paused waiter proceeds normally.
 	for _, state := range s.ops {
 		s.flushWaiters(state)
 	}
@@ -202,7 +203,11 @@ func (s *OpControlSubscriber) markStreamDead() {
 //
 // Returns nil immediately when the op is not currently paused. When paused,
 // blocks until a resume signal arrives or ctx is cancelled. Returns
-// *OpTerminatedError if the op has been (or becomes) terminated.
+// *OpTerminatedError if the op has been (or becomes) terminated. Returns
+// [ErrOpControlUnavailable] if the op is paused and the control stream has died
+// (or dies while waiting): the pause can no longer be lifted by the operator, so
+// WaitForOp fails closed rather than yielding an allow — the tool wrapper keeps
+// blocking under the enforce posture (AAASM-4019).
 //
 // A ctx cancel returns ctx.Err() — the caller can inspect IsPaused or
 // retry. This matches the cooperative-pause expectation in the architecture
@@ -219,12 +224,14 @@ func (s *OpControlSubscriber) WaitForOp(ctx context.Context, opID string) error 
 		return nil
 	}
 	if !s.alive {
-		// Stream already closed and we'd never be woken by an incoming
-		// signal. Yield so the caller can observe StreamAlive() and
-		// decide whether to reconnect — matches the close-is-not-a-
-		// terminate semantic.
+		// The op is paused (checked above) and the control stream is already
+		// dead, so no resume signal can ever arrive. Do NOT yield to allow: a
+		// paused op that resumes just because the operator's kill-switch channel
+		// dropped defeats the pause. Fail closed — the caller (tool wrapper)
+		// keeps blocking under enforce and can observe StreamAlive() to
+		// reconnect (AAASM-4019).
 		s.mu.Unlock()
-		return nil
+		return ErrOpControlUnavailable
 	}
 	ch := make(chan struct{})
 	state.waiters = append(state.waiters, ch)
@@ -234,9 +241,17 @@ func (s *OpControlSubscriber) WaitForOp(ctx context.Context, opID string) error 
 	case <-ch:
 		s.mu.Lock()
 		terminated := state.terminated
+		stillPaused := state.paused
+		alive := s.alive
 		s.mu.Unlock()
 		if terminated {
 			return &OpTerminatedError{OpID: opID}
+		}
+		if stillPaused && !alive {
+			// Woken by the stream dying (markStreamDead), not by a resume: the
+			// op is still paused and can no longer be resumed. Fail closed
+			// rather than proceed (AAASM-4019).
+			return ErrOpControlUnavailable
 		}
 		return nil
 	case <-ctx.Done():

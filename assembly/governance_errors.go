@@ -14,6 +14,14 @@ var ErrRuntimeNotInitialized = errors.New("assembly: runtime is not initialized"
 // (AAASM-3109).
 var ErrGovernanceUnavailable = errors.New("assembly: governance client unavailable; denying tool call (fail-closed)")
 
+// ErrOpControlUnavailable indicates the op-control kill switch could no longer
+// govern a paused op because its gateway stream died while the op was paused.
+// A paused op must not resume merely because the operator's control channel
+// dropped, so the tool wrapper treats this as continue-blocking under the
+// fail-closed enforce posture (deny) and lets observe/disabled proceed
+// (AAASM-4019).
+var ErrOpControlUnavailable = errors.New("assembly: op-control stream closed while op paused; cannot confirm resume (fail-closed)")
+
 // PolicyViolationError indicates a policy decision denied tool execution.
 type PolicyViolationError struct {
 	// ToolName is the name of the tool whose execution was denied.

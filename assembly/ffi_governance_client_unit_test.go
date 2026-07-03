@@ -30,17 +30,18 @@ func TestFFIGovernanceClient_CloseIsNoOp(t *testing.T) {
 	}
 }
 
-func TestFFIGovernanceClient_CheckFoldsUnknownDecisionToAllow(t *testing.T) {
+func TestFFIGovernanceClient_CheckErrorsOnUnknownDecision(t *testing.T) {
 	t.Parallel()
 
-	// A garbled decision code that is neither deny nor pending must fold onto
-	// an allow Decision (the native shim normalises unspecified to allow).
+	// A decision code this SDK does not recognise (version skew) must NOT fold
+	// onto a silent allow: Check surfaces an error so the tool wrapper applies
+	// its fail-open / fail-closed posture (AAASM-4019).
 	dec, err := newFFIGovernanceClient(&fakeQuerier{decision: 99}).Check(
 		context.Background(), CheckRequest{ToolName: "calc"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	if err == nil {
+		t.Fatalf("expected unrecognized decision to surface an error, got decision %+v", dec)
 	}
 	if dec.Denied || dec.Pending {
-		t.Fatalf("expected unknown decision to fold to allow, got %+v", dec)
+		t.Fatalf("expected the returned decision to be the non-committal zero value, got %+v", dec)
 	}
 }
