@@ -68,23 +68,27 @@ Run from a clean `master` checkout. Substitute the operator-supplied `<X>`.
 
 1. **Sync + verify** — `git fetch remote`, confirm `master` == `remote/master`,
    working tree clean, `ci-success` green on the tip.
-2. **Update the `VERSION` file** if the project tracks it for the release (it is
-   the human-facing version marker; keep it consistent with the tag literal,
-   minus the leading `v`). Commit as
-   `🔧 (release): Set VERSION to <X-without-v>` if changed.
+2. **Bump BOTH the root `VERSION` file AND the `assembly/version.go` `Version`
+   const — in lockstep** (`0.0.1-rc.3`, i.e. tag minus the leading `v`). These are
+   the two human-facing version markers; `TestVersionMatchesVERSIONFile`
+   (`assembly/version_test.go`, AAASM-3731) **fails CI** if they drift apart, so a
+   prep PR that bumps one but not the other is red. goreleaser stamps the *built
+   binary* version via ldflags at release, but these checked-in markers are the
+   source-of-truth the library reports via `assembly.Version` and that release
+   tooling reads — a stale marker ships a go-sdk that lies about which release it is.
+   Commit as `🔖 (release): Bump version markers to <X-without-v>` (or two commits,
+   `VERSION file` + `Version constant`, but never only one).
 3. **Bump `sonar.projectVersion`** — the static `sonar.projectVersion` literal in
-   `sonar-project.properties` is the source-of-truth / local-scan fallback and
-   must track the release line. `coverage.yml` overrides it dynamically at scan
-   time (`git describe --tags` → strip the leading `v` and any pre-release suffix
-   → release line, e.g. `v0.0.1-rc.1` → `0.0.1`), so a fresh tag updates the
-   SonarCloud version automatically and drift never breaks CI. Because the CI
-   override resolves to the *release line*, no manual edit is needed when the new
-   tag stays on the current line; bump the static literal in the same prep commit
-   as the `VERSION` file (step 2) whenever the release crosses to a **new**
-   release line (e.g. `0.0.1` → `0.1.0`). Commit as
-   `🔧 (sonar): Bump projectVersion fallback to <release-line>` if changed. Never
-   leave it at `0.0.0` — that leaves the SonarCloud gate "Not computed". (Mirrors
-   the core's `release-tag-cut` automation, AAASM-3819.)
+   `sonar-project.properties` is the source-of-truth / local-scan fallback. **Bump it
+   to the full tag literal (minus the leading `v`) on EVERY release**, including
+   pre-release iterations that stay on the same release line — this repo's actual
+   practice tracks it per-release (`0.0.1` → `0.0.1-rc.1` → `0.0.1-rc.2` → …), so keep
+   it in lockstep with `assembly/version.go`. `coverage.yml` overrides it dynamically
+   at scan time so CI never breaks on drift, but leaving the literal stale is a
+   release-prep defect (same class as the python/node SDK sonar lag). Commit as
+   `🔖 (release): Bump sonar.projectVersion to <X-without-v>`. Never leave it at
+   `0.0.0` — that leaves the SonarCloud gate "Not computed". (Mirrors the core's
+   `release-tag-cut` automation, AAASM-3819.)
 4. **Create the annotated tag** — `git tag -a "<X>" -m "go-sdk <X>"` on the
    release commit.
 5. **Push the tag** — `git push remote "<X>"`. This is tag-only and touches no
@@ -162,8 +166,11 @@ default test matrix never compiles the native path.
 go-sdk is the simplest case here. Unlike the python/node SDKs, **go-sdk has no
 in-repo pinned version strings in its docs** — install is
 `go get github.com/ai-agent-assembly/go-sdk@vX`, which resolves the module by tag,
-so there is no checked-in version literal to bump beyond the `assembly/version.go`
-`Version` const (and the `VERSION` file), which the release flow / goreleaser owns.
+so the only checked-in version literals to bump are the root `VERSION` file, the
+`assembly/version.go` `Version` const (kept in lockstep — see step 2), and
+`sonar.projectVersion` (all in the prep commit — steps 2 & 3 above). (The ADR
+fetch-proof examples in `docs/adr/` pin a *specific historical* tag as evidence —
+those are frozen records, never bump them.)
 
 The one place a published go-sdk version *is* pinned lives **outside this repo**:
 go-sdk's runnable **examples live in the `agent-assembly-examples` repo** and pin a
