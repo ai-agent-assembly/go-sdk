@@ -43,7 +43,7 @@ const (
 
 // InstallHint is the copy-paste message embedded in ErrBinaryNotFound.
 const InstallHint = `agent-assembly runtime not found.
-  Install with: brew install agent-assembly/tap/aasm
+  Install with: brew install ai-agent-assembly/tap/aasm
   Or manually:  curl -fsSL https://get.agent-assembly.io | sh
                go install github.com/ai-agent-assembly/agent-assembly/cmd/aasm@latest`
 
