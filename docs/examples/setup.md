@@ -93,7 +93,7 @@ you want to exercise that path:
 
 ```bash
 # Homebrew
-brew install agent-assembly/tap/aasm
+brew install ai-agent-assembly/tap/aasm
 
 # curl installer
 curl -fsSL https://get.agent-assembly.io | sh
