@@ -17,9 +17,10 @@
 # internal/proto/*.pb.go land in the merged profile with near-zero coverage.
 # SonarCloud drops them via sonar.exclusions, so leaving them in Codecov's
 # denominator is what dragged Codecov to ~61% while Sonar reported ~96.7%
-# (AAASM-4006). Exclude them here so both tools measure the same file set:
-#   - **/internal/proto/**/*.pb.go
-#   - **/internal/proto/*.pb.go
+# (AAASM-4006). Codecov normalises the Go import-path-prefixed profile entries
+# to repo-relative paths (e.g. `internal/proto/common.pb.go`), so the earlier
+# `**/internal/proto/*.pb.go` glob never matched (its leading `**/` cannot match
+# the empty prefix before a top-level dir). Use a repo-relative dir glob instead.
 codecov:
   token: $CODECOV_TOKEN
   branch: master
@@ -40,5 +41,4 @@ ignore:
   - "examples/**"
   - "**/cgo_bridge.go"
   - "**/gateway_resolver_windows.go"
-  - "**/internal/proto/**/*.pb.go"
-  - "**/internal/proto/*.pb.go"
+  - "internal/proto/**"
