@@ -68,13 +68,16 @@ Run from a clean `master` checkout. Substitute the operator-supplied `<X>`.
 
 1. **Sync + verify** — `git fetch remote`, confirm `master` == `remote/master`,
    working tree clean, `ci-success` green on the tip.
-2. **Bump the `assembly/version.go` `Version` const** — go-sdk's human-facing
-   version marker (`const Version = "<X-without-v>"`, e.g. `0.0.1-rc.3`). goreleaser
-   stamps the *built binary* version via ldflags at release, but this checked-in
-   const is the source-of-truth the library reports and MUST be advanced in the prep
-   commit — a stale const ships a go-sdk whose `assembly.Version` lies about which
-   release it is. Commit as `🔖 (release): Bump Version constant to <X-without-v>`.
-   (go-sdk has no separate `VERSION` file — this const is it.)
+2. **Bump BOTH the root `VERSION` file AND the `assembly/version.go` `Version`
+   const — in lockstep** (`0.0.1-rc.3`, i.e. tag minus the leading `v`). These are
+   the two human-facing version markers; `TestVersionMatchesVERSIONFile`
+   (`assembly/version_test.go`, AAASM-3731) **fails CI** if they drift apart, so a
+   prep PR that bumps one but not the other is red. goreleaser stamps the *built
+   binary* version via ldflags at release, but these checked-in markers are the
+   source-of-truth the library reports via `assembly.Version` and that release
+   tooling reads — a stale marker ships a go-sdk that lies about which release it is.
+   Commit as `🔖 (release): Bump version markers to <X-without-v>` (or two commits,
+   `VERSION file` + `Version constant`, but never only one).
 3. **Bump `sonar.projectVersion`** — the static `sonar.projectVersion` literal in
    `sonar-project.properties` is the source-of-truth / local-scan fallback. **Bump it
    to the full tag literal (minus the leading `v`) on EVERY release**, including
@@ -163,11 +166,11 @@ default test matrix never compiles the native path.
 go-sdk is the simplest case here. Unlike the python/node SDKs, **go-sdk has no
 in-repo pinned version strings in its docs** — install is
 `go get github.com/ai-agent-assembly/go-sdk@vX`, which resolves the module by tag,
-so the only checked-in version literals to bump are the `assembly/version.go`
-`Version` const and `sonar.projectVersion` (both in the prep commit — steps 2 & 3
-above). There is no separate `VERSION` file. (The ADR fetch-proof examples in
-`docs/adr/` pin a *specific historical* tag as evidence — those are frozen records,
-never bump them.)
+so the only checked-in version literals to bump are the root `VERSION` file, the
+`assembly/version.go` `Version` const (kept in lockstep — see step 2), and
+`sonar.projectVersion` (all in the prep commit — steps 2 & 3 above). (The ADR
+fetch-proof examples in `docs/adr/` pin a *specific historical* tag as evidence —
+those are frozen records, never bump them.)
 
 The one place a published go-sdk version *is* pinned lives **outside this repo**:
 go-sdk's runnable **examples live in the `agent-assembly-examples` repo** and pin a
