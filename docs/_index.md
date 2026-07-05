@@ -35,8 +35,8 @@ Concretely, the SDK is two things working together:
 
 For the platform as a whole — what the gateway is, how policy and budgets are
 authored, and how the three interception layers fit together — see the
-[core agent-assembly documentation](https://ai-agent-assembly.github.io/agent-assembly/)
-and the shared [docs hub](https://ai-agent-assembly.github.io/agent-assembly-docs/).
+[core agent-assembly documentation](https://docs.agent-assembly.com/core/)
+and the shared [docs hub](https://docs.agent-assembly.com/).
 
 ## Who it's for
 
@@ -45,8 +45,8 @@ and the shared [docs hub](https://ai-agent-assembly.github.io/agent-assembly-doc
   add it as a library, not a rewrite.
 - **Platform teams** standardising agent governance across services: the same
   gateway and policy back several languages (there are sibling
-  [Python](https://ai-agent-assembly.github.io/python-sdk/) and
-  [Node](https://ai-agent-assembly.github.io/node-sdk/) SDKs), so a Go service
+  [Python](https://docs.agent-assembly.com/python-sdk/) and
+  [Node](https://docs.agent-assembly.com/node-sdk/) SDKs), so a Go service
   joins the same control plane.
 
 ## Quick look

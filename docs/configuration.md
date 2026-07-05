@@ -35,7 +35,7 @@ The gateway URL is resolved from, highest priority first:
    --foreground`).
 
 The `aasm` CLI and the gateway it manages are documented in the core
-[agent-assembly docs](https://ai-agent-assembly.github.io/agent-assembly/) —
+[agent-assembly docs](https://docs.agent-assembly.com/core/) —
 see there for running a gateway, authoring policy, and the full `aasm`
 command set.
 
