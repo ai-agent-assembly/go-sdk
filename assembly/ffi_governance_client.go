@@ -25,7 +25,10 @@ type policyQuerier interface {
 // contract:
 //
 //	deny                          -> Decision{Denied: true, Reason}
-//	allow / redact / unspecified  -> Decision{}
+//	allow / redact                -> Decision{}
+//	unspecified                   -> error (fail-closed under enforce): the
+//	                                 proto3 zero value is not an authoritative
+//	                                 allow (AAASM-4166)
 //	pending                       -> Decision{Pending: true}; the wrapper then
 //	                                 calls WaitForApproval, which denies (no
 //	                                 approval channel exists — AAASM-3920)
@@ -65,9 +68,15 @@ func (c *ffiGovernanceClient) Check(_ context.Context, request CheckRequest) (De
 	case ffi.DecisionPending:
 		return Decision{Pending: true, Reason: reason}, nil
 	case ffi.DecisionAllow, ffi.DecisionRedact:
-		// Allow and redact proceed. DecisionAllow (0) also covers the
-		// UNSPECIFIED verdict, which the native shim folds onto allow.
+		// Allow and redact proceed.
 		return Decision{}, nil
+	case ffi.DecisionUnspecified:
+		// The proto3 zero value UNSPECIFIED means "no decision rendered" — a
+		// non-authoritative verdict. It must NOT proceed as a silent allow: surface
+		// an error so the tool wrapper applies its posture (deny under the default
+		// enforce; allow only when fail-closed is disabled or under observe /
+		// disabled), matching the Node SDK's fail-closed handling (AAASM-4166).
+		return Decision{}, fmt.Errorf("assembly: non-authoritative UNSPECIFIED policy verdict")
 	default:
 		// A decision code this SDK does not recognise — an out-of-range value
 		// or a variant a newer gateway added after this SDK was built (version

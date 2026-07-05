@@ -75,6 +75,41 @@ func TestFFIGovernanceClientCheckMapsDecisions(t *testing.T) {
 	}
 }
 
+// UNSPECIFIED (the proto3 zero value) is non-authoritative: Check must surface an
+// error rather than proceed as a silent allow, so the wrapper fails it closed
+// under enforce instead of aliasing a real ALLOW (AAASM-4166).
+func TestFFIGovernanceClientCheckErrorsOnUnspecifiedDecision(t *testing.T) {
+	t.Parallel()
+
+	dec, err := newFFIGovernanceClient(&fakeQuerier{decision: ffi.DecisionUnspecified}).Check(
+		context.Background(), CheckRequest{ToolName: "web_search", AgentID: "agent-1"})
+	if err == nil {
+		t.Fatalf("expected UNSPECIFIED verdict to surface an error, got decision %+v", dec)
+	}
+	if dec.Denied || dec.Pending {
+		t.Fatalf("expected the returned decision to be the non-committal zero value, got %+v", dec)
+	}
+}
+
+// UNSPECIFIED round-trip: a runtime that returns the proto3 zero-value verdict
+// blocks the tool under the fail-closed enforce default — the inner tool never
+// runs. Previously UNSPECIFIED folded onto allow and the tool ran unchecked.
+func TestWrappedToolUnspecifiedFailsClosedByDefault(t *testing.T) {
+	t.Parallel()
+
+	inner := &countingTool{name: "web_search", result: "leaked"}
+	client := newFFIGovernanceClient(&fakeQuerier{decision: ffi.DecisionUnspecified})
+	wrapped := NewAssemblyTool(inner, client, defaultRuntimeOptions())
+
+	_, err := wrapped.Call(context.Background(), `{"q":"secret"}`)
+	if err == nil {
+		t.Fatal("expected fail-closed default to deny the tool on an UNSPECIFIED verdict")
+	}
+	if inner.calls != 0 {
+		t.Fatalf("inner tool was called %d times, want 0 (UNSPECIFIED must block execution)", inner.calls)
+	}
+}
+
 func TestFFIGovernanceClientCheckForwardsToolCallContract(t *testing.T) {
 	t.Parallel()
 

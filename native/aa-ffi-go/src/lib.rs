@@ -54,16 +54,18 @@ pub const AA_STATUS_REGISTER_FAILED: AaStatus = 9;
 
 /// C-ABI policy decision returned by [`aa_query_policy`].
 ///
-/// Mirrors `aa_proto::assembly::common::v1::Decision`. `UNSPECIFIED` is folded
-/// onto `ALLOW` (an unset decision is not a block), but a value this shim cannot
+/// Mirrors `aa_proto::assembly::common::v1::Decision`. `UNSPECIFIED` — the proto3
+/// zero value meaning "no decision rendered" — is a non-authoritative verdict, so
+/// it maps to its own [`AA_DECISION_UNSPECIFIED`] sentinel rather than aliasing a
+/// real `ALLOW`; the Go layer treats it like an unrecognized code and fails closed
+/// under enforce (AAASM-4166), matching the Node SDK. A value this shim cannot
 /// interpret — an out-of-range code or a proto variant added after this shim was
 /// built (version skew) — folds onto `DENY` so it fails closed rather than
 /// silently allowing an unknown verdict (AAASM-4019).
 pub type AaDecision = i32;
 
-/// Action permitted. Also returned when the runtime returns an unspecified
-/// decision. A failed query no longer maps to allow — it surfaces a non-OK
-/// status instead (see [`aa_query_policy`], AAASM-3920).
+/// Action permitted. A failed query no longer maps to allow — it surfaces a
+/// non-OK status instead (see [`aa_query_policy`], AAASM-3920).
 pub const AA_DECISION_ALLOW: AaDecision = 0;
 /// Action blocked.
 pub const AA_DECISION_DENY: AaDecision = 1;
@@ -71,6 +73,10 @@ pub const AA_DECISION_DENY: AaDecision = 1;
 pub const AA_DECISION_PENDING: AaDecision = 2;
 /// Action permitted but sensitive fields must be redacted first.
 pub const AA_DECISION_REDACT: AaDecision = 3;
+/// No decision rendered (proto3 zero value `UNSPECIFIED`). Not an authoritative
+/// allow — the Go layer maps it through its fail-closed path under enforce
+/// (AAASM-4166), so it must not alias [`AA_DECISION_ALLOW`].
+pub const AA_DECISION_UNSPECIFIED: AaDecision = 4;
 
 /// Opaque handle to an active Agent Assembly session.
 ///
@@ -118,10 +124,13 @@ fn parse_action_type(raw: &str) -> ActionType {
 
 /// Map a proto [`Decision`] code onto the stable C-ABI [`AaDecision`].
 ///
-/// The known verdicts map through directly; `UNSPECIFIED` folds onto
-/// [`AA_DECISION_ALLOW`] (an unset decision is not a block). A value this shim
-/// cannot interpret — an out-of-range code or a proto variant added after this
-/// shim was built (version skew) — folds onto [`AA_DECISION_DENY`]: folding it
+/// The known verdicts map through directly; `UNSPECIFIED` — the proto3 zero
+/// value meaning "no decision rendered" — maps to its own
+/// [`AA_DECISION_UNSPECIFIED`] sentinel rather than aliasing [`AA_DECISION_ALLOW`],
+/// so the Go layer can fail it closed under enforce instead of treating an unset
+/// decision as an authoritative allow (AAASM-4166, matching the Node SDK). A value
+/// this shim cannot interpret — an out-of-range code or a proto variant added after
+/// this shim was built (version skew) — folds onto [`AA_DECISION_DENY`]: folding it
 /// onto allow would let a newer gateway's verdict silently downgrade to allow,
 /// so it fails closed instead and the Go layer denies under enforce (AAASM-4019).
 fn decision_for(decision: i32) -> AaDecision {
@@ -129,7 +138,8 @@ fn decision_for(decision: i32) -> AaDecision {
         Ok(Decision::Deny) => AA_DECISION_DENY,
         Ok(Decision::Pending) => AA_DECISION_PENDING,
         Ok(Decision::Redact) => AA_DECISION_REDACT,
-        Ok(Decision::Allow) | Ok(Decision::Unspecified) => AA_DECISION_ALLOW,
+        Ok(Decision::Allow) => AA_DECISION_ALLOW,
+        Ok(Decision::Unspecified) => AA_DECISION_UNSPECIFIED,
         Err(_) => AA_DECISION_DENY,
     }
 }
@@ -909,18 +919,22 @@ mod tests {
         unsafe { aa_free_string(raw) };
     }
 
-    /// The known verdicts map through directly and UNSPECIFIED folds onto ALLOW,
-    /// but a decision code the shim cannot interpret (version skew) must fold
-    /// onto DENY, not ALLOW, so it fails closed (AAASM-4019).
+    /// The known verdicts map through directly; UNSPECIFIED maps to its own
+    /// sentinel (not ALLOW) so the Go layer fails it closed (AAASM-4166), and a
+    /// decision code the shim cannot interpret (version skew) must fold onto DENY,
+    /// not ALLOW, so it fails closed (AAASM-4019).
     #[test]
     fn decision_for_folds_unknown_onto_deny() {
         assert_eq!(decision_for(Decision::Deny as i32), AA_DECISION_DENY);
         assert_eq!(decision_for(Decision::Pending as i32), AA_DECISION_PENDING);
         assert_eq!(decision_for(Decision::Redact as i32), AA_DECISION_REDACT);
         assert_eq!(decision_for(Decision::Allow as i32), AA_DECISION_ALLOW);
+        // UNSPECIFIED (proto3 zero value) is non-authoritative: it must map to its
+        // own sentinel, never alias a real ALLOW, so the Go layer fails it closed
+        // under enforce (AAASM-4166).
         assert_eq!(
             decision_for(Decision::Unspecified as i32),
-            AA_DECISION_ALLOW
+            AA_DECISION_UNSPECIFIED
         );
         // An out-of-range code (a future proto variant this shim predates) must
         // fail closed rather than silently allow.
