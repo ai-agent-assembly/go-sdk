@@ -3,8 +3,7 @@ package ffi
 import "unsafe"
 
 // AaDecision values mirror the aa-ffi-go C ABI (AaDecision) returned by
-// aa_query_policy. UNSPECIFIED is folded onto ALLOW by the native shim, so it is
-// not represented here.
+// aa_query_policy.
 const (
 	// DecisionAllow permits the action. It is also the placeholder decision
 	// returned alongside an error: an unreachable / slow / closed runtime
@@ -17,6 +16,12 @@ const (
 	DecisionPending int32 = 2
 	// DecisionRedact permits the action but requires sensitive fields redacted.
 	DecisionRedact int32 = 3
+	// DecisionUnspecified is the proto3 zero-value verdict ("no decision
+	// rendered"). The native shim maps it to this distinct sentinel — never onto
+	// DecisionAllow — so a non-authoritative verdict cannot alias a real allow;
+	// ffiGovernanceClient.Check routes it through the fail-closed path under
+	// enforce (AAASM-4166), matching the Node SDK.
+	DecisionUnspecified int32 = 4
 )
 
 // policyQuerier is an optional capability a binding may implement to answer

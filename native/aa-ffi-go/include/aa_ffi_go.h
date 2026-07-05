@@ -71,8 +71,8 @@ typedef int32_t AaDecision;
 #define AA_STATUS_REGISTER_FAILED 9
 
 /*
- Action permitted. Also returned when the query fails open (see
- [`aa_query_policy`]) or the runtime returns an unspecified decision.
+ Action permitted. A failed query no longer maps to allow — it surfaces a
+ non-OK status instead (see [`aa_query_policy`]).
  */
 #define AA_DECISION_ALLOW 0
 
@@ -90,6 +90,13 @@ typedef int32_t AaDecision;
  Action permitted but sensitive fields must be redacted first.
  */
 #define AA_DECISION_REDACT 3
+
+/*
+ No decision rendered (proto3 zero value `UNSPECIFIED`). Not an authoritative
+ allow — the Go layer maps it through its fail-closed path under enforce
+ (AAASM-4166), so it must not alias `AA_DECISION_ALLOW`.
+ */
+#define AA_DECISION_UNSPECIFIED 4
 
 #ifdef __cplusplus
 extern "C" {
