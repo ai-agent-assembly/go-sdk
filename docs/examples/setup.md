@@ -96,7 +96,7 @@ you want to exercise that path:
 brew install ai-agent-assembly/tap/aasm
 
 # curl installer
-curl -fsSL https://get.agent-assembly.io | sh
+curl -fsSL https://agent-assembly.com/install.sh | sh
 
 # go install
 go install github.com/ai-agent-assembly/agent-assembly/cmd/aasm@latest
