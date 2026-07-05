@@ -24,7 +24,7 @@ Every governed tool call results in two messages to the gateway:
 These travel over the gateway's wire protocol (gRPC/HTTP). For how the gateway
 itself is built — registry, policy engine, budgets, and the three interception
 layers the SDK is one of — see the core
-[Architecture overview](https://ai-agent-assembly.github.io/agent-assembly/).
+[Architecture overview](https://docs.agent-assembly.com/core/).
 
 Your code talks to the gateway through one small interface, `GovernanceClient`:
 
@@ -107,7 +107,7 @@ mode governs what happens when no decision *arrives*.
 
 > The SDK is the lowest-latency of three interception layers, not a trust
 > boundary on its own — the gateway is authoritative. See the core
-> [Security Model](https://ai-agent-assembly.github.io/agent-assembly/) for how
+> [Security Model](https://docs.agent-assembly.com/core/) for how
 > the SDK, sidecar proxy, and eBPF layers combine to catch bypass attempts.
 
 ## Module structure

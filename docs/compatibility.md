@@ -27,7 +27,7 @@ change ships.
 > **Cross-SDK matrix.** The core↔SDK compatibility matrix — which SDK versions
 > speak which gateway protocol, across the Go, Python, and Node SDKs — is
 > published on the shared
-> [documentation hub](https://ai-agent-assembly.github.io/agent-assembly-docs/).
+> [documentation hub](https://docs.agent-assembly.com/).
 > Consult it when pairing an SDK release with a gateway deployment.
 
 ## Wire contract
@@ -83,12 +83,12 @@ SDK, so its compatibility is documented here. The core docs site hosts a
 **cross-SDK index/hub** that links to this page and to the Python/Node
 equivalents:
 
-> **<https://ai-agent-assembly.github.io/agent-assembly/stable/reference/framework-compatibility.html>**
+> **<https://docs.agent-assembly.com/core/stable/reference/framework-compatibility.html>**
 
 That index is the `/stable/` channel link; it **404s until GA** by design (the
 `stable` channel activates at the first `vX.Y.0` release), consistent with the
 core-side convention. Use the
-[documentation hub](https://ai-agent-assembly.github.io/agent-assembly-docs/)
+[documentation hub](https://docs.agent-assembly.com/)
 to reach the cross-SDK index in the meantime.
 
 ## Toolchain
