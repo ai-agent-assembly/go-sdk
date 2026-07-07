@@ -46,8 +46,17 @@ func newFFIGovernanceClient(querier policyQuerier) *ffiGovernanceClient {
 	return &ffiGovernanceClient{querier: querier}
 }
 
-// Check queries the runtime for a policy decision on a tool call.
-func (c *ffiGovernanceClient) Check(_ context.Context, request CheckRequest) (Decision, error) {
+// Check queries the runtime for a policy decision on a tool call. It fails
+// fast when the context is already cancelled (AAASM-4194), avoiding a blocking
+// FFI call that cannot be interrupted once started.
+func (c *ffiGovernanceClient) Check(ctx context.Context, request CheckRequest) (Decision, error) {
+	// Check context cancellation before the FFI call: the native aa_query_policy
+	// primitive is synchronous and cannot be interrupted once started, so an
+	// already-cancelled context must short-circuit here (AAASM-4194).
+	if err := ctx.Err(); err != nil {
+		return Decision{}, fmt.Errorf("assembly: context cancelled before policy check: %w", err)
+	}
+
 	if c.querier == nil {
 		return Decision{}, nil
 	}
@@ -98,7 +107,14 @@ func (c *ffiGovernanceClient) Check(_ context.Context, request CheckRequest) (De
 // only safe resolution is to deny, so a pending decision blocks the tool rather
 // than running it unapproved. The runtime / proxy / eBPF layers remain
 // authoritative; this is the SDK's defence-in-depth fail-closed posture.
-func (c *ffiGovernanceClient) WaitForApproval(_ context.Context, _ ApprovalRequest) (Decision, error) {
+//
+// Context cancellation is checked first (AAASM-4194): a cancelled context should
+// abort the wait rather than proceeding to a denial verdict.
+func (c *ffiGovernanceClient) WaitForApproval(ctx context.Context, _ ApprovalRequest) (Decision, error) {
+	if err := ctx.Err(); err != nil {
+		return Decision{}, fmt.Errorf("assembly: context cancelled while waiting for approval: %w", err)
+	}
+
 	return Decision{
 		Denied: true,
 		Reason: "tool call requires approval but no approval channel is available; denying (fail-closed)",
