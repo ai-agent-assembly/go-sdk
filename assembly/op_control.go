@@ -32,6 +32,11 @@ import (
 	pb "github.com/ai-agent-assembly/go-sdk/internal/proto"
 )
 
+// maxOpControlSlots caps OpControlSubscriber.ops to prevent unbounded growth
+// from a compromised gateway pushing endless unique opIDs. When the cap is
+// hit, the OLDEST entry (insertion order) is evicted. See AAASM-4294.
+const maxOpControlSlots = 4096
+
 // OpControlClient is the slice of PolicyServiceClient the subscriber actually
 // uses. Defined as an interface so tests can inject a mock without standing
 // up a gRPC server. Mirrors PR-E's _OpControlStub Protocol and PR-F's
