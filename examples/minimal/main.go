@@ -13,6 +13,8 @@ func main() {
 	a, err := assembly.Init(context.Background(),
 		assembly.WithGatewayURL("https://your-gateway.com"),
 		assembly.WithAPIKey("xxx"),
+		// WARNING: WithFailClosed(false) enables fail-open mode.
+		// Use only for testing/debugging. Production should use fail-closed (default).
 		assembly.WithFailClosed(false),
 		assembly.WithTimeout(500*time.Millisecond),
 	)

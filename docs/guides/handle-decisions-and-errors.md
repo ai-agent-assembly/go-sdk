@@ -65,8 +65,8 @@ a, err := assembly.Init(ctx,
 
 | Setting | On a gateway/check failure |
 |---|---|
-| `WithFailClosed(true)` | The call is **blocked** — `Call` returns the wrapped check error (fail-safe). |
-| `WithFailClosed(false)` *(default)* | The call **proceeds** to the inner tool (fail-open). |
+| `WithFailClosed(true)` *(default)* | The call is **blocked** — `Call` returns the wrapped check error (fail-safe). |
+| `WithFailClosed(false)` | The call **proceeds** to the inner tool (fail-open). |
 
 Pick fail-closed when an ungoverned action is unacceptable; pick fail-open when
 availability matters more than strict enforcement. The two are independent of the
