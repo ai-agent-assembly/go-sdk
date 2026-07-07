@@ -41,8 +41,10 @@ type policyQuerier interface {
 // posture (deny by default under enforce; allow only when WithFailClosed is
 // disabled or under observe / disabled). The decision is always DecisionAllow on
 // error so a caller that ignores the error still gets an advisory non-blocking
-// value. QueryPolicy still fails open when no native binding is compiled in or
-// the binding cannot answer policy queries (in-memory test transports).
+// value. The no-cgo production build (fallbackUDSBridge) still answers policy
+// queries — it reports an unreachable runtime as a non-OK status, so it fails
+// closed (errors → deny under enforce), never open. QueryPolicy only fails open
+// for in-memory test bindings that do not implement policyQuerier at all.
 //
 // actionType is a snake_case proto action name (e.g. "tool_call"); toolName and
 // argsJSON may be empty.
