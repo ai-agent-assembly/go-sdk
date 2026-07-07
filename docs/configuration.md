@@ -28,7 +28,7 @@ production and omit them entirely for local development.
 The gateway URL is resolved from, highest priority first:
 
 1. `WithGatewayURL("…")` — the explicit option.
-2. The `AAASM_GATEWAY_URL` environment variable.
+2. The `AA_GATEWAY_URL` environment variable.
 3. The `agent.gateway_url` key in `~/.aasm/config.yaml`.
 4. The local default `http://localhost:7391` — `Init` probes it and, if no
    gateway answers, auto-starts a local one (`aasm start --mode local
@@ -41,11 +41,16 @@ command set.
 
 If every source yields an empty URL, `Init` returns `ErrInvalidGateway`.
 
-The API key follows the same chain — `WithAPIKey` → `AAASM_API_KEY` →
+The API key follows the same chain — `WithAPIKey` → `AA_API_KEY` →
 `agent.api_key` in the config file — but an **empty API key is allowed**:
 local mode accepts unauthenticated calls, so no error is raised when the key
 is unset. `WithAPIKey` is therefore **optional**; supply it only when your
 gateway requires authentication.
+
+> **Note:** `AAASM_GATEWAY_URL` / `AAASM_API_KEY` are accepted as deprecated
+> aliases for backward compatibility and emit a one-time deprecation warning
+> at runtime; use the canonical `AA_*` names in new configurations. (See
+> `assembly/gateway_resolver.go`.)
 
 ```yaml
 # ~/.aasm/config.yaml
