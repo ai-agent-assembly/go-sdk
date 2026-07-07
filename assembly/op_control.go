@@ -178,9 +178,23 @@ func (s *OpControlSubscriber) dispatch(msg *pb.OpControlMessage) {
 }
 
 // slot lazily creates a state slot for opID. Caller must hold s.mu.
+//
+// When the map is already at maxOpControlSlots, the oldest entry (by
+// insertion order) is evicted first — a defense-in-depth measure against a
+// compromised gateway pushing endless unique opIDs (AAASM-4294). Any waiters
+// on the evicted slot are woken so they don't block forever on state that is
+// no longer tracked.
 func (s *OpControlSubscriber) slot(opID string) *opControlState {
 	if state, ok := s.ops[opID]; ok {
 		return state
+	}
+	if len(s.ops) >= maxOpControlSlots {
+		oldest := s.opsOrder[0]
+		s.opsOrder = s.opsOrder[1:]
+		if evicted, ok := s.ops[oldest]; ok {
+			s.flushWaiters(evicted)
+			delete(s.ops, oldest)
+		}
 	}
 	state := &opControlState{}
 	s.ops[opID] = state
