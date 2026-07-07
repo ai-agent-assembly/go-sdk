@@ -20,14 +20,19 @@ if errors.Is(err, assembly.ErrInvalidGateway) {
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `ErrInvalidGateway` from `Init` | No gateway URL from any source — the option, `AAASM_GATEWAY_URL`, the config file, and the local default all came back empty (the local auto-start also failed). | Pass `assembly.WithGatewayURL("https://…")`, or make sure a local gateway is reachable on `http://localhost:7391`. See the [resolution chain]({{< relref "/configuration#gateway-and-credential-resolution" >}}). |
+| `ErrInvalidGateway` from `Init` | No gateway URL from any source — the option, `AA_GATEWAY_URL`, the config file, and the local default all came back empty (the local auto-start also failed). | Pass `assembly.WithGatewayURL("https://…")`, or make sure a local gateway is reachable on `http://localhost:7391`. See the [resolution chain]({{< relref "/configuration#gateway-and-credential-resolution" >}}). |
 | `*ConfigurationError` from `Init` | The SDK needed the local default but couldn't bring it up — typically `aasm` is missing from `PATH`. | Install the `aasm` CLI (the error message includes the `go install …` hint), or point at an existing gateway with `WithGatewayURL`. |
 | `*GatewayError` from `Init` | A gateway URL is known, but the auto-started gateway didn't answer `/healthz` within the timeout window. | Check the gateway is healthy and reachable; raise the start window or start it yourself before `Init`. |
 | `ErrRuntimeNotInitialized` | Using the runtime before a successful `Init`, or after `Close` | Check the `Init` error before use; don't reuse a closed `*Assembly`. |
 
 An empty API key is **not** an error — local mode accepts unauthenticated
-agents. Set `WithAPIKey` (or `AAASM_API_KEY`) only when your gateway requires
+agents. Set `WithAPIKey` (or `AA_API_KEY`) only when your gateway requires
 authentication.
+
+> **Note:** `AAASM_GATEWAY_URL` / `AAASM_API_KEY` are accepted as deprecated
+> aliases for backward compatibility and emit a one-time deprecation warning
+> at runtime; use the canonical `AA_*` names in new configurations. (See
+> `assembly/gateway_resolver.go`.)
 
 ## Sidecar mode
 
