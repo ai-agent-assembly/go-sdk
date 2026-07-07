@@ -107,6 +107,8 @@ func startRuntime(binaryPath string, port int) (*os.Process, error) {
 		_ = logFile.Close()
 		return nil, fmt.Errorf("spawn aasm sidecar: %w", err)
 	}
+	// Child inherits its own fd for logFile; parent no longer needs the handle.
+	_ = logFile.Close()
 	return cmd.Process, nil
 }
 
