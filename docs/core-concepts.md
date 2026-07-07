@@ -97,10 +97,10 @@ gateway applies its own server-side default (live enforce).
 **Failure mode** (`WithFailClosed`) decides what happens when the SDK *can't
 reach* the gateway to get a decision:
 
-- `WithFailClosed(true)` — a check failure **blocks** the call (fail-closed /
-  fail-safe).
-- `WithFailClosed(false)` *(default)* — the call **proceeds** when the gateway
-  is unreachable (fail-open).
+- `WithFailClosed(true)` *(default)* — a check failure **blocks** the call
+  (fail-closed / fail-safe).
+- `WithFailClosed(false)` — the call **proceeds** when the gateway is
+  unreachable (fail-open).
 
 These compose: enforcement mode governs decisions the gateway *makes*; failure
 mode governs what happens when no decision *arrives*.
