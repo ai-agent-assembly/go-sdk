@@ -32,6 +32,11 @@ import (
 	pb "github.com/ai-agent-assembly/go-sdk/internal/proto"
 )
 
+// maxOpControlSlots caps OpControlSubscriber.ops to prevent unbounded growth
+// from a compromised gateway pushing endless unique opIDs. When the cap is
+// hit, the OLDEST entry (insertion order) is evicted. See AAASM-4294.
+const maxOpControlSlots = 4096
+
 // OpControlClient is the slice of PolicyServiceClient the subscriber actually
 // uses. Defined as an interface so tests can inject a mock without standing
 // up a gRPC server. Mirrors PR-E's _OpControlStub Protocol and PR-F's
@@ -67,9 +72,13 @@ type OpControlSubscriber struct {
 	conn   *grpc.ClientConn // set when Connect opened the channel; nil when constructed for tests
 	cancel context.CancelFunc
 
-	mu    sync.Mutex
-	ops   map[string]*opControlState
-	alive bool
+	mu sync.Mutex
+	// ops is the per-op_id state map. opsOrder mirrors it in insertion order
+	// so the oldest entry can be evicted once the map reaches
+	// maxOpControlSlots (see AAASM-4294).
+	ops      map[string]*opControlState
+	opsOrder []string
+	alive    bool
 }
 
 // Connect opens a gRPC channel to gatewayURL, opens the OpControlStream
@@ -122,11 +131,12 @@ func NewOpControlSubscriber(
 		return nil, fmt.Errorf("op_control: subscribe: %w", err)
 	}
 	sub := &OpControlSubscriber{
-		client: client,
-		agent:  agent,
-		cancel: cancel,
-		ops:    make(map[string]*opControlState),
-		alive:  true,
+		client:   client,
+		agent:    agent,
+		cancel:   cancel,
+		ops:      make(map[string]*opControlState),
+		opsOrder: make([]string, 0),
+		alive:    true,
 	}
 	go sub.readLoop(stream)
 	return sub, nil
@@ -168,12 +178,27 @@ func (s *OpControlSubscriber) dispatch(msg *pb.OpControlMessage) {
 }
 
 // slot lazily creates a state slot for opID. Caller must hold s.mu.
+//
+// When the map is already at maxOpControlSlots, the oldest entry (by
+// insertion order) is evicted first — a defense-in-depth measure against a
+// compromised gateway pushing endless unique opIDs (AAASM-4294). Any waiters
+// on the evicted slot are woken so they don't block forever on state that is
+// no longer tracked.
 func (s *OpControlSubscriber) slot(opID string) *opControlState {
 	if state, ok := s.ops[opID]; ok {
 		return state
 	}
+	if len(s.ops) >= maxOpControlSlots {
+		oldest := s.opsOrder[0]
+		s.opsOrder = s.opsOrder[1:]
+		if evicted, ok := s.ops[oldest]; ok {
+			s.flushWaiters(evicted)
+			delete(s.ops, oldest)
+		}
+	}
 	state := &opControlState{}
 	s.ops[opID] = state
+	s.opsOrder = append(s.opsOrder, opID)
 	return state
 }
 
