@@ -72,9 +72,13 @@ type OpControlSubscriber struct {
 	conn   *grpc.ClientConn // set when Connect opened the channel; nil when constructed for tests
 	cancel context.CancelFunc
 
-	mu    sync.Mutex
-	ops   map[string]*opControlState
-	alive bool
+	mu sync.Mutex
+	// ops is the per-op_id state map. opsOrder mirrors it in insertion order
+	// so the oldest entry can be evicted once the map reaches
+	// maxOpControlSlots (see AAASM-4294).
+	ops      map[string]*opControlState
+	opsOrder []string
+	alive    bool
 }
 
 // Connect opens a gRPC channel to gatewayURL, opens the OpControlStream
@@ -127,11 +131,12 @@ func NewOpControlSubscriber(
 		return nil, fmt.Errorf("op_control: subscribe: %w", err)
 	}
 	sub := &OpControlSubscriber{
-		client: client,
-		agent:  agent,
-		cancel: cancel,
-		ops:    make(map[string]*opControlState),
-		alive:  true,
+		client:   client,
+		agent:    agent,
+		cancel:   cancel,
+		ops:      make(map[string]*opControlState),
+		opsOrder: make([]string, 0),
+		alive:    true,
 	}
 	go sub.readLoop(stream)
 	return sub, nil
@@ -179,6 +184,7 @@ func (s *OpControlSubscriber) slot(opID string) *opControlState {
 	}
 	state := &opControlState{}
 	s.ops[opID] = state
+	s.opsOrder = append(s.opsOrder, opID)
 	return state
 }
 
