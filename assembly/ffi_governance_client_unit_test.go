@@ -2,6 +2,7 @@ package assembly
 
 import (
 	"context"
+	"errors"
 	"testing"
 )
 
@@ -40,6 +41,56 @@ func TestFFIGovernanceClient_CheckErrorsOnUnknownDecision(t *testing.T) {
 		context.Background(), CheckRequest{ToolName: "calc"})
 	if err == nil {
 		t.Fatalf("expected unrecognized decision to surface an error, got decision %+v", dec)
+	}
+	if dec.Denied || dec.Pending {
+		t.Fatalf("expected the returned decision to be the non-committal zero value, got %+v", dec)
+	}
+}
+
+// TestFFIGovernanceClient_CheckFailsFastOnCancelledContext verifies that Check
+// returns early when the context is already cancelled, avoiding a blocking FFI
+// call that cannot be interrupted once started (AAASM-4194).
+func TestFFIGovernanceClient_CheckFailsFastOnCancelledContext(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel immediately
+
+	querier := &fakeQuerier{}
+	client := newFFIGovernanceClient(querier)
+
+	dec, err := client.Check(ctx, CheckRequest{ToolName: "web_search", AgentID: "agent-1"})
+	if err == nil {
+		t.Fatal("expected Check to return error when context is cancelled")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected error to wrap context.Canceled, got %v", err)
+	}
+	if dec.Denied || dec.Pending {
+		t.Fatalf("expected the returned decision to be the non-committal zero value, got %+v", dec)
+	}
+	if querier.calls != 0 {
+		t.Fatalf("querier.QueryPolicy was called %d times, want 0 (should short-circuit before FFI)", querier.calls)
+	}
+}
+
+// TestFFIGovernanceClient_WaitForApprovalFailsFastOnCancelledContext verifies
+// that WaitForApproval returns early when the context is already cancelled,
+// rather than proceeding to a denial verdict (AAASM-4194).
+func TestFFIGovernanceClient_WaitForApprovalFailsFastOnCancelledContext(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel immediately
+
+	client := newFFIGovernanceClient(&fakeQuerier{})
+
+	dec, err := client.WaitForApproval(ctx, ApprovalRequest{ToolName: "web_search"})
+	if err == nil {
+		t.Fatal("expected WaitForApproval to return error when context is cancelled")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected error to wrap context.Canceled, got %v", err)
 	}
 	if dec.Denied || dec.Pending {
 		t.Fatalf("expected the returned decision to be the non-committal zero value, got %+v", dec)
