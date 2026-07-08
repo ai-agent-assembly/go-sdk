@@ -18,9 +18,9 @@
 //     reviewers recognise it as generated.
 //
 //  2. README.md — rewrites only the bounded block
-//         <!-- BEGIN GENERATED: sdk-metadata -->
-//         ...
-//         <!-- END GENERATED: sdk-metadata -->
+//     <!-- BEGIN GENERATED: sdk-metadata -->
+//     ...
+//     <!-- END GENERATED: sdk-metadata -->
 //     preserving every byte of surrounding hand-written prose.
 //
 // The program has zero network access and reads only local repo state.
