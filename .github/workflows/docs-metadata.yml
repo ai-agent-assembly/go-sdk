@@ -1,0 +1,57 @@
+name: Docs Metadata
+
+# AAASM-4311: enforce that generated Go docs metadata (internal/version/
+# metadata.go and the README's `sdk-metadata` bounded block) is up to date
+# with metadata/sdk.yaml, go.mod, and VERSION. The check runs on every PR and
+# on push to master, and DOES NOT skip on `**/*.md` because the README block
+# is one of the enforced surfaces.
+
+on:
+  pull_request:
+    paths-ignore:
+      - "LICENSE"
+  push:
+    paths-ignore:
+      - "LICENSE"
+    branches:
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# AAASM-3993: least-privilege default token — this workflow only checks out
+# and runs `go generate` + a diff check; no job pushes, comments, or deploys.
+permissions:
+  contents: read
+
+jobs:
+  verify-generated:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: recursive
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: "1.26.x"
+
+      - name: Verify modules
+        run: |
+          go mod download
+          go mod verify
+          git diff --exit-code go.mod go.sum
+
+      - name: Run generator
+        run: go generate ./...
+
+      - name: Assert generated docs metadata is up to date
+        run: |
+          if ! git diff --exit-code; then
+            echo "::error::Generated docs metadata is stale. Run 'go generate ./...' and commit the result."
+            exit 1
+          fi

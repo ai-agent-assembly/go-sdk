@@ -1,0 +1,24 @@
+# Authoritative shared metadata for Go SDK docs generation.
+# AAASM-4311 / Epic AAASM-4309.
+#
+# `go.mod` remains the source of truth for the module path. The `VERSION` file
+# is the source of truth for the gateway protocol version. This file holds the
+# docs-facing values that do NOT live in `go.mod` / `VERSION` but must be kept
+# in sync across README, docs/, and generated Go constants — see
+# CONTRIBUTING.md for the add-a-value workflow.
+#
+# Only include values that are actually used in code or documentation. Do not
+# add unused constants merely for symmetry with the Python / Node SDKs.
+
+# Canonical URLs (product-level, not per-release).
+docsUrl: "https://docs.agent-assembly.com/go-sdk/"
+repoUrl: "https://github.com/ai-agent-assembly/go-sdk"
+releasesUrl: "https://github.com/ai-agent-assembly/go-sdk/releases"
+
+# Go minimum toolchain (mirrors the `go` directive in `go.mod`, expressed as
+# the major.minor floor advertised in badges / prerequisites).
+goMinVersion: "1.26"
+
+# Install command shown in README's Installation section. The module path is
+# read from `go.mod` at generate time and interpolated into `{module}`.
+installCommand: "go get {module}"
