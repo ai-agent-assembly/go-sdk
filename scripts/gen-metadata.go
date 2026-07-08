@@ -72,9 +72,9 @@ func main() {
 	log.SetFlags(0)
 	log.SetPrefix("gen-metadata: ")
 
-	repoRoot, err := os.Getwd()
+	repoRoot, err := findRepoRoot()
 	if err != nil {
-		log.Fatalf("resolve cwd: %v", err)
+		log.Fatalf("resolve repo root: %v", err)
 	}
 
 	meta, err := load(repoRoot)
@@ -88,6 +88,28 @@ func main() {
 
 	if err := rewriteReadmeBlock(repoRoot, meta); err != nil {
 		log.Fatalf("rewrite README.md sdk-metadata block: %v", err)
+	}
+}
+
+// findRepoRoot walks up from the current working directory until it finds a
+// go.mod file. This lets the generator be invoked either directly from the
+// repo root (`go run scripts/gen-metadata.go`) or by `go generate` running
+// inside a nested package directory.
+func findRepoRoot() (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("getwd: %w", err)
+	}
+	dir := cwd
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", fmt.Errorf("no go.mod found in %s or any parent", cwd)
+		}
+		dir = parent
 	}
 }
 
