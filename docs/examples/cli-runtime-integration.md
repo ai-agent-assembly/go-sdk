@@ -162,7 +162,7 @@ needing `aasm` installed.
 
 ## Links
 
-- Example directory: [`go/cli-runtime-integration`](https://github.com/ai-agent-assembly/agent-assembly-examples/tree/master/go/cli-runtime-integration)
-- [`README.md`](https://github.com/ai-agent-assembly/agent-assembly-examples/blob/master/go/cli-runtime-integration/README.md)
+- Example directory: [`go/cli-runtime-integration`](https://github.com/ai-agent-assembly/examples/tree/master/go/cli-runtime-integration)
+- [`README.md`](https://github.com/ai-agent-assembly/examples/blob/master/go/cli-runtime-integration/README.md)
 - [`assembly.InitAssembly`](https://pkg.go.dev/github.com/ai-agent-assembly/go-sdk/assembly#InitAssembly) · [`assembly.ErrBinaryNotFound`](https://pkg.go.dev/github.com/ai-agent-assembly/go-sdk/assembly#ErrBinaryNotFound)
 - Related: [Troubleshooting]({{< relref "/troubleshooting" >}})

@@ -22,7 +22,7 @@ Anything outside the `assembly/` package (`internal/`, `examples/`) is not part 
 
 ## Framework compatibility
 
-The first-class agent-framework adapter is **[LangChainGo](https://github.com/tmc/langchaingo)** (`github.com/tmc/langchaingo`), tested on the **`v0.1.x`** line (CI and the [`agent-assembly-examples/go/langchaingo`](https://github.com/ai-agent-assembly/agent-assembly-examples/tree/master/go/langchaingo) sample pin `v0.1.14`). `assembly.WrapChain` governs a LangChainGo `chains.Chain`; `assembly.WrapTools` governs any tool.
+The first-class agent-framework adapter is **[LangChainGo](https://github.com/tmc/langchaingo)** (`github.com/tmc/langchaingo`), tested on the **`v0.1.x`** line (CI and the [`agent-assembly-examples/go/langchaingo`](https://github.com/ai-agent-assembly/examples/tree/master/go/langchaingo) sample pin `v0.1.14`). `assembly.WrapChain` governs a LangChainGo `chains.Chain`; `assembly.WrapTools` governs any tool.
 
 The SDK requires **no framework by default** — `go.mod` imports neither `langchaingo` nor any other framework. `assembly.Tool` is structurally identical to LangChainGo's `tools.Tool` (`Name`/`Description`/`Call`), so `WrapTools` governs an arbitrary slice of `langchaingo/tools.Tool` values (or any other type with the same three methods) with no adapter. Go-side coverage is LangChainGo plus this generic tool-wrapping — there are no other per-framework adapters.
 
@@ -135,7 +135,7 @@ The second argument is the `GovernanceClient` that talks to the gateway; passing
 - **Core runtime** — [ai-agent-assembly/agent-assembly](https://github.com/ai-agent-assembly/agent-assembly): the gateway, policy engine, proxy, and eBPF layers this SDK talks to.
 - **Protocol spec** — the gateway wire protocol this SDK is pinned to lives in the core monorepo at [docs/src/protocol](https://github.com/ai-agent-assembly/agent-assembly/tree/master/docs/src/protocol).
 - **Canonical docs** — the org-wide documentation site at [docs.agent-assembly.com](https://docs.agent-assembly.com/).
-- **Runnable examples** — [ai-agent-assembly/agent-assembly-examples](https://github.com/ai-agent-assembly/agent-assembly-examples): learn by running small, framework-specific Go (and Python/Node) samples for policy enforcement, approvals, audit, trace, and runtime workflows.
+- **Runnable examples** — [ai-agent-assembly/examples](https://github.com/ai-agent-assembly/examples): learn by running small, framework-specific Go (and Python/Node) samples for policy enforcement, approvals, audit, trace, and runtime workflows.
 - **Release notes** — [github.com/ai-agent-assembly/go-sdk/releases](https://github.com/ai-agent-assembly/go-sdk/releases).
 
 ## Support & Security
