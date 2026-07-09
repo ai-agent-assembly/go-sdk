@@ -115,6 +115,12 @@ sourced from three authoritative places:
 
 - `internal/version/metadata.go` — generated Go constants with the standard
   `// Code generated ... DO NOT EDIT.` header.
+- `assembly/version.go` — the public `assembly.Version` constant, sourced
+  from the same `VERSION` file that feeds `internal/version.ProtocolVersion`.
+  AAASM-4326 replaced the previously hand-maintained literal so the public
+  API surface can no longer drift from the shared metadata source. To bump
+  the SDK version, edit `VERSION` and re-run `go generate ./...` — never
+  edit `assembly/version.go` by hand.
 - The bounded `<!-- BEGIN GENERATED: sdk-metadata --> ... <!-- END GENERATED:
   sdk-metadata -->` block inside `README.md` (surrounding prose is preserved
   byte-for-byte; only the block body is rewritten).
@@ -122,8 +128,9 @@ sourced from three authoritative places:
 ### Add or update a shared value
 
 1. Edit the source of truth — `metadata/sdk.yaml` for docs-facing values,
-   `go.mod` for the module path, `VERSION` for the protocol version. Do NOT
-   edit `internal/version/metadata.go` or the README block by hand.
+   `go.mod` for the module path, `VERSION` for the protocol version (also
+   feeds `assembly.Version`). Do NOT edit `internal/version/metadata.go`,
+   `assembly/version.go`, or the README block by hand.
 2. If you need a new field, extend `sharedMetadata`/`resolvedMetadata` in
    `scripts/gen-metadata.go`, add a rendering hook only where a real
    consumer exists (a Go caller, or a README/doc surface). Skip fields that
