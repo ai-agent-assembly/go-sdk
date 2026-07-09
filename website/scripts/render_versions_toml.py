@@ -6,7 +6,7 @@ version-selector data file. The logic used to live inlined inside the
 ``Recompute versions.toml from git tags`` step of
 ``.github/workflows/docs-site.yml``; it was extracted here verbatim so the same
 serializer can be reused without copy-pasting (notably by the downstream docs
-aggregator in ``agent-assembly-docs``, see AAASM-3757). Channel computation
+aggregator in ``docs``, see AAASM-3757). Channel computation
 itself is owned by :mod:`versions_channels`; this module only handles parsing
 the existing file, preserving the hand-curated ``latest`` entry, and emitting
 the final TOML.
