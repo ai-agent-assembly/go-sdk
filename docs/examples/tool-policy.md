@@ -122,6 +122,6 @@ func runTool(ctx context.Context, tool assembly.Tool, input string) {
 
 ## Links
 
-- Example directory: [`go/tool-policy`](https://github.com/ai-agent-assembly/agent-assembly-examples/tree/master/go/tool-policy)
-- [`README.md`](https://github.com/ai-agent-assembly/agent-assembly-examples/blob/master/go/tool-policy/README.md)
+- Example directory: [`go/tool-policy`](https://github.com/ai-agent-assembly/examples/tree/master/go/tool-policy)
+- [`README.md`](https://github.com/ai-agent-assembly/examples/blob/master/go/tool-policy/README.md)
 - Related: [Handle allow/deny decisions and errors]({{< relref "/guides/handle-decisions-and-errors" >}})

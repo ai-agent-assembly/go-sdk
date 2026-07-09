@@ -38,7 +38,7 @@ need to run `go get` to use them — `go mod download` (below) pulls it in.
 All Go examples live under `go/` in the central examples repo:
 
 ```bash
-git clone https://github.com/ai-agent-assembly/agent-assembly-examples.git
+git clone https://github.com/ai-agent-assembly/examples.git
 cd agent-assembly-examples/go
 ```
 

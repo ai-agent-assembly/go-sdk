@@ -136,7 +136,7 @@ runTool(ctx, governed[1], "user@example.com")   // denied
 
 ## Links
 
-- Example directory: [`go/langchaingo`](https://github.com/ai-agent-assembly/agent-assembly-examples/tree/master/go/langchaingo)
-- [`README.md`](https://github.com/ai-agent-assembly/agent-assembly-examples/blob/master/go/langchaingo/README.md)
+- Example directory: [`go/langchaingo`](https://github.com/ai-agent-assembly/examples/tree/master/go/langchaingo)
+- [`README.md`](https://github.com/ai-agent-assembly/examples/blob/master/go/langchaingo/README.md)
 - [LangChainGo](https://github.com/tmc/langchaingo) · [`tools.Tool`](https://pkg.go.dev/github.com/tmc/langchaingo/tools#Tool)
 - Related: [Integrate with a framework]({{< relref "/guides/framework-integration" >}})
