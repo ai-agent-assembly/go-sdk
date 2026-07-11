@@ -137,7 +137,17 @@ func ignoreSignalExit(err error) error {
 	return err
 }
 
+// connectToLocalSidecar is the fallthrough boot path taken when neither a
+// sidecar address nor a managed binary is configured. There is no local sidecar
+// to discover here (the pure-Go build has no native transport), so rather than
+// returning a bare, opaque sentinel it wraps ErrSidecarUnavailable with the
+// concrete configuration a caller must supply to reach a working setup. The
+// sentinel stays wrapped so errors.Is(err, ErrSidecarUnavailable) still holds.
 func connectToLocalSidecar(ctx context.Context, address string) (SidecarClient, error) {
 	_, _ = ctx, address
-	return nil, ErrSidecarUnavailable
+	return nil, fmt.Errorf(
+		"%w: pass assembly.WithSidecarAddress(<gateway gRPC addr, e.g. 127.0.0.1:50051>) "+
+			"pointing at a running gateway, or WithSidecarBinary to have the SDK manage one",
+		ErrSidecarUnavailable,
+	)
 }
