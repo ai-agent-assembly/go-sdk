@@ -10,6 +10,17 @@ updates:
       - "dependencies"
       - "go"
 
+  - package-ecosystem: "gomod"
+    directory: "/website"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "go"
+      - "website"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
