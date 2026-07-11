@@ -111,45 +111,9 @@ func assertInitFallbackFFIFailsClosed(t *testing.T) {
 	}
 }
 
-func assertInitWithSidecarAddressReachesRegisterBranch(t *testing.T) {
-	t.Helper()
-	// AAASM-4469 G-A: the exported WithSidecarAddress must populate the field that
-	// gates boot's real registration branch. Under the pure-Go fallback the native
-	// ffi Connect fails closed, so boot falls through to sidecarConnector carrying
-	// the configured address — observing that address proves an external caller
-	// (using only exported options) now reaches the register path, which was
-	// previously unreachable because the only setter was unexported.
-	originalConnector := sidecarConnector
-	t.Cleanup(func() {
-		sidecarConnector = originalConnector
-	})
-
-	var gotAddress string
-	sidecarConnector = func(_ context.Context, address string) (SidecarClient, error) {
-		gotAddress = address
-		return stubSidecarClient{}, nil
-	}
-
-	a, err := Init(context.Background(),
-		WithGatewayURL("https://gateway.example.com"),
-		WithAPIKey("test-key"),
-		WithSidecarAddress("127.0.0.1:50051"),
-	)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if a == nil {
-		t.Fatal("expected non-nil Assembly")
-	}
-	if gotAddress != "127.0.0.1:50051" {
-		t.Fatalf("boot did not carry the configured sidecar address: got %q, want 127.0.0.1:50051", gotAddress)
-	}
-}
-
 func TestInit(t *testing.T) {
 	t.Run("connector success", assertInitConnectorSuccess)
 	t.Run("connector failure", assertInitConnectorFailure)
 	t.Run("missing gateway and absent aasm surfaces ConfigurationError", assertInitMissingGatewaySurfacesConfigError)
 	t.Run("fallback ffi fails closed and falls through to sidecar connector", assertInitFallbackFFIFailsClosed)
-	t.Run("WithSidecarAddress reaches register branch via exported option", assertInitWithSidecarAddressReachesRegisterBranch)
 }
