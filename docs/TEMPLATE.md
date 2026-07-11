@@ -55,12 +55,31 @@ project plumbing stays out of the SDK's main eye-line.
 |---|---|
 | Static-site generator | Hugo (extended build) |
 | Theme | [Hextra](https://github.com/imfing/hextra) via Hugo Modules |
-| Hosting | GitHub Pages, project-site URL |
-| URL scheme | `https://ai-agent-assembly.github.io/<sdk-name>/` |
+| Hosting | GitHub Pages, project-site build target — see "Two-tier URL model" below |
+| Reader-facing URL | `https://docs.agent-assembly.com/<sdk-name>/` |
+| Internal Pages build target (not reader-facing) | `https://ai-agent-assembly.github.io/<sdk-name>/` |
 | Default branch (deploy trigger) | `master` |
 | Build command | `cd website && hugo --minify` |
 | Local preview | `cd website && hugo server -D` |
 | Pages source | "GitHub Actions" (set once in repo Settings → Pages) |
+
+## Two-tier URL model
+
+There are two URLs in play, and only one of them is ever shown to a reader:
+
+1. **`https://docs.agent-assembly.com/<sdk-name>/` — canonical, reader-facing.**
+   Owned by the [`docs`](https://github.com/ai-agent-assembly/docs) repo's hub
+   aggregation pipeline (`aggregate.sh`), which either rebuilds the source
+   repo's site from scratch, or — for MkDocs-based repos — clones an
+   already-published `gh-pages` branch verbatim. `website/hugo.toml`'s
+   `baseURL` must be set to this pattern. This repo's own `website/hugo.toml`
+   sets `baseURL = "https://docs.agent-assembly.com/go-sdk/"` — copy that
+   shape, swapping in the new SDK's name.
+2. **`https://ai-agent-assembly.github.io/<sdk-name>/` — internal-only
+   infrastructure.** This is the raw GitHub Pages deploy target that
+   `.github/workflows/docs-site.yml` publishes to; the aggregation pipeline in
+   (1) consumes it as an input. It must never be linked to or surfaced to
+   readers directly.
 
 ## Shared brand styling (Path A)
 
@@ -96,8 +115,12 @@ favicon from `design/brand/` into `website/static/images/`. Re-sync from
 
 ## Out-of-scope decisions (deferred to per-SDK choice)
 
-- Custom domain (DNS / CNAME) — leave on `*.github.io` until there is a
-  unified landing page for all three SDKs.
+- Custom domain — already resolved, not deferred: the reader-facing URL is
+  `https://docs.agent-assembly.com/<sdk-name>/`, served by the `docs` repo's
+  hub aggregation pipeline. Set `website/hugo.toml`'s `baseURL` to that
+  pattern (see "Two-tier URL model" above for the worked example from this
+  repo). Do not leave `baseURL` on `*.github.io` — that URL is internal-only
+  infrastructure, not the public entry point.
 - Versioned docs — single-version (latest `master`) for now; add Hugo's
   version selector if/when an LTS branch emerges.
 
@@ -110,4 +133,9 @@ favicon from `design/brand/` into `website/static/images/`. Re-sync from
 3. Copy `.github/workflows/docs-site.yml` verbatim; no changes needed if the
    path conventions match.
 4. Set Pages source = "GitHub Actions" once.
-5. First push to `master` deploys to `https://ai-agent-assembly.github.io/<sdk-name>/`.
+5. First push to `master` deploys to the internal GitHub Pages build target
+   `https://ai-agent-assembly.github.io/<sdk-name>/`. That is not the
+   reader-facing URL — the `docs` repo's aggregation pipeline picks it up
+   from there and republishes it at the canonical
+   `https://docs.agent-assembly.com/<sdk-name>/`, which is what `baseURL` in
+   `website/hugo.toml` must be set to (see "Two-tier URL model" above).
