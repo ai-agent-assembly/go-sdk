@@ -172,10 +172,29 @@ func WithEnforcementMode(mode EnforcementMode) Option {
 	}
 }
 
-func withSidecarAddress(sidecarAddress string) Option {
+// WithSidecarAddress sets the gRPC address of an already-running gateway the
+// SDK registers against (for example "127.0.0.1:50051"). It is the only public
+// way to populate the sidecar address, and thus the only way an external caller
+// can reach [Init]'s real registration path: without it (or [WithSidecarBinary])
+// boot falls through to the local-sidecar connector, which reports the runtime
+// is not configured (see [ErrSidecarUnavailable]).
+//
+// Registration itself — the Ed25519 possession-proof handshake with the gateway
+// — runs only under the opt-in native cgo binding (build tag aa_ffi_go,
+// CGO_ENABLED=1); see the vendored aa-sdk-client shim. The default pure-Go build
+// has no native transport, so it does not register even when this option is set;
+// full pure-Go registration is a separate product decision (AAASM-4469 G-B) and
+// must not reimplement the handshake in Go.
+func WithSidecarAddress(address string) Option {
 	return func(opts *runtimeOptions) {
-		opts.sidecarAddress = sidecarAddress
+		opts.sidecarAddress = address
 	}
+}
+
+// withSidecarAddress is the internal alias retained for the package's own test
+// call sites; new code and external callers use the exported [WithSidecarAddress].
+func withSidecarAddress(sidecarAddress string) Option {
+	return WithSidecarAddress(sidecarAddress)
 }
 
 // WithOpControl wires a live op-control consumer into the wrapped tool path so
