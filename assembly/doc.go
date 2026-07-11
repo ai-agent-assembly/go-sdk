@@ -10,11 +10,21 @@
 //	a, err := assembly.Init(ctx,
 //	    assembly.WithGatewayURL("https://gateway.example.com"),
 //	    assembly.WithAPIKey("my-key"),
+//	    // Point at a running gateway's gRPC address so Init can reach the
+//	    // registration path; without it (or WithSidecarBinary) Init returns
+//	    // ErrSidecarUnavailable.
+//	    assembly.WithSidecarAddress("127.0.0.1:50051"),
 //	)
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //	defer a.Close()
+//
+// Gateway registration (the Ed25519 possession-proof handshake) runs only under
+// the opt-in native cgo binding — build with `-tags aa_ffi_go` and
+// CGO_ENABLED=1. The default pure-Go build has no native transport, so it does
+// not self-register; [WithSidecarAddress] makes the path reachable, the native
+// binding makes it enforce-grade.
 //
 // # Wrapping Tools
 //
