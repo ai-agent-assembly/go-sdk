@@ -155,6 +155,49 @@ func TestSidecarHealthySuccess(t *testing.T) {
 	}
 }
 
+func TestSidecarHealthyEmptyAddressFailsFast(t *testing.T) {
+	t.Parallel()
+
+	// Regression (AAASM-4470): WithSidecarBinary set but address empty. A
+	// non-cancelling context must NOT hang the poll loop — the empty address is
+	// caught before the loop and reported clearly, not as a bare deadline error.
+	sc := NewSidecar("/nonexistent", "")
+
+	start := time.Now()
+	err := sc.Healthy(context.Background())
+	if err == nil {
+		t.Fatal("expected error for empty sidecar address, got nil")
+	}
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Fatalf("Healthy blocked %v on empty address; expected fast failure", elapsed)
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("empty-address failure should not surface as a deadline error: %v", err)
+	}
+}
+
+func TestSidecarHealthyDefaultTimeoutBoundsNonCancellingContext(t *testing.T) {
+	t.Parallel()
+
+	// Regression (AAASM-4470): unreachable address with a non-cancelling context
+	// (as the documented quick-start uses). The internal default timeout must
+	// bound the wait so Healthy returns instead of looping forever.
+	sc := NewSidecar("/nonexistent", "127.0.0.1:1")
+	sc.healthTimeout = 150 * time.Millisecond
+
+	start := time.Now()
+	err := sc.Healthy(context.Background())
+	if err == nil {
+		t.Fatal("expected timeout error, got nil")
+	}
+	if elapsed := time.Since(start); elapsed > 2*time.Second {
+		t.Fatalf("Healthy blocked %v; internal default timeout did not bound the wait", elapsed)
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("expected DeadlineExceeded in error chain, got: %v", err)
+	}
+}
+
 func TestSidecarHealthyTimeout(t *testing.T) {
 	t.Parallel()
 

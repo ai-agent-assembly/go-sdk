@@ -65,6 +65,13 @@ var sidecarConnector = connectToLocalSidecar
 
 // Init configures and initializes the assembly runtime in a single call.
 //
+// When WithSidecarBinary is set, Init starts the sidecar and health-checks it
+// before returning. That health check is always bounded: it honours a deadline
+// on ctx when one is present, and otherwise applies an internal default timeout.
+// Init therefore returns even when ctx never cancels (e.g. context.Background())
+// and the sidecar address is empty or unreachable — the caller is not required
+// to supply a context with a deadline to be guaranteed a return.
+//
 // Example:
 //
 //	a, err := assembly.Init(ctx,
