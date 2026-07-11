@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 )
@@ -55,8 +56,17 @@ func TestConnectToLocalSidecarReturnsUnavailable(t *testing.T) {
 	t.Parallel()
 
 	_, err := connectToLocalSidecar(context.Background(), "127.0.0.1:50051")
+	// The wrapped sentinel must still satisfy errors.Is so existing callers keep
+	// working, and the message must name the concrete fix (AAASM-4469 G-C) rather
+	// than being an opaque stub error.
 	if !errors.Is(err, ErrSidecarUnavailable) {
 		t.Fatalf("expected ErrSidecarUnavailable, got %v", err)
+	}
+	msg := err.Error()
+	for _, want := range []string{"WithSidecarAddress", "WithSidecarBinary"} {
+		if !strings.Contains(msg, want) {
+			t.Fatalf("expected actionable error to mention %q, got %q", want, msg)
+		}
 	}
 }
 

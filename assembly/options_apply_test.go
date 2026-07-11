@@ -27,6 +27,15 @@ func TestWithSidecarBinary_SetsPath(t *testing.T) {
 	}
 }
 
+func TestWithSidecarAddress_SetsField(t *testing.T) {
+	t.Parallel()
+
+	cfg := applyOptions(WithSidecarAddress("127.0.0.1:50051"))
+	if cfg.sidecarAddress != "127.0.0.1:50051" {
+		t.Fatalf("sidecarAddress = %q, want 127.0.0.1:50051", cfg.sidecarAddress)
+	}
+}
+
 func TestWithControlPlaneURL_SetsURL(t *testing.T) {
 	t.Parallel()
 
