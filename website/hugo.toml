@@ -30,6 +30,10 @@ refLinksErrorLevel = "ERROR"
   [[module.mounts]]
     source = "../docs"
     target = "content"
+    # AAASM-4564: docs/superpowers/ holds internal planning artifacts (not
+    # public docs content). Exclude it so a stray planning file never gets
+    # built into a real site page if it lands under docs/ again.
+    files = ["! superpowers/**"]
   [[module.mounts]]
     source = "assets"
     target = "assets"
