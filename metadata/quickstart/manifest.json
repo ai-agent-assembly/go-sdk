@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "sdk": "go",
+  "source": "Vendored from the examples repo (Epic AAASM-4511, snippet tooling AAASM-4512 / PR examples#267). Committed and drift-checked here; the docs build never fetches examples.",
+  "quickstart_tabs": ["langchaingo", "basic-agent"],
+  "frameworks": [
+    {
+      "framework_id": "basic-agent",
+      "label": "Plain",
+      "status": "validated",
+      "lang": "go",
+      "snippet_path": "metadata/quickstart/_snippets/basic-agent.go.txt",
+      "source_example": "go/basic-agent/main.go"
+    },
+    {
+      "framework_id": "cli-runtime-integration",
+      "label": "CLI Runtime (sidecar)",
+      "status": "validated",
+      "lang": "go",
+      "snippet_path": "metadata/quickstart/_snippets/cli-runtime-integration.go.txt",
+      "source_example": "go/cli-runtime-integration/main.go"
+    },
+    {
+      "framework_id": "langchaingo",
+      "label": "LangChainGo",
+      "status": "validated",
+      "lang": "go",
+      "snippet_path": "metadata/quickstart/_snippets/langchaingo.go.txt",
+      "source_example": "go/langchaingo/main.go"
+    },
+    {
+      "framework_id": "tool-policy",
+      "label": "Tool Policy (plain)",
+      "status": "validated",
+      "lang": "go",
+      "snippet_path": "metadata/quickstart/_snippets/tool-policy.go.txt",
+      "source_example": "go/tool-policy/main.go"
+    }
+  ]
+}

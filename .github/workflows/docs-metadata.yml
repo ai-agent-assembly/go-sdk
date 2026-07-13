@@ -5,6 +5,10 @@ name: Docs Metadata
 # with metadata/sdk.yaml, go.mod, and VERSION. The check runs on every PR and
 # on push to master, and DOES NOT skip on `**/*.md` because the README block
 # is one of the enforced surfaces.
+#
+# AAASM-4515: `go generate ./...` also drives scripts/gen-quickstart-tabs.go,
+# so the `quickstart-tabs` bounded block in docs/quick-start.md is likewise
+# drift-checked here against its vendored source (metadata/quickstart/).
 
 on:
   pull_request:
