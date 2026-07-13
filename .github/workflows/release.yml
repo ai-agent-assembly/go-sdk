@@ -90,7 +90,7 @@ jobs:
               exit 0
             fi
           fi
-          exit $RC
+          exit "$RC"
 
   sbom:
     name: Generate + attach CycloneDX SBOM

@@ -70,4 +70,4 @@ jobs:
               exit 0
             fi
           fi
-          exit $RC
+          exit "$RC"
