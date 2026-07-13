@@ -14,7 +14,7 @@ compatibility contract and how releases are cut.
 ## Protocol version
 
 The [`VERSION`](https://github.com/ai-agent-assembly/go-sdk/blob/master/VERSION)
-file pins the gateway protocol version this SDK speaks (currently `0.0.1-rc.3`). It
+file pins the gateway protocol version this SDK speaks (currently `0.0.1-rc.4`). It
 is the wire-compatibility contract, separate from the module's release tags:
 
 - A released tag such as `v0.0.1-alpha.3` is the **SDK version** you `go get`.
