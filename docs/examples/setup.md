@@ -91,16 +91,29 @@ Only the [CLI runtime integration]({{< relref "/examples/cli-runtime-integration
 example uses the `aasm` binary, and only for its full-sidecar path. Install it if
 you want to exercise that path:
 
+{{< tabs >}}
+{{< tab name="Homebrew" >}}
+
 ```bash
-# Homebrew
 brew install ai-agent-assembly/tap/aasm
+```
 
-# curl installer
+{{< /tab >}}
+{{< tab name="curl installer" >}}
+
+```bash
 curl -fsSL https://agent-assembly.com/install.sh | sh
+```
 
-# go install
+{{< /tab >}}
+{{< tab name="go install" >}}
+
+```bash
 go install github.com/ai-agent-assembly/agent-assembly/cmd/aasm@latest
 ```
+
+{{< /tab >}}
+{{< /tabs >}}
 
 If `aasm` is not installed, that example detects it and continues in offline
 fallback mode.
