@@ -168,3 +168,12 @@ code, pre, kbd { font-family: var(--mono-font-family); }
   text-decoration: underline;
 }
 .dark .aa-feedback-improve { color: hsl(234 89% 74%); }
+
+/* Hextra tab-title font-size override (AAASM-4563).
+   Hextra (pulled in as a Hugo Module, not vendored) renders each
+   {{< tabs >}} title as a button.hextra-tabs-toggle — confirmed by a local
+   Hugo build of docs/quick-start.md's framework tabs section. Hextra ships
+   no font-size utility on that button (only font-weight/line-height), so
+   the tab titles otherwise render at body size; tighten them so they read
+   as navigation rather than body copy. */
+.hextra-tabs-toggle { font-size: 0.875rem; }
