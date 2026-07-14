@@ -14,7 +14,7 @@ const ModulePath = "github.com/ai-agent-assembly/go-sdk"
 // ProtocolVersion is the gateway wire-protocol version this SDK build is
 // pinned to, sourced from the top-level VERSION file. It is the value the
 // gateway is expected to advertise on Init handshakes.
-const ProtocolVersion = "0.0.1-rc.4"
+const ProtocolVersion = "0.0.1-rc.5"
 
 // DocsURL is the canonical documentation site for the Go SDK.
 const DocsURL = "https://docs.agent-assembly.com/go-sdk/"
