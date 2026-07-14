@@ -19,12 +19,12 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 # handshake — the version this shim now forwards from the Go module version so
 # downgrade detection reflects the installed release. Re-pin to the squash-merge
 # commit once PR #1226 lands. (Prior pin ebc4d7dc added team_id/parent_agent_id.)
-aa-sdk-client = { git = "https://github.com/ai-agent-assembly/agent-assembly.git", rev = "679dce0223409fe2e103439db2e487992624d72e", package = "aa-sdk-client" }
+aa-sdk-client = { git = "https://github.com/ai-agent-assembly/agent-assembly.git", rev = "5b6f9fae04321894ccf4a0e787158044b43c2b9b", package = "aa-sdk-client" }
 # Generated protobuf types, pinned to the same SHA as aa-sdk-client. Needed to
 # build the `CheckActionRequest` / read the `CheckActionResponse` of the
 # synchronous policy query (`AssemblyClient::query_policy`); aa-sdk-client does
 # not re-export aa_proto, so the shim depends on it directly.
-aa-proto = { git = "https://github.com/ai-agent-assembly/agent-assembly.git", rev = "679dce0223409fe2e103439db2e487992624d72e", package = "aa-proto" }
+aa-proto = { git = "https://github.com/ai-agent-assembly/agent-assembly.git", rev = "5b6f9fae04321894ccf4a0e787158044b43c2b9b", package = "aa-proto" }
 # `AssemblyClient::register` is async (tonic gRPC), but the C-ABI `aa_register`
 # surface is synchronous. The shim drives that one future to completion on a
 # private current-thread runtime — hence only the `rt` feature is needed (the
