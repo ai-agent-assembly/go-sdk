@@ -79,8 +79,8 @@ example's helper script, which honours:
 | `WAIT_SECONDS` | `5` | How long the script waits for the sidecar to become healthy. |
 
 When you graduate to a **real gateway** in your own code, the SDK's `Init` reads
-its gateway URL and API key from options, the `AAASM_GATEWAY_URL` /
-`AAASM_API_KEY` environment variables, or a config file — and defaults to
+its gateway URL and API key from options, the `AA_GATEWAY_URL` /
+`AA_API_KEY` environment variables, or a config file — and defaults to
 `http://localhost:7391` for local development. See
 [Quick Start]({{< relref "/quick-start" >}}) and
 [Configuration]({{< relref "/configuration" >}}) for that path.
