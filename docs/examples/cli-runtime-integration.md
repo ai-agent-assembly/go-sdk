@@ -49,7 +49,7 @@ first — including the optional `aasm` install if you want the full sidecar pat
 Then:
 
 ```bash
-cd agent-assembly-examples/go/cli-runtime-integration
+cd examples/go/cli-runtime-integration
 go mod download
 ```
 

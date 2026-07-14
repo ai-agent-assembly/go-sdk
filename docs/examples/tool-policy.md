@@ -48,7 +48,7 @@ Complete [Preparing the runtime environment]({{< relref "/examples/setup" >}})
 first. Then:
 
 ```bash
-cd agent-assembly-examples/go/tool-policy
+cd examples/go/tool-policy
 go mod download
 go run .
 ```

@@ -39,7 +39,7 @@ All Go examples live under `go/` in the central examples repo:
 
 ```bash
 git clone https://github.com/ai-agent-assembly/examples.git
-cd agent-assembly-examples/go
+cd examples/go
 ```
 
 Each subdirectory (`basic-agent`, `tool-policy`, `langchaingo`,
@@ -79,8 +79,8 @@ example's helper script, which honours:
 | `WAIT_SECONDS` | `5` | How long the script waits for the sidecar to become healthy. |
 
 When you graduate to a **real gateway** in your own code, the SDK's `Init` reads
-its gateway URL and API key from options, the `AAASM_GATEWAY_URL` /
-`AAASM_API_KEY` environment variables, or a config file — and defaults to
+its gateway URL and API key from options, the `AA_GATEWAY_URL` /
+`AA_API_KEY` environment variables, or a config file — and defaults to
 `http://localhost:7391` for local development. See
 [Quick Start]({{< relref "/quick-start" >}}) and
 [Configuration]({{< relref "/configuration" >}}) for that path.

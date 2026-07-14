@@ -51,7 +51,7 @@ first. This example pins **Go ≥ 1.26**, **Go SDK v0.0.1-alpha.4**, and
 **LangChainGo v0.1.14** in its `go.mod`. Then:
 
 ```bash
-cd agent-assembly-examples/go/langchaingo
+cd examples/go/langchaingo
 go mod download
 go run .
 ```
