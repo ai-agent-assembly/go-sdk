@@ -47,7 +47,7 @@ Complete the one-time [Preparing the runtime environment]({{< relref "/examples/
 steps first. Then:
 
 ```bash
-cd agent-assembly-examples/go/basic-agent
+cd examples/go/basic-agent
 go mod download
 go run .
 ```

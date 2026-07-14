@@ -39,7 +39,7 @@ All Go examples live under `go/` in the central examples repo:
 
 ```bash
 git clone https://github.com/ai-agent-assembly/examples.git
-cd agent-assembly-examples/go
+cd examples/go
 ```
 
 Each subdirectory (`basic-agent`, `tool-policy`, `langchaingo`,

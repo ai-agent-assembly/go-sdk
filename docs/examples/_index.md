@@ -6,7 +6,7 @@ weight: 8
 # Examples
 
 Complete, runnable Go examples live in the
-[agent-assembly-examples](https://github.com/ai-agent-assembly/examples/tree/master/go)
+[examples](https://github.com/ai-agent-assembly/examples/tree/master/go)
 repository. Each is a self-contained Go module with its own `README.md`. This
 section walks through every Go example in depth: what it demonstrates, how the
 governance flow works, the real commands to run it, and an annotated tour of the
