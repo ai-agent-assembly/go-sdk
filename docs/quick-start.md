@@ -10,6 +10,21 @@ install the SDK, initialise the runtime, and wrap your tools so every call is
 checked against the AI Agent Assembly gateway. The whole thing is a single
 `main` you can copy, paste, and run.
 
+{{< callout type="warning" >}}
+**Agent registration is not reachable from a plain `go get` today — following
+this quick-start will not make your agent appear in the dashboard.** The steps
+below wrap and govern tool calls, but the register handshake runs *only* under
+the opt-in native cgo binding (`-tags aa_ffi_go`, `CGO_ENABLED=1`), and that
+native library (`libaa_ffi_go`) is **not published anywhere** yet: building with
+`-tags aa_ffi_go` fails with `ld: library 'aa_ffi_go' not found` outside a full
+monorepo checkout. The default pure-Go build has no native transport, so it does
+not register even when [`WithSidecarAddress`](https://pkg.go.dev/github.com/ai-agent-assembly/go-sdk/assembly#WithSidecarAddress)
+is set (see that option's godoc). Publishing the native library — or dropping the
+cgo requirement — is a separate product decision; track status in
+[AAASM-4547](https://lightning-dust-mite.atlassian.net/browse/AAASM-4547) and
+[AAASM-4469](https://lightning-dust-mite.atlassian.net/browse/AAASM-4469).
+{{< /callout >}}
+
 ## Prerequisites
 
 - **Go** ≥ 1.26 (the floor declared in `go.mod`).

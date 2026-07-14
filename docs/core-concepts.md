@@ -61,6 +61,17 @@ Registration is **implicit**: there is no separate `RegisterAgent` call. `Init`
 emits the registration event for you as part of boot, derived from the options
 you passed.
 
+{{< callout type="warning" >}}
+**In the default pure-Go build this registration step is currently a no-op.**
+`Init` connects and governs tool calls, but the register handshake fires *only*
+under the opt-in native cgo binding (`-tags aa_ffi_go`, `CGO_ENABLED=1`), whose
+native library (`libaa_ffi_go`) is **not published** — so a plain `go get` agent
+does not appear in the dashboard, even with
+[`WithSidecarAddress`](https://pkg.go.dev/github.com/ai-agent-assembly/go-sdk/assembly#WithSidecarAddress)
+set. See the [Quick Start]({{< relref "/quick-start" >}}) note and
+[AAASM-4547](https://lightning-dust-mite.atlassian.net/browse/AAASM-4547).
+{{< /callout >}}
+
 ```mermaid
 sequenceDiagram
     participant App as Your code
