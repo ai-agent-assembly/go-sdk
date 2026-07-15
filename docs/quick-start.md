@@ -51,6 +51,14 @@ cgo requirement — is a separate product decision; track status in
   `ErrSidecarUnavailable`. And per the warning at the top of this page, the
   registration handshake itself only runs under the opt-in native cgo binding
   today.
+
+  To confirm both surfaces are actually up rather than guessing from `Init`'s
+  behavior, check them directly:
+
+  ```bash
+  curl http://localhost:7391/healthz   # REST — real JSON: mode, storage, version, uptime_secs
+  nc -z localhost 50051 && echo "gRPC port open"   # gRPC has no health endpoint yet; this only confirms the port accepts connections
+  ```
   {{< /callout >}}
 - For **production**: a gateway URL and, if your gateway requires auth, an API
   key. Both can come from options, environment variables, or a config file —
