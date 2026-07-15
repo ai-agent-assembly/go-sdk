@@ -132,7 +132,9 @@ and recorded after.
 ### Govern your first agent
 
 Pick your framework — each tab shows the governance slice copied verbatim from a
-runnable example (a CI drift check keeps them in lockstep). Go's per-framework
+runnable example in the
+[examples repo](https://github.com/ai-agent-assembly/examples/tree/master/go)
+(a CI drift check keeps them in lockstep). Go's per-framework
 surface is thin today, so the tabs are **LangChainGo** (the framework path) and
 **Plain** (the framework-agnostic path). Two more validated Go examples already
 exist — **Tool Policy** and **CLI Runtime (sidecar)** — but those are patterns
@@ -236,6 +238,7 @@ func main() {
 ## Where to next
 
 - [Core Concepts]({{< relref "/core-concepts" >}}) — what's actually happening inside the SDK.
+- **[Examples]({{< relref "/examples" >}})** — wire the SDK into the framework you actually use.
 - [Guides]({{< relref "/guides" >}}) — wrap a real agent, integrate a framework, handle decisions.
 - [Configuration]({{< relref "/configuration" >}}) — every `Init` option, defaults, and enforcement modes.
 - [Troubleshooting]({{< relref "/troubleshooting" >}}) — what to do when `Init` or a check fails.
