@@ -7,7 +7,7 @@ a development environment, run the test suite, and submit a pull request.
 
 ### Required
 
-- **Go ≥ 1.24** — install via the official distribution or `brew install go`.
+- **Go ≥ 1.26** — matches the floor declared in `go.mod`; install via the official distribution or `brew install go`.
 - **golangci-lint** — `brew install golangci-lint` (or see the
   [project's install guide](https://golangci-lint.run/welcome/install/)).
 - **make** — for the `Makefile` targets (`fmt`, `lint`, `test`).
@@ -60,7 +60,7 @@ make test-native
 AAASM_MEMORY_HARNESS=1 go test ./internal/ffi -run TestMemoryRegressionHarness
 ```
 
-CI runs the full matrix across Go 1.24 / 1.25, ubuntu / macOS, and `CGO_ENABLED` 0 / 1. If your local run passes, CI almost certainly will.
+CI runs the full matrix across Go 1.26.x, ubuntu / macOS, and `CGO_ENABLED` 0 / 1. If your local run passes, CI almost certainly will.
 
 ## Idiomatic Go Conventions
 
