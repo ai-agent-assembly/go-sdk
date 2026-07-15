@@ -31,6 +31,7 @@ Go framework compatibility is documented authoritatively in [docs/compatibility.
 ## Prerequisites
 
 - **Go ≥ 1.26** — the floor declared in `go.mod`.
+  - **Security — build with Go ≥ 1.26.5.** [GO-2026-5856](https://pkg.go.dev/vuln/GO-2026-5856) is a `crypto/tls` Encrypted-Client-Hello (ECH) privacy leak in the Go **standard library**, fixed in go1.26.5. Because the vulnerable code lives in the stdlib, the fix ships with *your* compiler, not this module — the module deliberately keeps a broad `go 1.26.0` floor (and pins `toolchain go1.26.5` for its own build and `govulncheck` gate), so a consumer compiling go-sdk with Go 1.26.0–1.26.4 still links the vulnerable stdlib. Security-conscious builds should use Go ≥ 1.26.5 to pick up the fix.
 - For production: an operator-issued gateway URL and API key. For local development you can skip both — `Init` discovers a gateway on `http://localhost:7391` (see [Configuration](docs/configuration.md#gateway-and-credential-resolution)).
 - *(Optional)* a C compiler — only needed if you build with `-tags aa_ffi_go` to enable the native FFI transport. The default transport is pure-Go and runs cleanly with `CGO_ENABLED=0`.
 
