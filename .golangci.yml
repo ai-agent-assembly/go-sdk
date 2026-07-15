@@ -9,3 +9,12 @@ linters:
     - govet
     - staticcheck
     - revive
+  exclusions:
+    rules:
+      # SA5011 false-positive in tests: staticcheck can't prove `t.Fatal`
+      # terminates, so a `if x == nil { t.Fatal(...) }` guard followed by `x.f`
+      # is flagged as a possible nil deref though the test can never reach it.
+      - path: _test\.go
+        linters:
+          - staticcheck
+        text: SA5011
