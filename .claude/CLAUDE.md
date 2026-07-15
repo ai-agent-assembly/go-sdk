@@ -96,7 +96,7 @@ These are load-bearing; reviewers push back on PRs that skip them.
   skips the Go hooks; if a hook fails in a fresh worktree, fix the cause.
 - **CGo build matrix:** if you touch `internal/ffi/`, validate both paths — the native
   binding (`go test -tags aa_ffi_go ./...`) **and** the pure-Go fallback
-  (`CGO_ENABLED=0 go test ./...`). CI runs Go 1.24/1.25 × ubuntu/macOS × `CGO_ENABLED`
+  (`CGO_ENABLED=0 go test ./...`). CI runs Go 1.26 × ubuntu/macOS × `CGO_ENABLED`
   0/1.
 - **Org GitHub Actions can be billing-blocked** — jobs may abort in seconds with a
   payments message. Check run **annotations** before triaging as a code bug; **validate
