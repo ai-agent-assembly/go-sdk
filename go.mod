@@ -2,6 +2,12 @@ module github.com/ai-agent-assembly/go-sdk
 
 go 1.26.0
 
+// Pin the build/scan toolchain to go1.26.5 so govulncheck evaluates crypto/tls
+// against the patched stdlib — GO-2026-5856 (ECH privacy leak) is fixed in
+// go1.26.5. The `go` line stays at 1.26.0 (the language/min-version floor); this
+// only raises the toolchain actually used to build and scan.
+toolchain go1.26.5
+
 require (
 	github.com/oklog/ulid/v2 v2.1.1
 	go.opentelemetry.io/otel/trace v1.44.0
