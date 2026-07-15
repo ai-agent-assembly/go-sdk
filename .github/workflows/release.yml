@@ -75,15 +75,14 @@ jobs:
             # Extract IDs of vulnerabilities that directly affect our code
             ALL_IDS=$(grep -E "^Vulnerability #[0-9]+: GO-" /tmp/govulncheck.txt | grep -oE "GO-[0-9]+-[0-9]+")
             # CVEs whose fix is not yet available in the pinned Go toolchain
-            # line (currently 1.26.x). Each entry MUST cite the fixed-in
-            # version and the follow-up bump ticket.
+            # line. Each entry MUST cite the fixed-in version and the follow-up
+            # bump ticket.
             #   GO-2026-4971 — awaiting go1.26.3 (no released fix)
-            #   GO-2026-5856 — crypto/tls Encrypted Client Hello privacy leak;
-            #     fixed in go1.26.5. Once the CI runner resolves 1.26.x to
-            #     >=1.26.5, remove this entry.
+            # go.mod pins `toolchain go1.26.5`, so GO-2026-5856 (crypto/tls ECH
+            # privacy leak, fixed in go1.26.5) now resolves as fixed and no
+            # longer needs an allowlist entry (AAASM-4634).
             KNOWN_UNFIXED=$(printf '%s\n' \
-              "GO-2026-4971" \
-              "GO-2026-5856")
+              "GO-2026-4971")
             UNKNOWN=$(echo "$ALL_IDS" | grep -vxF "$KNOWN_UNFIXED" | tr -d '[:space:]')
             if [ -z "$UNKNOWN" ]; then
               echo "::warning::Known unfixed CVE(s) with no released fix in the pinned toolchain: $ALL_IDS. Treating as accepted risk."
