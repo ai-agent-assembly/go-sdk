@@ -29,22 +29,29 @@ cgo requirement — is a separate product decision; track status in
 
 - **Go** ≥ 1.26 (the floor declared in `go.mod`).
 - For **local development**: nothing else — `Init` auto-discovers a gateway on
-  `http://localhost:7391`, and starts one for you if none is running (it shells
-  out to `aasm start --mode local --foreground`, so the
+  `http://localhost:7391`, and starts one for you if none is running (the
   [`aasm` CLI](https://github.com/ai-agent-assembly/agent-assembly) must be on
   your `PATH`).
 
-  > **Note: local-mode transports — `:7391` REST + `:50051` gRPC.** The
-  > `:7391` auto-discovery above only resolves the REST gateway URL. Agent
-  > **registration** is a separate concern that talks to the gateway's gRPC
-  > endpoint (default `127.0.0.1:50051`) — `Init` does **not** auto-derive
-  > this address the way the Python and Node SDKs do. Reaching it requires an
-  > explicit
-  > [`WithSidecarAddress`](https://pkg.go.dev/github.com/ai-agent-assembly/go-sdk/assembly#WithSidecarAddress)
-  > (or `WithSidecarBinary`) option; without one, `Init` returns
-  > `ErrSidecarUnavailable`. And per the warning at the top of this page, the
-  > registration handshake itself only runs under the opt-in native cgo
-  > binding today.
+  {{< callout type="note" >}}
+  **Local-mode transports — `:7391` REST + `:50051` gRPC.** `Init` shells out
+  to the following command to auto-start the gateway:
+
+  ```bash
+  aasm start --mode local --foreground
+  ```
+
+  The `:7391` auto-discovery above only resolves the REST gateway URL. Agent
+  **registration** is a separate concern that talks to the gateway's gRPC
+  endpoint (default `127.0.0.1:50051`) — `Init` does **not** auto-derive this
+  address the way the Python and Node SDKs do. Reaching it requires an
+  explicit
+  [`WithSidecarAddress`](https://pkg.go.dev/github.com/ai-agent-assembly/go-sdk/assembly#WithSidecarAddress)
+  (or `WithSidecarBinary`) option; without one, `Init` returns
+  `ErrSidecarUnavailable`. And per the warning at the top of this page, the
+  registration handshake itself only runs under the opt-in native cgo binding
+  today.
+  {{< /callout >}}
 - For **production**: a gateway URL and, if your gateway requires auth, an API
   key. Both can come from options, environment variables, or a config file —
   see [Configuration]({{< relref "/configuration" >}}).
