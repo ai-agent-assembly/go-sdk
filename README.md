@@ -97,6 +97,9 @@ examples/minimal/
 
 ## Quick Start
 
+> [!WARNING]
+> **Agent registration is not reachable from a plain `go get` today — following this quick start will not make your agent appear in the dashboard.** The `Init` call below wraps and governs tool calls, but the register handshake runs *only* under the opt-in native cgo binding (`-tags aa_ffi_go`, `CGO_ENABLED=1`), and that native library (`libaa_ffi_go`) is **not published anywhere** yet. The default pure-Go build has no native transport, so it does not register even when `WithSidecarAddress` is set. See [docs/quick-start.md](docs/quick-start.md) for the full explanation; track status in [AAASM-4547](https://lightning-dust-mite.atlassian.net/browse/AAASM-4547) and [AAASM-4469](https://lightning-dust-mite.atlassian.net/browse/AAASM-4469).
+
 ```go
 import (
     "context"
