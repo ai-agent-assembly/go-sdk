@@ -108,6 +108,14 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # upload the SBOM asset to the GitHub Release
+    env:
+      # AAASM-4709: pin this job onto the go1.26.5 toolchain, the same one the
+      # security-gate job above already forces (see the AAASM-4634 comment on
+      # its "Run govulncheck" step). Without this, `go` resolves to whatever
+      # actions/setup-go's `go-version: "1.26.x"` cached (the 1.26.4 toolcache)
+      # and `go install`/cyclonedx-gomod's module resolution run outbound TLS
+      # on a stdlib still vulnerable to GO-2026-5856.
+      GOTOOLCHAIN: go1.26.5
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
