@@ -86,14 +86,14 @@ jobs:
             ALL_IDS=$(grep -E "^Vulnerability #[0-9]+: GO-" /tmp/govulncheck.txt | grep -oE "GO-[0-9]+-[0-9]+")
             # CVEs whose fix is not yet available in the pinned Go toolchain
             # line. Each entry MUST cite the fixed-in version and the follow-up
-            # bump ticket.
-            #   GO-2026-4971 — awaiting go1.26.3 (no released fix)
-            # This step runs under GOTOOLCHAIN=go1.26.5 (see the step env
-            # above), so GO-2026-5856 (crypto/tls ECH privacy leak, fixed in
-            # go1.26.5) resolves as fixed and no longer needs an allowlist
-            # entry (AAASM-4634).
-            KNOWN_UNFIXED=$(printf '%s\n' \
-              "GO-2026-4971")
+            # bump ticket. Empty as of AAASM-4709: GO-2026-4971 (previously
+            # listed here as "awaiting go1.26.3, no released fix") was fixed in
+            # go1.26.3, and this step runs under GOTOOLCHAIN=go1.26.5 (see the
+            # step env above) — i.e. already past that fix — so the entry was
+            # dead. GO-2026-5856 (crypto/tls ECH privacy leak, fixed in
+            # go1.26.5) likewise resolves as fixed under this toolchain and
+            # needs no entry (AAASM-4634).
+            KNOWN_UNFIXED=""
             UNKNOWN=$(echo "$ALL_IDS" | grep -vxF "$KNOWN_UNFIXED" | tr -d '[:space:]')
             if [ -z "$UNKNOWN" ]; then
               echo "::warning::Known unfixed CVE(s) with no released fix in the pinned toolchain: $ALL_IDS. Treating as accepted risk."
@@ -108,6 +108,14 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # upload the SBOM asset to the GitHub Release
+    env:
+      # AAASM-4709: pin this job onto the go1.26.5 toolchain, the same one the
+      # security-gate job above already forces (see the AAASM-4634 comment on
+      # its "Run govulncheck" step). Without this, `go` resolves to whatever
+      # actions/setup-go's `go-version: "1.26.x"` cached (the 1.26.4 toolcache)
+      # and `go install`/cyclonedx-gomod's module resolution run outbound TLS
+      # on a stdlib still vulnerable to GO-2026-5856.
+      GOTOOLCHAIN: go1.26.5
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
