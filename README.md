@@ -98,7 +98,7 @@ examples/minimal/
 ## Quick Start
 
 > [!WARNING]
-> **Agent registration is not reachable from a plain `go get` today — following this quick start will not make your agent appear in the dashboard.** The `Init` call below wraps and governs tool calls, but the register handshake runs *only* under the opt-in native cgo binding (`-tags aa_ffi_go`, `CGO_ENABLED=1`), and that native library (`libaa_ffi_go`) is **not published anywhere** yet. The default pure-Go build has no native transport, so it does not register even when `WithSidecarAddress` is set. See [docs/quick-start.md](docs/quick-start.md) for the full explanation; track status in [AAASM-4547](https://lightning-dust-mite.atlassian.net/browse/AAASM-4547) and [AAASM-4469](https://lightning-dust-mite.atlassian.net/browse/AAASM-4469).
+> **`Init` requires a reachable sidecar address or a managed binary, or it returns `ErrSidecarUnavailable`.** The snippet below passes `WithSidecarAddress` pointing at a running gateway's gRPC endpoint (default `127.0.0.1:50051`) — without it (or `WithSidecarBinary` to have the SDK manage one), `Init` falls through to `ErrSidecarUnavailable` and the `log.Fatal` below fires. And even with a reachable address, agent registration itself is not reachable from a plain `go get` today — following this quick start will not make your agent appear in the dashboard. The register handshake runs *only* under the opt-in native cgo binding (`-tags aa_ffi_go`, `CGO_ENABLED=1`), and that native library (`libaa_ffi_go`) is **not published anywhere** yet. The default pure-Go build has no native transport, so it does not register even when `WithSidecarAddress` is set. See [docs/quick-start.md](docs/quick-start.md) for the full explanation; track status in [AAASM-4547](https://lightning-dust-mite.atlassian.net/browse/AAASM-4547) and [AAASM-4469](https://lightning-dust-mite.atlassian.net/browse/AAASM-4469).
 
 ```go
 import (
@@ -109,7 +109,11 @@ import (
 )
 
 ctx := assembly.WithAgentID(context.Background(), "my-agent")
-a, err := assembly.Init(ctx, assembly.WithGatewayURL(url), assembly.WithAPIKey(key))
+a, err := assembly.Init(ctx,
+    assembly.WithGatewayURL(url),
+    assembly.WithAPIKey(key),
+    assembly.WithSidecarAddress("127.0.0.1:50051"), // required — see warning above
+)
 if err != nil {
     log.Fatal(err)
 }
@@ -124,7 +128,7 @@ Then wrap your agent's tools so every call is governed:
 governed := assembly.WrapTools(myTools, nil)
 ```
 
-The second argument is the `GovernanceClient` that talks to the gateway; passing `nil` gives a passthrough wrapper (tools run, no gateway calls) — wire in a real client when you're ready to enforce. Each call against a tool in `governed` is then checked against the gateway policy before it runs and recorded after. Hand `governed` to your agent in place of the originals. See [Quick Start](docs/quick-start.md) for the end-to-end walk-through.
+The second argument is the `GovernanceClient` that talks to the gateway. Under the default fail-closed enforce posture, passing `nil` denies every wrapped call (`ErrGovernanceUnavailable`) rather than running it unchecked (AAASM-3109) — wire in a real client when you're ready to enforce. To get a passthrough wrapper instead (tools run, no gateway calls) while you're wiring one up, pass `assembly.WithFailClosed(false)` as an option. Each call against a tool in `governed` is then checked against the gateway policy before it runs and recorded after. Hand `governed` to your agent in place of the originals. See [Quick Start](docs/quick-start.md) for the end-to-end walk-through.
 
 ## Documentation
 
