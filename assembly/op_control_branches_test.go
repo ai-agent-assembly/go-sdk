@@ -1,7 +1,9 @@
 package assembly
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -23,6 +25,50 @@ func TestReadLoop_TransportErrorMarksStreamDead(t *testing.T) {
 	stream.mu.Unlock()
 
 	waitFor(t, func() bool { return !sub.StreamAlive() }, time.Second)
+}
+
+// TestEvictionFailsClosedForPausedWaiter is the AAASM-4811 regression: when a
+// still-paused op is evicted to make room under maxOpControlSlots, its blocked
+// waiter must fail closed with ErrOpControlUnavailable — not wake to a silent
+// allow. The evicted slot is deleted from the map, so no resume signal can ever
+// reach that waiter again; yielding nil (allow) would let a paused op run just
+// because the gateway pushed enough distinct opIDs to evict it.
+func TestEvictionFailsClosedForPausedWaiter(t *testing.T) {
+	sub, stream, _ := newSubscriber(t)
+
+	// Pause the op we will later force out of the slot map.
+	stream.push(msg("op-evict", pb.OpControlSignal_OP_CONTROL_SIGNAL_PAUSE, 0))
+	waitFor(t, func() bool { return sub.IsPaused("op-evict") }, time.Second)
+
+	// A waiter blocks on the paused op.
+	done := make(chan error, 1)
+	go func() {
+		done <- sub.WaitForOp(context.Background(), "op-evict")
+	}()
+
+	// Confirm it is genuinely blocked (and thus registered as a waiter) before
+	// eviction flushes the slot.
+	select {
+	case err := <-done:
+		t.Fatalf("WaitForOp returned %v while op was paused; want it to block", err)
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	// Push maxOpControlSlots distinct fresh ops. "op-evict" holds the oldest
+	// slot; the maxOpControlSlots-th brand-new op trips the cap and evicts the
+	// oldest entry — op-evict — while it is still paused.
+	for i := 0; i < maxOpControlSlots; i++ {
+		stream.push(msg(fmt.Sprintf("filler-%d", i), pb.OpControlSignal_OP_CONTROL_SIGNAL_RESUME, uint64(i+1)))
+	}
+
+	select {
+	case err := <-done:
+		if !errors.Is(err, ErrOpControlUnavailable) {
+			t.Fatalf("WaitForOp returned %v; want ErrOpControlUnavailable on eviction while paused (must not yield an allow)", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("WaitForOp did not wake after the paused op was evicted")
+	}
 }
 
 // TestDispatch_UnspecifiedSignalIsIgnored covers the default arm of the
