@@ -2,6 +2,18 @@ package ffi
 
 import "unsafe"
 
+// AAASM-4794: this file ships a test-double binding in the regular (non-test)
+// build. That looks fixable with a `_test.go` suffix or a `//go:build test`
+// constraint, but neither is safe here: assembly/*_test.go (a different
+// package) imports NewCapturingClient* and friends, and Go only exposes a
+// package's _test.go-gated symbols to that package's own test binary, not to
+// importers. Gating this file breaks `go vet ./...`/`go test ./...` for the
+// assembly package (12 undefined-symbol errors, verified) unless every
+// go test/vet invocation in the Makefile and CI also adds `-tags test` —
+// which nothing here does today. Doing that is out of scope for this fix;
+// left as a note rather than a change that trades a hygiene nit for a
+// broken build.
+//
 // Registration records the arguments of a single capturingBinding.register call
 // so boot tests can assert the agent was registered via the native aa_register
 // path (AAASM-3404) rather than only via a SendEvent("register", ...) audit
