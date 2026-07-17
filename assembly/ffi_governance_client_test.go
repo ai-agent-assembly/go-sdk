@@ -44,7 +44,6 @@ func TestFFIGovernanceClientCheckMapsDecisions(t *testing.T) {
 	}{
 		{name: "deny", decision: ffi.DecisionDeny, reason: "blocked", wantDenied: true, wantReason: "blocked"},
 		{name: "allow", decision: ffi.DecisionAllow},
-		{name: "redact", decision: ffi.DecisionRedact},
 		{name: "pending", decision: ffi.DecisionPending, reason: "needs approval", wantPending: true, wantReason: "needs approval"},
 	}
 
@@ -107,6 +106,43 @@ func TestWrappedToolUnspecifiedFailsClosedByDefault(t *testing.T) {
 	}
 	if inner.calls != 0 {
 		t.Fatalf("inner tool was called %d times, want 0 (UNSPECIFIED must block execution)", inner.calls)
+	}
+}
+
+// REDACT means "allow, but with the policy's sensitive fields redacted". The
+// native ABI carries no redacted content, so the SDK cannot honour it: Check
+// must surface an error rather than fold REDACT onto a plain allow, otherwise
+// the tool runs with the unredacted args the policy wanted scrubbed (AAASM-4788).
+func TestFFIGovernanceClientCheckErrorsOnRedactDecision(t *testing.T) {
+	t.Parallel()
+
+	dec, err := newFFIGovernanceClient(&fakeQuerier{decision: ffi.DecisionRedact, reason: "scrub ssn"}).Check(
+		context.Background(), CheckRequest{ToolName: "web_search", AgentID: "agent-1"})
+	if err == nil {
+		t.Fatalf("expected REDACT verdict to surface an error, got decision %+v", dec)
+	}
+	if dec.Denied || dec.Pending {
+		t.Fatalf("expected the returned decision to be the non-committal zero value, got %+v", dec)
+	}
+}
+
+// REDACT round-trip: a runtime that returns REDACT blocks the tool under the
+// fail-closed enforce default — the inner tool never runs with the unredacted
+// arguments. Previously REDACT folded onto allow and the tool ran unchecked,
+// leaking the payload the policy wanted scrubbed (AAASM-4788).
+func TestWrappedToolRedactFailsClosedByDefault(t *testing.T) {
+	t.Parallel()
+
+	inner := &countingTool{name: "web_search", result: "leaked"}
+	client := newFFIGovernanceClient(&fakeQuerier{decision: ffi.DecisionRedact})
+	wrapped := newAssemblyTool(inner, client, defaultRuntimeOptions())
+
+	_, err := wrapped.Call(context.Background(), `{"ssn":"123-45-6789"}`)
+	if err == nil {
+		t.Fatal("expected fail-closed default to deny the tool on a REDACT verdict the SDK cannot honour")
+	}
+	if inner.calls != 0 {
+		t.Fatalf("inner tool was called %d times, want 0 (REDACT must not run the tool with unredacted args)", inner.calls)
 	}
 }
 
