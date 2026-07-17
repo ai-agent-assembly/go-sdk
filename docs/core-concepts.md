@@ -281,7 +281,8 @@ Two design points worth knowing:
 - **Failure mode is configurable** via `WithFailClosed` (see
   [Modes and enforcement](#modes-and-enforcement)).
 
-The single-tool path (`AssemblyTool` + `NewAssemblyTool`) is exported for the
-rare case where you need to wrap one tool in isolation — for example, inside
-another framework's registry that reaches in one tool at a time. For everything
-else, prefer `WrapTools`.
+`AssemblyTool` (the concrete type `WrapTools` returns behind the `Tool`
+interface) has no exported constructor — there is no single-tool path separate
+from `WrapTools`. For the rare case of wrapping one tool in isolation (for
+example, inside another framework's registry that reaches in one tool at a
+time), call `WrapTools` with a one-element slice and take `wrapped[0]`.

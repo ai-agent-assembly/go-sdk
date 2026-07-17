@@ -73,7 +73,7 @@ func TestFailOpenGovernanceLogDoesNotLeakAPIKey(t *testing.T) {
 	opts.enforcementMode = EnforcementModeObserve
 	opts.failClosed = false
 
-	wrapped := NewAssemblyTool(redactTool{}, redactStubClient{}, opts)
+	wrapped := newAssemblyTool(redactTool{}, redactStubClient{}, opts)
 
 	// Call must succeed (fail-open) and emit the "allowing tool call" warning.
 	if _, err := wrapped.Call(context.Background(), "query"); err != nil {

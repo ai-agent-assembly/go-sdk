@@ -133,15 +133,13 @@ func main() {
 
 ## Wrapping a single tool
 
-For the occasional case where a framework hands you one tool at a time, the
-single-tool path is exported too:
+There is no separate single-tool constructor — `WrapTools` is the only
+entry point. For the occasional case where a framework hands you one tool at a
+time, call `WrapTools` with a one-element slice and take the first result:
 
 ```go
-wrapped := assembly.NewAssemblyTool(innerTool, client, /* runtime opts */)
+wrapped := assembly.WrapTools([]assembly.Tool{innerTool}, client)[0]
 ```
-
-For everything else, prefer `WrapTools` — it applies your options once and wraps
-the whole slice.
 
 ## Next
 

@@ -22,10 +22,10 @@ type AssemblyTool struct { //nolint:revive // Keep API name aligned with AAASM-6
 	opControl OpController
 }
 
-// NewAssemblyTool constructs a governance wrapper around a tool. When opts
+// newAssemblyTool constructs a governance wrapper around a tool. When opts
 // carries an op-control subscriber (via [WithOpControl]), the wrapper consults
 // the gateway's live kill switch before each tool call (AAASM-3501).
-func NewAssemblyTool(inner Tool, client GovernanceClient, opts runtimeOptions) *AssemblyTool {
+func newAssemblyTool(inner Tool, client GovernanceClient, opts runtimeOptions) *AssemblyTool {
 	return &AssemblyTool{
 		inner:     inner,
 		client:    client,

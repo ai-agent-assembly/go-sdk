@@ -9,7 +9,7 @@ import (
 )
 
 func TestAssemblyToolNilInner(t *testing.T) {
-	wrapped := NewAssemblyTool(nil, nil, defaultRuntimeOptions())
+	wrapped := newAssemblyTool(nil, nil, defaultRuntimeOptions())
 
 	if wrapped.Name() != "" {
 		t.Fatalf("expected empty name, got %q", wrapped.Name())
@@ -29,7 +29,7 @@ func TestAssemblyToolFailClosedOnCheckError(t *testing.T) {
 	opts := defaultRuntimeOptions()
 	opts.failClosed = true
 
-	wrapped := NewAssemblyTool(coverageTool{name: "calculator", result: "42"}, client, opts)
+	wrapped := newAssemblyTool(coverageTool{name: "calculator", result: "42"}, client, opts)
 	_, err := wrapped.Call(context.Background(), "6*7")
 	if err == nil {
 		t.Fatal("expected error when failClosed is true")
@@ -44,7 +44,7 @@ func TestAssemblyToolFailOpenOnCheckError(t *testing.T) {
 	opts := defaultRuntimeOptions()
 	opts.failClosed = false
 
-	wrapped := NewAssemblyTool(coverageTool{name: "calculator", result: "42"}, client, opts)
+	wrapped := newAssemblyTool(coverageTool{name: "calculator", result: "42"}, client, opts)
 	result, err := wrapped.Call(context.Background(), "6*7")
 	if err != nil {
 		t.Fatalf("expected fail-open behavior, got error %v", err)
@@ -59,7 +59,7 @@ func TestAssemblyToolPendingWaitError(t *testing.T) {
 		checkDecision: Decision{Pending: true},
 		waitErr:       errors.New("wait timeout"),
 	}
-	wrapped := NewAssemblyTool(coverageTool{name: "calculator", result: "42"}, client, defaultRuntimeOptions())
+	wrapped := newAssemblyTool(coverageTool{name: "calculator", result: "42"}, client, defaultRuntimeOptions())
 
 	_, err := wrapped.Call(context.Background(), "6*7")
 	if err == nil {
@@ -75,7 +75,7 @@ func TestAssemblyToolPendingDenied(t *testing.T) {
 		checkDecision: Decision{Pending: true},
 		waitDecision:  Decision{Denied: true, Reason: "requires approval"},
 	}
-	wrapped := NewAssemblyTool(coverageTool{name: "web_search", result: "unused"}, client, defaultRuntimeOptions())
+	wrapped := newAssemblyTool(coverageTool{name: "web_search", result: "unused"}, client, defaultRuntimeOptions())
 
 	_, err := wrapped.Call(context.Background(), "query")
 	var violation *PolicyViolationError
@@ -90,7 +90,7 @@ func TestAssemblyToolPendingDenied(t *testing.T) {
 func TestAssemblyToolRecordResultCapturesErrorString(t *testing.T) {
 	recorded := make(chan RecordRequest, 1)
 	client := &coverageGovernanceClient{recordRequests: recorded}
-	wrapped := NewAssemblyTool(
+	wrapped := newAssemblyTool(
 		coverageTool{name: "calculator", callErr: errors.New("call failed")},
 		client,
 		defaultRuntimeOptions(),

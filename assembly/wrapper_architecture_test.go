@@ -30,7 +30,7 @@ func TestAssemblyToolPassthrough(t *testing.T) {
 	inner := stubTool{name: "calculator", description: "basic calculator", result: "42"}
 	opts := defaultRuntimeOptions()
 	opts.enforcementMode = EnforcementModeObserve
-	wrapped := NewAssemblyTool(inner, nil, opts)
+	wrapped := newAssemblyTool(inner, nil, opts)
 
 	if wrapped.Name() != inner.name {
 		t.Fatalf("expected name %q, got %q", inner.name, wrapped.Name())
@@ -56,7 +56,7 @@ func TestAssemblyToolDenyDecision(t *testing.T) {
 	client := &stubGovernanceClient{
 		checkDecision: Decision{Denied: true, Reason: "blocked"},
 	}
-	wrapped := NewAssemblyTool(stubTool{name: "web_search", result: "unused"}, client, defaultRuntimeOptions())
+	wrapped := newAssemblyTool(stubTool{name: "web_search", result: "unused"}, client, defaultRuntimeOptions())
 
 	_, err := wrapped.Call(context.Background(), "query")
 	var violation *PolicyViolationError
@@ -75,7 +75,7 @@ func TestAssemblyToolPendingDecision(t *testing.T) {
 		checkDecision: Decision{Pending: true},
 		waitDecision:  Decision{Denied: false},
 	}
-	wrapped := NewAssemblyTool(stubTool{name: "calculator", result: "42"}, client, defaultRuntimeOptions())
+	wrapped := newAssemblyTool(stubTool{name: "calculator", result: "42"}, client, defaultRuntimeOptions())
 
 	result, err := wrapped.Call(context.Background(), "6*7")
 	if err != nil {
@@ -93,7 +93,7 @@ func TestAssemblyToolPropagatesContextMetadataToGovernanceRequests(t *testing.T)
 		recordDone:    make(chan struct{}, 1),
 	}
 
-	wrapped := NewAssemblyTool(stubTool{name: "calculator", result: "42"}, client, defaultRuntimeOptions())
+	wrapped := newAssemblyTool(stubTool{name: "calculator", result: "42"}, client, defaultRuntimeOptions())
 	ctx := WithAgentID(context.Background(), "agent-1")
 	ctx = WithTraceID(ctx, "trace-1")
 
