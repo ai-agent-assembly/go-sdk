@@ -64,6 +64,17 @@ func (a *Assembly) boot(ctx context.Context) error {
 		a.managedSidecar = sc
 	}
 
+	// stopManagedSidecar releases the subprocess started above (if any) on a
+	// boot failure past this point. Without it, an error returned here
+	// propagates out of Init, which discards the *Assembly — and with it the
+	// only handle able to Stop() the managed process — leaking it (AAASM-4789).
+	stopManagedSidecar := func() {
+		if a.managedSidecar != nil {
+			_ = a.managedSidecar.Stop()
+			a.managedSidecar = nil
+		}
+	}
+
 	if a.opts.sidecarAddress != "" && a.ffiClient != nil {
 		// Forward the agent id (signed into the handshake, AAASM-3587) and the
 		// Go-module SDK version (Version) so the installed package version — not
@@ -74,12 +85,17 @@ func (a *Assembly) boot(ctx context.Context) error {
 			// native aa_query_policy primitive so a DENY blocks a tool call.
 			a.governance = newFFIGovernanceClient(a.ffiClient)
 			a.registerAgent()
-			return a.ffiClient.SendEvent("register", buildRegistrationEvent(a.opts))
+			if err := a.ffiClient.SendEvent("register", buildRegistrationEvent(a.opts)); err != nil {
+				stopManagedSidecar()
+				return err
+			}
+			return nil
 		}
 	}
 
 	sidecar, err := a.sidecarConnector(ctx, a.opts.sidecarAddress)
 	if err != nil {
+		stopManagedSidecar()
 		return err
 	}
 
