@@ -68,7 +68,12 @@ func (c *ffiGovernanceClient) Check(ctx context.Context, request CheckRequest) (
 	}
 
 	if c.querier == nil {
-		return Decision{}, nil
+		// No querier means there is no runtime to render a verdict. Returning a
+		// plain allow here (the previous behaviour) would silently pass every tool
+		// call unchecked — the exact fail-open this client exists to prevent.
+		// Surface an error so the tool wrapper applies its posture (deny under the
+		// fail-closed enforce default) rather than allowing (AAASM-4811).
+		return Decision{}, fmt.Errorf("assembly: no policy querier configured; cannot render a verdict (fail-closed)")
 	}
 
 	decision, reason, err := c.querier.QueryPolicy(

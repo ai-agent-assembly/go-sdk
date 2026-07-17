@@ -90,9 +90,16 @@ func WithFailClosed(failClosed bool) Option {
 	}
 }
 
-// WithTimeout sets the gateway check timeout. If not set, the default
-// timeout is 500ms. The timeout is applied only when the caller's context
-// does not already carry a deadline.
+// WithTimeout sets the gateway check timeout (default 500ms), applied only
+// when the caller's context does not already carry a deadline.
+//
+// Scope: this bounds only the HTTP/gRPC [GatewayClient] transport path. It does
+// NOT bound the default production check path, which runs through the native
+// FFI client (see ffiGovernanceClient) — the native aa_query_policy primitive is
+// synchronous and cannot be interrupted once started, so no timeout can cap it
+// (an already-cancelled context is honoured before the call, but a call in
+// flight runs to completion). Don't rely on this option to deadline-enforce an
+// FFI-routed check (AAASM-4811).
 func WithTimeout(timeout time.Duration) Option {
 	return func(opts *runtimeOptions) {
 		opts.timeout = timeout
