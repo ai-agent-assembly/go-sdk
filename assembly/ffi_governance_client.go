@@ -25,7 +25,16 @@ type policyQuerier interface {
 // contract:
 //
 //	deny                          -> Decision{Denied: true, Reason}
-//	allow / redact                -> Decision{}
+//	allow                         -> Decision{}
+//	redact                        -> error (fail-closed under enforce): the native
+//	                                 aa_query_policy ABI returns only
+//	                                 (decision, reason) and carries no redacted
+//	                                 content, so the SDK cannot honour the
+//	                                 redaction. Folding it onto a plain allow would
+//	                                 run the tool with the unredacted args the
+//	                                 policy wanted scrubbed (AAASM-4788); full
+//	                                 field-level redaction needs a native-shim ABI
+//	                                 change (AAASM-1920)
 //	unspecified                   -> error (fail-closed under enforce): the
 //	                                 proto3 zero value is not an authoritative
 //	                                 allow (AAASM-4166)
@@ -77,9 +86,23 @@ func (c *ffiGovernanceClient) Check(ctx context.Context, request CheckRequest) (
 		return Decision{Denied: true, Reason: reason}, nil
 	case ffi.DecisionPending:
 		return Decision{Pending: true, Reason: reason}, nil
-	case ffi.DecisionAllow, ffi.DecisionRedact:
-		// Allow and redact proceed.
+	case ffi.DecisionAllow:
+		// A plain allow proceeds.
 		return Decision{}, nil
+	case ffi.DecisionRedact:
+		// REDACT means "allow, but with the policy's sensitive fields redacted".
+		// The native aa_query_policy ABI hands back only (decision, reason) — it
+		// carries no redacted args/fields — so this SDK has nothing to substitute
+		// and cannot honour the redaction. Folding REDACT onto a plain allow (the
+		// previous behaviour) ran the tool with the *unredacted* arguments the
+		// policy explicitly wanted scrubbed, silently downgrading REDACT to full
+		// ALLOW (AAASM-4788). Surface an error instead so the tool wrapper applies
+		// its posture: deny under the fail-closed enforce default, advisory-allow
+		// (logged) only under observe/disabled or when fail-open was opted into —
+		// exactly as it handles a non-authoritative UNSPECIFIED verdict. Honouring
+		// the redaction properly needs a native-shim ABI change to return the
+		// redacted payload (tracked with AAASM-1920).
+		return Decision{}, fmt.Errorf("assembly: REDACT verdict cannot be honoured client-side: the native shim provides no redacted content (AAASM-4788; needs AAASM-1920)")
 	case ffi.DecisionUnspecified:
 		// The proto3 zero value UNSPECIFIED means "no decision rendered" — a
 		// non-authoritative verdict. It must NOT proceed as a silent allow: surface

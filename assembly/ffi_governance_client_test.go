@@ -44,7 +44,6 @@ func TestFFIGovernanceClientCheckMapsDecisions(t *testing.T) {
 	}{
 		{name: "deny", decision: ffi.DecisionDeny, reason: "blocked", wantDenied: true, wantReason: "blocked"},
 		{name: "allow", decision: ffi.DecisionAllow},
-		{name: "redact", decision: ffi.DecisionRedact},
 		{name: "pending", decision: ffi.DecisionPending, reason: "needs approval", wantPending: true, wantReason: "needs approval"},
 	}
 
