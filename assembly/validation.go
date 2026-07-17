@@ -2,9 +2,21 @@ package assembly
 
 import "strings"
 
-func validateRuntimeOptions(opts runtimeOptions) error {
+// validateOptionErrors surfaces the first error an Option collected while
+// applying (a malformed WithEnforcementMode / over-long WithDelegationReason).
+// It is deliberately free of any dependency on resolved config so boot can call
+// it before any side-effecting resolution — a malformed option must fail fast
+// without spawning an aasm subprocess or probing the network (AAASM-4811).
+func validateOptionErrors(opts runtimeOptions) error {
 	if len(opts.errs) > 0 {
 		return opts.errs[0]
+	}
+	return nil
+}
+
+func validateRuntimeOptions(opts runtimeOptions) error {
+	if err := validateOptionErrors(opts); err != nil {
+		return err
 	}
 
 	if strings.TrimSpace(opts.gatewayURL) == "" {

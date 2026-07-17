@@ -41,6 +41,16 @@ func newAssembly(options ...Option) *Assembly {
 
 // boot boots the runtime and prepares governance integrations.
 func (a *Assembly) boot(ctx context.Context) error {
+	// Surface malformed-option errors (a bad WithEnforcementMode / over-long
+	// WithDelegationReason) BEFORE any side-effecting resolution. resolveGatewayURL
+	// can spawn an aasm subprocess and probe the network; a caller who passed a
+	// malformed option must fail fast with no such side effects (AAASM-4811). The
+	// gateway-URL presence check stays after resolution below, since resolution is
+	// what fills an empty URL from env/config/local-default.
+	if err := validateOptionErrors(a.opts); err != nil {
+		return err
+	}
+
 	resolvedURL, err := resolveGatewayURL(ctx, a.opts.gatewayURL)
 	if err != nil {
 		return err
