@@ -33,10 +33,11 @@ type policyQuerier interface {
 //	                                 calls WaitForApproval, which denies (no
 //	                                 approval channel exists — AAASM-3920)
 //
-// The native query is fail-open: an unreachable, slow, or closed runtime
-// returns allow with a nil error, so Check never blocks the agent on a missing
-// runtime. A genuine hard error (e.g. no native binding compiled in) is returned
-// to the caller; the tool wrapper then honours WithFailClosed.
+// The native query is fail-closed: an unreachable, slow, or closed runtime
+// surfaces a non-OK status, which QueryPolicy returns as an error rather than a
+// silent allow (see internal/ffi/query_policy.go and internal/ffi/status.go).
+// That error is returned to the caller; the tool wrapper then honours
+// WithFailClosed to decide whether the call proceeds or is denied.
 type ffiGovernanceClient struct {
 	querier policyQuerier
 }
