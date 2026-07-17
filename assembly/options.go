@@ -66,8 +66,11 @@ func WithControlPlaneURL(controlPlaneURL string) Option {
 	}
 }
 
-// WithAPIKey sets the governance API key. This option is required;
-// [Init] returns [ErrInvalidAPIKey] if it is not set.
+// WithAPIKey sets the governance API key. No consumer wires this value into
+// the transport today — local mode is unauth-accepting (Epic 17) and
+// validateRuntimeOptions does not require it — but the option is filed now so
+// the config shape stays consistent with the Python and Node SDKs and is
+// ready for the first authenticated caller.
 func WithAPIKey(apiKey string) Option {
 	return func(opts *runtimeOptions) {
 		opts.apiKey = apiKey

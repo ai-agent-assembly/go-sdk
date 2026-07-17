@@ -19,8 +19,6 @@ const (
 var (
 	// ErrInvalidGateway indicates the Gateway configuration is missing.
 	ErrInvalidGateway = errors.New("assembly: gateway is required")
-	// ErrInvalidAPIKey indicates the API key configuration is missing.
-	ErrInvalidAPIKey = errors.New("assembly: api key is required")
 	// ErrInvalidControlPlane indicates the control-plane URL is missing.
 	ErrInvalidControlPlane = errors.New("assembly: control plane url is required")
 )
