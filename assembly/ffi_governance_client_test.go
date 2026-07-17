@@ -189,16 +189,19 @@ func TestFFIGovernanceClientCheckPropagatesQueryError(t *testing.T) {
 	}
 }
 
-func TestFFIGovernanceClientNilQuerierProceeds(t *testing.T) {
+// A nil querier means there is no runtime to render a verdict. It must fail
+// closed with an error — not return a plain allow — so the tool wrapper denies
+// under the enforce default rather than passing the call unchecked (AAASM-4811).
+func TestFFIGovernanceClientNilQuerierFailsClosed(t *testing.T) {
 	t.Parallel()
 
 	client := newFFIGovernanceClient(nil)
 	decision, err := client.Check(context.Background(), CheckRequest{ToolName: "web_search"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	if err == nil {
+		t.Fatalf("expected an error for a nil querier (fail-closed), got decision %+v", decision)
 	}
 	if decision.Denied || decision.Pending {
-		t.Fatalf("expected empty decision, got %+v", decision)
+		t.Fatalf("expected an empty decision alongside the error, got %+v", decision)
 	}
 }
 
