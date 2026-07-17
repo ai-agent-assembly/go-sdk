@@ -53,6 +53,12 @@ type OpControlClient interface {
 type opControlState struct {
 	paused     bool
 	terminated bool
+	// evicted is set when the slot is dropped from the map to make room under
+	// maxOpControlSlots (see slot). A waiter woken on an evicted-but-still-paused
+	// op can no longer be resumed — its resume signal would land in a fresh slot,
+	// not this one — so it must fail closed exactly like a dead stream, never
+	// yield an allow (AAASM-4294 / AAASM-4019).
+	evicted bool
 	// waiters are unbuffered channels closed when the op becomes runnable
 	// (resume) or terminated (terminate). Each WaitForOp call registers a
 	// fresh waiter so multiple goroutines can await the same op_id.
@@ -182,8 +188,11 @@ func (s *OpControlSubscriber) dispatch(msg *pb.OpControlMessage) {
 // When the map is already at maxOpControlSlots, the oldest entry (by
 // insertion order) is evicted first — a defense-in-depth measure against a
 // compromised gateway pushing endless unique opIDs (AAASM-4294). Any waiters
-// on the evicted slot are woken so they don't block forever on state that is
-// no longer tracked.
+// on the evicted slot are woken; an evicted-but-still-paused op is marked so
+// its waiter fails closed with ErrOpControlUnavailable rather than waking to a
+// silent allow — the slot is gone, so no resume signal can ever reach it, the
+// same fail-closed contract as a dead stream (AAASM-4019). A terminated slot
+// keeps its OpTerminatedError verdict on eviction.
 func (s *OpControlSubscriber) slot(opID string) *opControlState {
 	if state, ok := s.ops[opID]; ok {
 		return state
@@ -192,6 +201,7 @@ func (s *OpControlSubscriber) slot(opID string) *opControlState {
 		oldest := s.opsOrder[0]
 		s.opsOrder = s.opsOrder[1:]
 		if evicted, ok := s.ops[oldest]; ok {
+			evicted.evicted = true
 			s.flushWaiters(evicted)
 			delete(s.ops, oldest)
 		}
@@ -268,14 +278,17 @@ func (s *OpControlSubscriber) WaitForOp(ctx context.Context, opID string) error 
 		terminated := state.terminated
 		stillPaused := state.paused
 		alive := s.alive
+		evicted := state.evicted
 		s.mu.Unlock()
 		if terminated {
 			return &OpTerminatedError{OpID: opID}
 		}
-		if stillPaused && !alive {
-			// Woken by the stream dying (markStreamDead), not by a resume: the
-			// op is still paused and can no longer be resumed. Fail closed
-			// rather than proceed (AAASM-4019).
+		if stillPaused && (!alive || evicted) {
+			// Woken while still paused but not by a resume — either the stream
+			// died (markStreamDead) or the slot was evicted under
+			// maxOpControlSlots (slot). Either way the pause can no longer be
+			// lifted for this waiter, so fail closed rather than proceed
+			// (AAASM-4019 / AAASM-4294).
 			return ErrOpControlUnavailable
 		}
 		return nil
