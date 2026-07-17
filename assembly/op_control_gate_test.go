@@ -115,7 +115,7 @@ func TestTerminatedOpDeniesBeforeGatewayCheck(t *testing.T) {
 	client := &checkRecordingClient{decision: Decision{}}
 	opts := defaultRuntimeOptions()
 	opts.opControl = opControl
-	wrapped := NewAssemblyTool(stubTool{name: "web_search", result: "unused"}, client, opts)
+	wrapped := newAssemblyTool(stubTool{name: "web_search", result: "unused"}, client, opts)
 
 	ctx := WithOpID(WithTraceID(context.Background(), "trace-1"), "trace-1:span-1")
 	_, err := wrapped.Call(ctx, "query")
@@ -144,7 +144,7 @@ func TestPausedOpBlocksThenProceedsOnResume(t *testing.T) {
 	client := &checkRecordingClient{decision: Decision{}}
 	opts := defaultRuntimeOptions()
 	opts.opControl = opControl
-	wrapped := NewAssemblyTool(stubTool{name: "calculator", result: "42"}, client, opts)
+	wrapped := newAssemblyTool(stubTool{name: "calculator", result: "42"}, client, opts)
 
 	ctx := WithOpID(WithTraceID(context.Background(), "trace-2"), "trace-2:span-2")
 
@@ -194,7 +194,7 @@ func TestNoTraceIdentitySkipsOpControl(t *testing.T) {
 	client := &checkRecordingClient{decision: Decision{}}
 	opts := defaultRuntimeOptions()
 	opts.opControl = opControl
-	wrapped := NewAssemblyTool(stubTool{name: "calculator", result: "42"}, client, opts)
+	wrapped := newAssemblyTool(stubTool{name: "calculator", result: "42"}, client, opts)
 
 	// No trace ID and no explicit op ID — there is no tracked op to address.
 	result, err := wrapped.Call(context.Background(), "6*7")
@@ -244,7 +244,7 @@ func TestOpControlNotConsultedWhenUnwired(t *testing.T) {
 
 	client := &checkRecordingClient{decision: Decision{}}
 	// No op control on opts — the default wrapper must behave exactly as before.
-	wrapped := NewAssemblyTool(stubTool{name: "t", result: "ok"}, client, defaultRuntimeOptions())
+	wrapped := newAssemblyTool(stubTool{name: "t", result: "ok"}, client, defaultRuntimeOptions())
 
 	ctx := WithTraceID(context.Background(), "trace-3")
 	result, err := wrapped.Call(ctx, "i")

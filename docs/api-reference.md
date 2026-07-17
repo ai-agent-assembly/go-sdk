@@ -51,16 +51,14 @@ func WrapTools(toolList []Tool, client GovernanceClient, options ...Option) []To
 governed: a policy `Check` runs before `Call`, a `RecordResult` after. Pass
 `nil` for `client` to get a passthrough wrapper.
 
-Single-tool path (rarely needed directly):
-
 ```go
 type AssemblyTool struct{ /* unexported */ }
-
-func NewAssemblyTool(inner Tool, client GovernanceClient, opts runtimeOptions) *AssemblyTool
 ```
 
-> `runtimeOptions` is unexported; you configure it through the `With*` options
-> passed to `WrapTools` / `Init`, not by constructing it directly.
+`AssemblyTool` is the concrete governed-tool type `WrapTools` returns behind
+the `Tool` interface; it has no exported constructor. There is no single-tool
+path separate from `WrapTools` — to wrap one tool, call `WrapTools` with a
+one-element slice and take the first result.
 
 ## The governance client contract
 

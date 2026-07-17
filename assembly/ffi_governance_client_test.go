@@ -99,7 +99,7 @@ func TestWrappedToolUnspecifiedFailsClosedByDefault(t *testing.T) {
 
 	inner := &countingTool{name: "web_search", result: "leaked"}
 	client := newFFIGovernanceClient(&fakeQuerier{decision: ffi.DecisionUnspecified})
-	wrapped := NewAssemblyTool(inner, client, defaultRuntimeOptions())
+	wrapped := newAssemblyTool(inner, client, defaultRuntimeOptions())
 
 	_, err := wrapped.Call(context.Background(), `{"q":"secret"}`)
 	if err == nil {
@@ -174,7 +174,7 @@ func TestWrappedToolPendingBlocksInnerCall(t *testing.T) {
 
 	inner := &countingTool{name: "web_search", result: "leaked"}
 	client := newFFIGovernanceClient(&fakeQuerier{decision: ffi.DecisionPending, reason: "needs approval"})
-	wrapped := NewAssemblyTool(inner, client, defaultRuntimeOptions())
+	wrapped := newAssemblyTool(inner, client, defaultRuntimeOptions())
 
 	_, err := wrapped.Call(context.Background(), `{"q":"secret"}`)
 
@@ -194,7 +194,7 @@ func TestWrappedToolDenyBlocksInnerCall(t *testing.T) {
 
 	inner := &countingTool{name: "web_search", result: "leaked"}
 	client := newFFIGovernanceClient(&fakeQuerier{decision: ffi.DecisionDeny, reason: "blocked by policy"})
-	wrapped := NewAssemblyTool(inner, client, defaultRuntimeOptions())
+	wrapped := newAssemblyTool(inner, client, defaultRuntimeOptions())
 
 	_, err := wrapped.Call(context.Background(), `{"q":"secret"}`)
 
@@ -221,7 +221,7 @@ func TestWrappedToolFailsClosedByDefaultWhenRuntimeUnreachable(t *testing.T) {
 
 	inner := &countingTool{name: "web_search", result: "ok"}
 	client := newFFIGovernanceClient(&fakeQuerier{err: ffi.ErrRuntimeUnavailable})
-	wrapped := NewAssemblyTool(inner, client, defaultRuntimeOptions())
+	wrapped := newAssemblyTool(inner, client, defaultRuntimeOptions())
 
 	_, err := wrapped.Call(context.Background(), `{"q":"x"}`)
 	if err == nil {
@@ -241,7 +241,7 @@ func TestWrappedToolFailsOpenWhenOptedOut(t *testing.T) {
 	opts := defaultRuntimeOptions()
 	WithFailClosed(false)(&opts)
 	client := newFFIGovernanceClient(&fakeQuerier{err: ffi.ErrRuntimeUnavailable})
-	wrapped := NewAssemblyTool(inner, client, opts)
+	wrapped := newAssemblyTool(inner, client, opts)
 
 	result, err := wrapped.Call(context.Background(), `{"q":"x"}`)
 	if err != nil {
@@ -263,7 +263,7 @@ func TestWrappedToolFailsClosedWhenOptedIn(t *testing.T) {
 	opts := defaultRuntimeOptions()
 	WithFailClosed(true)(&opts)
 	client := newFFIGovernanceClient(&fakeQuerier{err: ffi.ErrRuntimeUnavailable})
-	wrapped := NewAssemblyTool(inner, client, opts)
+	wrapped := newAssemblyTool(inner, client, opts)
 
 	_, err := wrapped.Call(context.Background(), `{"q":"x"}`)
 	if err == nil {

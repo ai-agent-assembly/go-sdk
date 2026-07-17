@@ -29,7 +29,7 @@ func TestUnknownDecisionDeniesUnderEnforce(t *testing.T) {
 	client := newFFIGovernanceClient(&fakeQuerier{decision: 99})
 	opts := defaultRuntimeOptions()
 	opts.enforcementMode = EnforcementModeEnforce
-	wrapped := NewAssemblyTool(inner, client, opts)
+	wrapped := newAssemblyTool(inner, client, opts)
 
 	_, err := wrapped.Call(context.Background(), "query")
 	if err == nil {
@@ -50,7 +50,7 @@ func TestUnknownDecisionAllowsUnderObserve(t *testing.T) {
 	client := newFFIGovernanceClient(&fakeQuerier{decision: 99})
 	opts := defaultRuntimeOptions()
 	opts.enforcementMode = EnforcementModeObserve
-	wrapped := NewAssemblyTool(inner, client, opts)
+	wrapped := newAssemblyTool(inner, client, opts)
 
 	result, err := wrapped.Call(context.Background(), "query")
 	if err != nil {
@@ -127,7 +127,7 @@ func TestOpControlGate_PausedStreamDeathDeniesUnderEnforce(t *testing.T) {
 	opts := defaultRuntimeOptions()
 	opts.enforcementMode = EnforcementModeEnforce
 	opts.opControl = errOpControl{err: ErrOpControlUnavailable}
-	wrapped := NewAssemblyTool(inner, &coverageGovernanceClient{}, opts)
+	wrapped := newAssemblyTool(inner, &coverageGovernanceClient{}, opts)
 
 	ctx := WithOpID(context.Background(), "op-x")
 	_, err := wrapped.Call(ctx, "query")
@@ -149,7 +149,7 @@ func TestOpControlGate_PausedStreamDeathAllowsUnderObserve(t *testing.T) {
 	opts := defaultRuntimeOptions()
 	opts.enforcementMode = EnforcementModeObserve
 	opts.opControl = errOpControl{err: ErrOpControlUnavailable}
-	wrapped := NewAssemblyTool(inner, &coverageGovernanceClient{}, opts)
+	wrapped := newAssemblyTool(inner, &coverageGovernanceClient{}, opts)
 
 	ctx := WithOpID(context.Background(), "op-x")
 	result, err := wrapped.Call(ctx, "query")

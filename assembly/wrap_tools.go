@@ -35,7 +35,7 @@ func WrapTools(toolList []Tool, client GovernanceClient, options ...Option) []To
 
 	wrapped := make([]Tool, len(toolList))
 	for index, tool := range toolList {
-		wrapped[index] = NewAssemblyTool(tool, client, runtimeOpts)
+		wrapped[index] = newAssemblyTool(tool, client, runtimeOpts)
 	}
 
 	return wrapped

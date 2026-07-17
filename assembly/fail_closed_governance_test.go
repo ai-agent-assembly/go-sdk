@@ -29,7 +29,7 @@ func TestNilGovernanceClientDeniesUnderFailClosedEnforce(t *testing.T) {
 	t.Parallel()
 
 	inner := &failClosedTool{name: "web_search", result: "leaked"}
-	wrapped := NewAssemblyTool(inner, nil, defaultRuntimeOptions())
+	wrapped := newAssemblyTool(inner, nil, defaultRuntimeOptions())
 
 	_, err := wrapped.Call(context.Background(), "query")
 	if !errors.Is(err, ErrGovernanceUnavailable) {
@@ -49,7 +49,7 @@ func TestNilGovernanceClientPassesThroughUnderDisabled(t *testing.T) {
 	inner := &failClosedTool{name: "web_search", result: "ok"}
 	opts := defaultRuntimeOptions()
 	opts.enforcementMode = EnforcementModeDisabled
-	wrapped := NewAssemblyTool(inner, nil, opts)
+	wrapped := newAssemblyTool(inner, nil, opts)
 
 	result, err := wrapped.Call(context.Background(), "query")
 	if err != nil {
@@ -68,7 +68,7 @@ func TestNilGovernanceClientPassesThroughWhenFailOpen(t *testing.T) {
 	inner := &failClosedTool{name: "web_search", result: "ok"}
 	opts := defaultRuntimeOptions()
 	WithFailClosed(false)(&opts)
-	wrapped := NewAssemblyTool(inner, nil, opts)
+	wrapped := newAssemblyTool(inner, nil, opts)
 
 	result, err := wrapped.Call(context.Background(), "query")
 	if err != nil {
@@ -88,7 +88,7 @@ func TestCheckErrorDeniesUnderExplicitEnforceMode(t *testing.T) {
 	client := &coverageGovernanceClient{checkErr: errors.New("gateway down")}
 	opts := defaultRuntimeOptions()
 	opts.enforcementMode = EnforcementModeEnforce
-	wrapped := NewAssemblyTool(&failClosedTool{name: "web_search", result: "leaked"}, client, opts)
+	wrapped := newAssemblyTool(&failClosedTool{name: "web_search", result: "leaked"}, client, opts)
 
 	_, err := wrapped.Call(context.Background(), "query")
 	if err == nil {
@@ -106,7 +106,7 @@ func TestCheckErrorAllowsUnderObserveMode(t *testing.T) {
 	inner := &failClosedTool{name: "web_search", result: "ok"}
 	opts := defaultRuntimeOptions()
 	opts.enforcementMode = EnforcementModeObserve
-	wrapped := NewAssemblyTool(inner, client, opts)
+	wrapped := newAssemblyTool(inner, client, opts)
 
 	result, err := wrapped.Call(context.Background(), "query")
 	if err != nil {
