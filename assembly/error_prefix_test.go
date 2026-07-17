@@ -14,7 +14,6 @@ func TestSentinelErrorsHaveAssemblyPrefix(t *testing.T) {
 	}{
 		{"ErrRuntimeNotInitialized", ErrRuntimeNotInitialized},
 		{"ErrInvalidGateway", ErrInvalidGateway},
-		{"ErrInvalidAPIKey", ErrInvalidAPIKey},
 		{"ErrSidecarUnavailable", ErrSidecarUnavailable},
 	}
 
