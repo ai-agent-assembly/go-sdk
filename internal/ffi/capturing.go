@@ -13,7 +13,7 @@ import "unsafe"
 // which nothing here does today. Doing that is out of scope for this fix;
 // left as a note rather than a change that trades a hygiene nit for a
 // broken build.
-//
+
 // Registration records the arguments of a single capturingBinding.register call
 // so boot tests can assert the agent was registered via the native aa_register
 // path (AAASM-3404) rather than only via a SendEvent("register", ...) audit
