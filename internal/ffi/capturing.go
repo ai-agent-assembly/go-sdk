@@ -39,6 +39,9 @@ type capturingBinding struct {
 	// registerStatus is the status code register returns; statusOK by default.
 	// Set it to a failure code to exercise the advisory register-failure path.
 	registerStatus int32
+	// Disconnects counts disconnect calls so a runtime test can assert Close
+	// tore the native FFI session down (AAASM-4832).
+	Disconnects int
 }
 
 func (b *capturingBinding) connect(_, agentID, sdkVersion string) (unsafe.Pointer, int32) {
@@ -54,6 +57,7 @@ func (b *capturingBinding) sendEvent(_ unsafe.Pointer, _, details string) int32 
 }
 
 func (b *capturingBinding) disconnect(_ unsafe.Pointer) int32 {
+	b.Disconnects++
 	return statusOK
 }
 
@@ -82,6 +86,15 @@ func (b *capturingBinding) register(_ unsafe.Pointer, agentID, name, framework, 
 func NewCapturingClient() (*Client, *[]string) {
 	b := &capturingBinding{}
 	return NewClient(b), &b.Events
+}
+
+// NewCapturingClientRecordingDisconnect returns an FFI client whose connect and
+// register succeed and whose binding counts disconnect calls. The returned *int
+// lets a runtime test assert that Close teared down the native FFI session
+// exactly once (AAASM-4832).
+func NewCapturingClientRecordingDisconnect() (*Client, *int) {
+	b := &capturingBinding{}
+	return NewClient(b), &b.Disconnects
 }
 
 // NewCapturingClientWithRegistrations is like NewCapturingClient but also exposes
