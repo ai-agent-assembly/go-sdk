@@ -39,8 +39,12 @@ type capturingBinding struct {
 	// registerStatus is the status code register returns; statusOK by default.
 	// Set it to a failure code to exercise the advisory register-failure path.
 	registerStatus int32
+	// sendEventStatus is the status code sendEvent returns; statusOK by default.
+	// Set it to a failure code to exercise the boot SendEvent-failure path.
+	sendEventStatus int32
 	// Disconnects counts disconnect calls so a runtime test can assert Close
-	// tore the native FFI session down (AAASM-4832).
+	// tore the native FFI session down (AAASM-4832), or that boot did so on the
+	// SendEvent-failure path (AAASM-4843).
 	Disconnects int
 }
 
@@ -53,6 +57,9 @@ func (b *capturingBinding) connect(_, agentID, sdkVersion string) (unsafe.Pointe
 
 func (b *capturingBinding) sendEvent(_ unsafe.Pointer, _, details string) int32 {
 	b.Events = append(b.Events, details)
+	if b.sendEventStatus != statusOK {
+		return b.sendEventStatus
+	}
 	return statusOK
 }
 
@@ -94,6 +101,16 @@ func NewCapturingClient() (*Client, *[]string) {
 // exactly once (AAASM-4832).
 func NewCapturingClientRecordingDisconnect() (*Client, *int) {
 	b := &capturingBinding{}
+	return NewClient(b), &b.Disconnects
+}
+
+// NewCapturingClientFailingSendEvent returns an FFI client whose connect and
+// register succeed but whose SendEvent fails, and whose binding counts disconnect
+// calls. Boot opens the native session (connect ok) and then hits the
+// SendEvent-failure path; the returned *int lets a runtime test assert boot tore
+// the session down (Disconnect) rather than leaking it (AAASM-4843).
+func NewCapturingClientFailingSendEvent() (*Client, *int) {
+	b := &capturingBinding{sendEventStatus: statusIPCError}
 	return NewClient(b), &b.Disconnects
 }
 

@@ -93,6 +93,21 @@ func (a *Assembly) boot(ctx context.Context) error {
 		}
 	}
 
+	// disconnectFFI tears down the native FFI session opened below on any boot
+	// failure that occurs after a successful Connect. Init discards the *Assembly
+	// on error, so Close — the only other Disconnect caller — never runs; without
+	// this the native session, its IPC reader thread, and the registered
+	// credential leak for the process lifetime (AAASM-4843, the connect-succeeded-
+	// then-fail sibling of the AAASM-4789/4832 sidecar/FFI teardown fixes). The
+	// ffiConnected guard keeps it a no-op on the pure-Go fallback, which never
+	// connected — Disconnect on a never-connected client would only error.
+	disconnectFFI := func() {
+		if a.ffiConnected && a.ffiClient != nil {
+			_ = a.ffiClient.Disconnect()
+			a.ffiConnected = false
+		}
+	}
+
 	if a.opts.sidecarAddress != "" && a.ffiClient != nil {
 		// Forward the agent id (signed into the handshake, AAASM-3587) and the
 		// Go-module SDK version (Version) so the installed package version — not
@@ -105,6 +120,7 @@ func (a *Assembly) boot(ctx context.Context) error {
 			a.governance = newFFIGovernanceClient(a.ffiClient)
 			a.registerAgent()
 			if err := a.ffiClient.SendEvent("register", buildRegistrationEvent(a.opts)); err != nil {
+				disconnectFFI()
 				stopManagedSidecar()
 				return err
 			}
