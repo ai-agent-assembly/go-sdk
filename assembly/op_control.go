@@ -185,31 +185,55 @@ func (s *OpControlSubscriber) dispatch(msg *pb.OpControlMessage) {
 
 // slot lazily creates a state slot for opID. Caller must hold s.mu.
 //
-// When the map is already at maxOpControlSlots, the oldest entry (by
-// insertion order) is evicted first — a defense-in-depth measure against a
-// compromised gateway pushing endless unique opIDs (AAASM-4294). Any waiters
-// on the evicted slot are woken; an evicted-but-still-paused op is marked so
-// its waiter fails closed with ErrOpControlUnavailable rather than waking to a
-// silent allow — the slot is gone, so no resume signal can ever reach it, the
-// same fail-closed contract as a dead stream (AAASM-4019). A terminated slot
-// keeps its OpTerminatedError verdict on eviction.
+// When the map is already at maxOpControlSlots, the oldest NON-terminated entry
+// is evicted to make room — a defense-in-depth measure against a compromised
+// gateway pushing endless unique opIDs (AAASM-4294). A terminated slot is never
+// chosen: it holds an OpTerminatedError verdict that a later WaitForOp for the
+// same opID must still observe, so evicting it would let a fast-fail-terminated
+// op resume into a fresh, non-terminated slot and proceed (AAASM-4832, the
+// sibling of the AAASM-4811 paused-eviction fail-closed fix). Any waiters on the
+// evicted slot are woken; an evicted-but-still-paused op is marked so its waiter
+// fails closed with ErrOpControlUnavailable rather than waking to a silent allow
+// — the slot is gone, so no resume signal can ever reach it, the same fail-closed
+// contract as a dead stream (AAASM-4019).
 func (s *OpControlSubscriber) slot(opID string) *opControlState {
 	if state, ok := s.ops[opID]; ok {
 		return state
 	}
 	if len(s.ops) >= maxOpControlSlots {
-		oldest := s.opsOrder[0]
-		s.opsOrder = s.opsOrder[1:]
-		if evicted, ok := s.ops[oldest]; ok {
-			evicted.evicted = true
-			s.flushWaiters(evicted)
-			delete(s.ops, oldest)
-		}
+		s.evictOldestNonTerminated()
 	}
 	state := &opControlState{}
 	s.ops[opID] = state
 	s.opsOrder = append(s.opsOrder, opID)
 	return state
+}
+
+// evictOldestNonTerminated drops the oldest slot that is NOT terminated to make
+// room under maxOpControlSlots. Caller must hold s.mu.
+//
+// Terminated slots are skipped so a fast-fail-terminate verdict is never
+// silently lost: were the oldest slot terminated and evicted, a later WaitForOp
+// for the same opID would create a fresh, non-terminated slot and return nil
+// (proceed) instead of the OpTerminatedError the operator issued (AAASM-4832).
+// This mirrors the AAASM-4811 fix that keeps a paused op's eviction fail-closed:
+// a paused slot may still be evicted here (its blocked waiter fails closed via
+// the evicted flag), but a terminated slot's verdict must survive. If every live
+// slot is terminated, nothing is evicted and the map is allowed to exceed the
+// cap rather than drop a terminate verdict — the cap defends against unbounded
+// unique opIDs, not against retaining genuine kill-switch signals.
+func (s *OpControlSubscriber) evictOldestNonTerminated() {
+	for i, opID := range s.opsOrder {
+		state, ok := s.ops[opID]
+		if !ok || state.terminated {
+			continue
+		}
+		s.opsOrder = append(s.opsOrder[:i], s.opsOrder[i+1:]...)
+		state.evicted = true
+		s.flushWaiters(state)
+		delete(s.ops, opID)
+		return
+	}
 }
 
 // flushWaiters closes every pending waiter channel and clears the slice.
