@@ -2,6 +2,7 @@ package assembly
 
 import (
 	"context"
+	"errors"
 	"log"
 
 	"github.com/ai-agent-assembly/go-sdk/internal/ffi"
@@ -19,6 +20,13 @@ type Assembly struct {
 	ffiClient        *ffi.Client
 	governance       GovernanceClient
 	managedSidecar   *Sidecar
+	// ffiConnected is set once boot successfully opens the native FFI session so
+	// Close knows to tear it down. It gates the Disconnect call: the default
+	// pure-Go build never connects (it falls through to the sidecar connector),
+	// and Disconnect on a never-connected client returns a not-connected error —
+	// so a guarded Close stays a no-op there rather than surfacing a spurious
+	// error (AAASM-4832).
+	ffiConnected bool
 }
 
 var newFFIClient = ffi.NewDefaultClient
@@ -93,6 +101,7 @@ func (a *Assembly) boot(ctx context.Context) error {
 		if err := a.ffiClient.Connect(a.opts.sidecarAddress, a.opts.agentID, Version); err == nil {
 			// The runtime is reachable: route governance checks through the
 			// native aa_query_policy primitive so a DENY blocks a tool call.
+			a.ffiConnected = true
 			a.governance = newFFIGovernanceClient(a.ffiClient)
 			a.registerAgent()
 			if err := a.ffiClient.SendEvent("register", buildRegistrationEvent(a.opts)); err != nil {
@@ -144,14 +153,27 @@ func (a *Assembly) registerAgent() {
 	}
 }
 
-// Close shuts down runtime resources.
+// Close shuts down runtime resources: it tears down the native FFI session (when
+// boot opened one) and stops the managed sidecar subprocess (when one was
+// launched). Both teardowns run even if the first errors; the combined error is
+// returned. Disconnecting the FFI session releases the native session, its IPC
+// reader thread, and the registered credential — without it those leak for the
+// process lifetime (AAASM-4832). The default pure-Go build never connected, so
+// the ffiConnected guard keeps Close a no-op there.
 func (a *Assembly) Close() error {
+	var errs []error
+	if a.ffiConnected && a.ffiClient != nil {
+		if err := a.ffiClient.Disconnect(); err != nil {
+			errs = append(errs, err)
+		}
+		a.ffiConnected = false
+	}
 	if a.managedSidecar != nil {
 		if err := a.managedSidecar.Stop(); err != nil {
-			return err
+			errs = append(errs, err)
 		}
 		a.managedSidecar = nil
 	}
 	a.sidecar = nil
-	return nil
+	return errors.Join(errs...)
 }
