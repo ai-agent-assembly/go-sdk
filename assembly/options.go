@@ -58,8 +58,13 @@ func WithGatewayURL(gatewayURL string) Option {
 // runtime). The field is filed now so the config shape stays consistent with
 // the Python and Node SDKs and is ready for the first HTTP caller.
 //
-// When this option is not set, the URL falls back to the AA_CONTROL_PLANE_URL
-// environment variable at resolution time.
+// The stored value is NOT env-resolved at boot today. Unlike the gateway URL —
+// which boot resolves via resolveGatewayURL, applying the AA_GATEWAY_URL fallback
+// — nothing calls resolveControlPlaneURL, so the AA_CONTROL_PLANE_URL environment
+// variable is not consulted for this field yet; WithControlPlaneURL is the only
+// way to populate it. resolveControlPlaneURL (init.go) is filed alongside for the
+// first HTTP control-plane consumer to wire in, at which point that fallback
+// becomes live (AAASM-4832).
 func WithControlPlaneURL(controlPlaneURL string) Option {
 	return func(opts *runtimeOptions) {
 		opts.controlPlaneURL = controlPlaneURL

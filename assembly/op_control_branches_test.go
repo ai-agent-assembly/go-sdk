@@ -71,6 +71,40 @@ func TestEvictionFailsClosedForPausedWaiter(t *testing.T) {
 	}
 }
 
+// TestEvictionExemptsTerminatedSlot is the AAASM-4832 regression (sibling of the
+// AAASM-4811 paused-eviction fix): a TERMINATED op's verdict must survive
+// eviction pressure. The terminated slot holds the OLDEST position, so the old
+// oldest-first eviction would have dropped it once the cap tripped — after which
+// a later WaitForOp for the same opID would create a fresh, non-terminated slot
+// and return nil (proceed) instead of the OpTerminatedError the operator issued.
+// A terminated slot must be skipped as an eviction victim, so its verdict still
+// survives maxOpControlSlots later distinct opIDs.
+func TestEvictionExemptsTerminatedSlot(t *testing.T) {
+	sub, stream, _ := newSubscriber(t)
+
+	// Terminate the op that holds the oldest slot.
+	stream.push(msg("op-term", pb.OpControlSignal_OP_CONTROL_SIGNAL_TERMINATE, 0))
+	waitFor(t, func() bool { return sub.IsTerminated("op-term") }, time.Second)
+
+	// Push maxOpControlSlots distinct fresh ops to drive the cap past its limit.
+	// op-term holds the oldest slot; the old oldest-first policy would evict it
+	// and lose its terminate verdict. It must be skipped instead.
+	for i := 0; i < maxOpControlSlots; i++ {
+		stream.push(msg(fmt.Sprintf("filler-%d", i), pb.OpControlSignal_OP_CONTROL_SIGNAL_RESUME, uint64(i+1)))
+	}
+
+	// Messages are processed in order, so once this sentinel is paused every
+	// filler before it has been dispatched and the cap has tripped.
+	stream.push(msg("sentinel", pb.OpControlSignal_OP_CONTROL_SIGNAL_PAUSE, uint64(maxOpControlSlots+1)))
+	waitFor(t, func() bool { return sub.IsPaused("sentinel") }, 2*time.Second)
+
+	err := sub.WaitForOp(context.Background(), "op-term")
+	var termErr *OpTerminatedError
+	if !errors.As(err, &termErr) {
+		t.Fatalf("WaitForOp(op-term) = %v; want *OpTerminatedError to survive eviction (AAASM-4832)", err)
+	}
+}
+
 // TestDispatch_UnspecifiedSignalIsIgnored covers the default arm of the
 // dispatch switch: an UNSPECIFIED signal must not pause or terminate the op.
 func TestDispatch_UnspecifiedSignalIsIgnored(t *testing.T) {
