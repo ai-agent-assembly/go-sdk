@@ -105,6 +105,43 @@ func TestEvictionExemptsTerminatedSlot(t *testing.T) {
 	}
 }
 
+// TestEvictionBoundsTerminatedSlotsUnderFlood is the AAASM-4843 regression: a
+// gateway spamming TERMINATE for endless unique op_ids must not grow the slot map
+// without bound. The AAASM-4832 fix exempts terminated slots from eviction, but if
+// EVERY live slot is terminated that exemption would evict nothing and let the map
+// grow forever. Under such flood pressure the oldest terminated verdict is dropped
+// so the map stays hard-bounded at maxOpControlSlots — yet a RECENTLY terminated
+// op's verdict must still survive (only the oldest is sacrificed).
+func TestEvictionBoundsTerminatedSlotsUnderFlood(t *testing.T) {
+	sub, stream, _ := newSubscriber(t)
+
+	const flood = maxOpControlSlots + 512
+	for i := 0; i < flood; i++ {
+		stream.push(msg(fmt.Sprintf("term-%d", i), pb.OpControlSignal_OP_CONTROL_SIGNAL_TERMINATE, uint64(i+1)))
+	}
+
+	// Messages are processed in order, so once the newest op is observed
+	// terminated, every earlier TERMINATE has been dispatched and the cap has
+	// been exercised.
+	newest := fmt.Sprintf("term-%d", flood-1)
+	waitFor(t, func() bool { return sub.IsTerminated(newest) }, 5*time.Second)
+
+	sub.mu.Lock()
+	size := len(sub.ops)
+	sub.mu.Unlock()
+	if size > maxOpControlSlots {
+		t.Fatalf("slot map grew to %d under a TERMINATE flood; want <= %d (must stay bounded)", size, maxOpControlSlots)
+	}
+
+	// The most recently terminated op must still carry its verdict — only the
+	// OLDEST terminated slots are sacrificed to hold the cap.
+	err := sub.WaitForOp(context.Background(), newest)
+	var termErr *OpTerminatedError
+	if !errors.As(err, &termErr) {
+		t.Fatalf("WaitForOp(%s) = %v; want *OpTerminatedError to survive the flood (a recent verdict must not be dropped)", newest, err)
+	}
+}
+
 // TestDispatch_UnspecifiedSignalIsIgnored covers the default arm of the
 // dispatch switch: an UNSPECIFIED signal must not pause or terminate the op.
 func TestDispatch_UnspecifiedSignalIsIgnored(t *testing.T) {
