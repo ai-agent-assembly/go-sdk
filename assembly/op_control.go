@@ -201,7 +201,7 @@ func (s *OpControlSubscriber) slot(opID string) *opControlState {
 		return state
 	}
 	if len(s.ops) >= maxOpControlSlots {
-		s.evictOldestNonTerminated()
+		s.evictOldest()
 	}
 	state := &opControlState{}
 	s.ops[opID] = state
@@ -209,30 +209,55 @@ func (s *OpControlSubscriber) slot(opID string) *opControlState {
 	return state
 }
 
-// evictOldestNonTerminated drops the oldest slot that is NOT terminated to make
-// room under maxOpControlSlots. Caller must hold s.mu.
+// evictOldest drops one slot to make room under maxOpControlSlots so the map
+// stays hard-bounded. Caller must hold s.mu.
 //
-// Terminated slots are skipped so a fast-fail-terminate verdict is never
-// silently lost: were the oldest slot terminated and evicted, a later WaitForOp
-// for the same opID would create a fresh, non-terminated slot and return nil
-// (proceed) instead of the OpTerminatedError the operator issued (AAASM-4832).
-// This mirrors the AAASM-4811 fix that keeps a paused op's eviction fail-closed:
-// a paused slot may still be evicted here (its blocked waiter fails closed via
-// the evicted flag), but a terminated slot's verdict must survive. If every live
-// slot is terminated, nothing is evicted and the map is allowed to exceed the
-// cap rather than drop a terminate verdict — the cap defends against unbounded
-// unique opIDs, not against retaining genuine kill-switch signals.
-func (s *OpControlSubscriber) evictOldestNonTerminated() {
+// It prefers the oldest NON-terminated slot so a fast-fail-terminate verdict is
+// not silently lost: were a terminated slot evicted, a later WaitForOp for the
+// same opID would create a fresh, non-terminated slot and return nil (proceed)
+// instead of the OpTerminatedError the operator issued (AAASM-4832). A paused
+// slot may still be evicted (its blocked waiter fails closed via the evicted
+// flag, AAASM-4811).
+//
+// But if EVERY live slot is terminated, skipping them all would evict nothing
+// and let a gateway spamming TERMINATE for endless unique op_ids grow the map
+// without bound — the cap could never fire. So as a last resort the oldest
+// terminated slot is dropped instead, keeping the map bounded (AAASM-4843). A
+// terminate verdict is thus retained under normal load and sacrificed only under
+// sustained all-terminated attack pressure, and then only the OLDEST one — a
+// recently terminated op still survives.
+func (s *OpControlSubscriber) evictOldest() {
+	fallback := -1
 	for i, opID := range s.opsOrder {
 		state, ok := s.ops[opID]
-		if !ok || state.terminated {
+		if !ok {
 			continue
 		}
-		s.opsOrder = append(s.opsOrder[:i], s.opsOrder[i+1:]...)
+		if state.terminated {
+			if fallback < 0 {
+				fallback = i
+			}
+			continue
+		}
+		s.dropSlotAt(i)
+		return
+	}
+	if fallback >= 0 {
+		s.dropSlotAt(fallback)
+	}
+}
+
+// dropSlotAt removes the slot at index i in opsOrder from both opsOrder and the
+// ops map, marks it evicted, and wakes any waiters so a blocked waiter fails
+// closed rather than blocking forever on state that is no longer tracked. Caller
+// must hold s.mu and guarantee i is a valid opsOrder index.
+func (s *OpControlSubscriber) dropSlotAt(i int) {
+	opID := s.opsOrder[i]
+	s.opsOrder = append(s.opsOrder[:i], s.opsOrder[i+1:]...)
+	if state, ok := s.ops[opID]; ok {
 		state.evicted = true
 		s.flushWaiters(state)
 		delete(s.ops, opID)
-		return
 	}
 }
 
