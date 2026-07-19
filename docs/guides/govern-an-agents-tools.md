@@ -66,9 +66,10 @@ is an `*AssemblyTool` that runs a policy `Check` before `Call` and a
 `RecordResult` after.
 
 - The second argument is your `GovernanceClient` (the thing that talks to the
-  gateway). Pass `nil` to start with a **passthrough** wrapper — the tools run,
-  no gateway calls are made — and wire in a real client when you're ready to
-  enforce.
+  gateway). Under the default fail-closed enforce posture, passing `nil` denies
+  every wrapped call (`ErrGovernanceUnavailable`) rather than running it
+  unchecked — pass `assembly.WithFailClosed(false)` for a true passthrough
+  wrapper (the tools run, no gateway calls) while you wire in a real client.
 - You can pass per-wrap options, e.g. `assembly.WithFailClosed(true)`, to make
   governance failures block the call.
 
