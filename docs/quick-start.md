@@ -133,11 +133,12 @@ type Tool interface {
 governed := assembly.WrapTools(myTools, nil)
 ```
 
-The second argument is the `GovernanceClient` that talks to the gateway.
-Passing `nil` gives you a **passthrough wrapper** — the tools run, but no
-`Check`/`RecordResult` calls are made. That's the simplest starting point and
-what the package's own runnable example uses; wire in a real client when you're
-ready to enforce policy (see
+The second argument is the `GovernanceClient` that talks to the gateway. Under
+the default fail-closed enforce posture, passing `nil` denies every wrapped call
+(`ErrGovernanceUnavailable`) rather than running it unchecked — pass
+`assembly.WithFailClosed(false)` for a true passthrough wrapper (the tools run,
+no `Check`/`RecordResult` calls) while you wire in a real client, ready to
+enforce policy (see
 [Handle allow/deny decisions and errors]({{< relref "/guides/handle-decisions-and-errors" >}})).
 
 Hand `governed` to your agent in place of the originals. From here on, each call
