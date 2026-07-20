@@ -16,7 +16,7 @@ The SDK initialises in a few lines, propagates agent identity through `context.C
 
 ## Project status
 
-`go-sdk` is **pre-release** — see the [releases page](https://github.com/ai-agent-assembly/go-sdk/releases) (or the **release** badge above) for the current published tag. The [`VERSION`](VERSION) file pins the gateway **protocol version** the SDK is built against (currently `0.0.1-rc.6`). The public `assembly` package API may still change between pre-release tags — pin an exact tag in your `go.mod` and review the [release notes](https://github.com/ai-agent-assembly/go-sdk/releases) before upgrading. See [Core-runtime compatibility](docs/compatibility.md) for the version/protocol contract.
+`go-sdk` is **pre-release** — see the [releases page](https://github.com/ai-agent-assembly/go-sdk/releases) (or the **release** badge above) for the current published tag. The [`VERSION`](VERSION) file pins the gateway **protocol version** the SDK is built against (currently <!-- BEGIN GENERATED: protocol-version -->`0.0.1-rc.6`<!-- END GENERATED: protocol-version -->). The public `assembly` package API may still change between pre-release tags — pin an exact tag in your `go.mod` and review the [release notes](https://github.com/ai-agent-assembly/go-sdk/releases) before upgrading. See [Core-runtime compatibility](docs/compatibility.md) for the version/protocol contract.
 
 Anything outside the `assembly/` package (`internal/`, `examples/`) is not part of the public API and may change without notice.
 

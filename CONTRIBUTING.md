@@ -124,6 +124,11 @@ sourced from three authoritative places:
 - The bounded `<!-- BEGIN GENERATED: sdk-metadata --> ... <!-- END GENERATED:
   sdk-metadata -->` block inside `README.md` (surrounding prose is preserved
   byte-for-byte; only the block body is rewritten).
+- The inline `<!-- BEGIN GENERATED: protocol-version --> ... <!-- END GENERATED:
+  protocol-version -->` block inside `README.md`'s "Project status" prose — the
+  protocol-version literal narrated mid-sentence. It is sourced from `VERSION`
+  so the prose can no longer drift from the SoT (ADR 0013 / AAASM-4920); the
+  same `Docs Metadata` gate below fails the build if it goes stale.
 
 ### Add or update a shared value
 
