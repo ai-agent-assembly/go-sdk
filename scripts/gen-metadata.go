@@ -22,11 +22,14 @@
 //     AAASM-4326 replaced the previously hand-maintained literal so the public
 //     API surface can no longer drift from the shared metadata source.
 //
-//  3. README.md — rewrites only the bounded block
-//     <!-- BEGIN GENERATED: sdk-metadata -->
-//     ...
-//     <!-- END GENERATED: sdk-metadata -->
-//     preserving every byte of surrounding hand-written prose.
+//  3. README.md — rewrites two bounded blocks, preserving every byte of the
+//     surrounding hand-written prose:
+//     - <!-- BEGIN GENERATED: sdk-metadata --> ... <!-- END GENERATED: sdk-metadata -->
+//     (the "Metadata at a glance" table), and
+//     - <!-- BEGIN GENERATED: protocol-version --> ... <!-- END GENERATED: protocol-version -->
+//     (the inline protocol-version literal in the "Project status" prose).
+//     AAASM-4920 brought this literal under the generator so the README can
+//     no longer restate — and drift from — the VERSION-file SoT (ADR 0013).
 //
 // The program has zero network access and reads only local repo state.
 //
@@ -280,6 +283,27 @@ func renderReadmeBlock(meta resolvedMetadata) string {
 	return b.String()
 }
 
+// readmeProtocolVersionRE matches the inline protocol-version block embedded in
+// the "Project status" prose. It is a separate, single-line sentinel pair (no
+// surrounding newlines) so the generated literal can sit mid-sentence — the
+// prose narrates the value, this block owns it. Bringing it under the generator
+// closes the ADR 0013 gap where the README restated the VERSION-file literal in
+// hand-maintained prose and could drift from the SoT (AAASM-4920).
+var readmeProtocolVersionRE = regexp.MustCompile(
+	`(?s)<!--\s*BEGIN GENERATED: protocol-version\s*-->.*?<!--\s*END GENERATED: protocol-version\s*-->`,
+)
+
+// renderProtocolVersionBlock renders the inline protocol-version sentinel pair.
+// It carries no DO-NOT-EDIT banner because an inline HTML comment mid-sentence
+// would render as visible prose noise; the sentinel names alone mark it as
+// generated, and CONTRIBUTING.md documents the pipeline.
+func renderProtocolVersionBlock(meta resolvedMetadata) string {
+	return fmt.Sprintf(
+		"<!-- BEGIN GENERATED: protocol-version -->`%s`<!-- END GENERATED: protocol-version -->",
+		meta.ProtocolVersion,
+	)
+}
+
 func rewriteReadmeBlock(repoRoot string, meta resolvedMetadata) error {
 	target := filepath.Join(repoRoot, "README.md")
 	current, err := os.ReadFile(target)
@@ -293,8 +317,15 @@ func rewriteReadmeBlock(repoRoot string, meta resolvedMetadata) error {
 				"`<!-- END GENERATED: sdk-metadata -->` pair to opt in",
 		)
 	}
-	rendered := renderReadmeBlock(meta)
-	updated := readmeBlockRE.ReplaceAllLiteral(current, []byte(rendered))
+	if !readmeProtocolVersionRE.Match(current) {
+		return fmt.Errorf(
+			"README.md is missing the protocol-version generated block; " +
+				"add a `<!-- BEGIN GENERATED: protocol-version -->` / " +
+				"`<!-- END GENERATED: protocol-version -->` pair to opt in",
+		)
+	}
+	updated := readmeBlockRE.ReplaceAllLiteral(current, []byte(renderReadmeBlock(meta)))
+	updated = readmeProtocolVersionRE.ReplaceAllLiteral(updated, []byte(renderProtocolVersionBlock(meta)))
 	if bytes.Equal(current, updated) {
 		return nil
 	}
