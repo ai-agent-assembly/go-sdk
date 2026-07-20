@@ -84,12 +84,12 @@ There are two URLs in play, and only one of them is ever shown to a reader:
 ## Shared brand styling (Path A)
 
 Styling now follows the **shared documentation brand kit** tracked in the
-[`agent-assembly-docs`](https://github.com/ai-agent-assembly/docs)
+[`docs`](https://github.com/ai-agent-assembly/docs)
 repo under `design/`. The kit is applied here (Path A — vendor the snippet into
 each SDK site) by dropping `design/snippets/hextra-custom.css` at
 `website/assets/css/custom.css` (Hextra auto-loads it) and the brand logo /
 favicon from `design/brand/` into `website/static/images/`. Re-sync from
-`agent-assembly-docs` `design/` when the kit changes.
+`docs` `design/` when the kit changes.
 
 ## Required `hugo.toml` keys
 
