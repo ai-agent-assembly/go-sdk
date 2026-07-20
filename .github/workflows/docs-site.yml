@@ -121,7 +121,7 @@ jobs:
           printf '  %s\n' "${TAGS[@]}"
           # Serializer lives in website/scripts/render_versions_toml.py so the
           # exact same logic can be reused standalone (e.g. by the docs
-          # aggregator in agent-assembly-docs) instead of being inlined here
+          # aggregator in docs) instead of being inlined here
           # (AAASM-3760). It reads "$FILE" for the hand-curated latest entry and
           # rewrites it in place from the full tag set.
           python3 website/scripts/render_versions_toml.py "$FILE" "${TAGS[@]}"

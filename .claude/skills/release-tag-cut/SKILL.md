@@ -173,7 +173,7 @@ fetch-proof examples in `docs/adr/` pin a *specific historical* tag as evidence 
 those are frozen records, never bump them.)
 
 The one place a published go-sdk version *is* pinned lives **outside this repo**:
-go-sdk's runnable **examples live in the `agent-assembly-examples` repo** and pin a
+go-sdk's runnable **examples live in the `examples` repo** and pin a
 published go-sdk version in their `go.mod` + README prerequisite tables. Those track
 the **currently-published** tag, so they must be bumped **after** this release
 publishes (the consumer-repo timing rule) — **not** as part of cutting the tag.
