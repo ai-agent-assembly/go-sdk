@@ -179,9 +179,15 @@ func BenchmarkContextOps(b *testing.B) {
 	})
 }
 
-func TestContextOpsBenchmarkThreshold(t *testing.T) {
-	const maxNsPerOp = 100
-
+// TestContextOpsAllocationFree asserts the cheap-read invariant for the context
+// getters: reading an already-populated identity value must not allocate. This
+// replaces an earlier wall-clock ns/op threshold that was brittle under
+// `go test -race` — race instrumentation inflates per-op latency on slower CI
+// hardware, so the timing bound failed non-deterministically for a
+// non-correctness reason. Allocation count is what the hot-path invariant
+// actually cares about, and it is deterministic regardless of the race build or
+// host speed (AAASM-4941).
+func TestContextOpsAllocationFree(t *testing.T) {
 	ctx := WithAgentID(context.Background(), "threshold-agent")
 	ctx = WithTraceID(ctx, "threshold-trace")
 	ctx = WithRunID(ctx, "threshold-run")
@@ -209,11 +215,10 @@ func TestContextOpsBenchmarkThreshold(t *testing.T) {
 
 	for _, op := range ops {
 		result := testing.Benchmark(op.fn)
-		nsPerOp := result.NsPerOp()
-		if nsPerOp >= maxNsPerOp {
-			t.Errorf("%s: %d ns/op exceeds %d ns/op threshold", op.name, nsPerOp, maxNsPerOp)
+		if allocs := result.AllocsPerOp(); allocs != 0 {
+			t.Errorf("%s: %d allocs/op, want 0 (getter must be allocation-free)", op.name, allocs)
 		} else {
-			t.Logf("%s: %d ns/op (threshold: %d ns/op)", op.name, nsPerOp, maxNsPerOp)
+			t.Logf("%s: %d allocs/op", op.name, allocs)
 		}
 	}
 }
