@@ -322,6 +322,14 @@ mode (enforce / shadow), and live status:
 
 ![Agent Assembly operator dashboard — Fleet view, dark theme, showing the same registered-agent table.](/images/dashboard/fleet-dark.png "Fleet view (dark theme): the same operator surface a governed Go agent appears in once registration is available.")
 
+The **Topology** view lays the same fleet out as a graph, grouping agents into
+per-team clusters — each cluster carrying its own budget bar, so you can see which
+team an agent belongs to and how its spend rolls up:
+
+![Agent Assembly operator dashboard — Topology view, light theme: agent cards grouped into two team clusters (support, analytics), each labelled with a per-team budget bar and connected by delegation edges; one card outlined red for an errored agent.](/images/dashboard/topology-light.png "Topology (light theme): the fleet as a team-clustered graph, with per-team budget bars.")
+
+![Agent Assembly operator dashboard — Topology view, dark theme: the same team-clustered agent graph.](/images/dashboard/topology-dark.png "Topology (dark theme): agents grouped by team, each cluster showing its budget rollup.")
+
 The **Audit Log** is the immutable governance trail — LLM calls, tool invocations,
 file ops, network requests, and policy verdicts across all agents. Here a policy
 **deny** is recorded (top row: an outbound `gmail/send` to an external recipient
