@@ -1,6 +1,6 @@
 ---
 title: Core Concepts
-weight: 2
+weight: 3
 ---
 
 # Core Concepts
