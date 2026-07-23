@@ -1,6 +1,6 @@
 ---
 title: Guides
-weight: 4
+weight: 3
 ---
 
 # Guides

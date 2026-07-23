@@ -1,6 +1,6 @@
 ---
 title: Compatibility & Versioning
-weight: 7
+weight: 6
 ---
 
 # Compatibility & Versioning
