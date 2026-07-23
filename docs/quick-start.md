@@ -110,6 +110,16 @@ governed tool call today by constructing a `GovernanceClient` directly, which is
 exactly what Steps 3–5 do.
 {{< /callout >}}
 
+Once your agent registers with a running gateway, it appears in the operator dashboard's
+**Overview** right away — the fleet count ticks up and the three-layer posture goes live.
+(On the published pure-Go build registration isn't reachable yet — see [Current status &
+limitations](#current-status--limitations); the view below is the surface your Go agent
+lands in once it is.)
+
+![Agent Assembly operator dashboard — Overview, light theme: three-layer posture rings above a fleet snapshot reading six total agents, four enforcing, two shadow, none flagged.](/images/dashboard/overview-light.png "Overview (light theme): posture rings and the fleet snapshot — where a newly registered agent shows up immediately. Shown with sample fixture data.")
+
+![Agent Assembly operator dashboard — Overview, dark theme: the same posture rings and fleet snapshot re-themed to dark.](/images/dashboard/overview-dark.png "Overview (dark theme): the same at-a-glance registered / enforcing / flagged summary. Shown with sample fixture data.")
+
 ## Step 3 — Wrap a tool and watch a call get allowed
 
 Your tools only need to satisfy the SDK's small `Tool` interface:
