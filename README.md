@@ -2,11 +2,11 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/ai-agent-assembly/go-sdk.svg)](https://pkg.go.dev/github.com/ai-agent-assembly/go-sdk)
 [![GitHub release](https://img.shields.io/github/v/tag/ai-agent-assembly/go-sdk?sort=semver&label=release&logo=github)](https://github.com/ai-agent-assembly/go-sdk/releases)
-[![Tests](https://img.shields.io/github/actions/workflow/status/ai-agent-assembly/go-sdk/go-test.yml?branch=master&logo=githubactions&label=tests)](https://github.com/ai-agent-assembly/go-sdk/actions/workflows/go-test.yml)
-[![Lint](https://img.shields.io/github/actions/workflow/status/ai-agent-assembly/go-sdk/lint.yml?branch=master&logo=go&label=lint)](https://github.com/ai-agent-assembly/go-sdk/actions/workflows/lint.yml)
+[![Tests](https://img.shields.io/github/actions/workflow/status/ai-agent-assembly/go-sdk/go-test.yml?branch=main&logo=githubactions&label=tests)](https://github.com/ai-agent-assembly/go-sdk/actions/workflows/go-test.yml)
+[![Lint](https://img.shields.io/github/actions/workflow/status/ai-agent-assembly/go-sdk/lint.yml?branch=main&logo=go&label=lint)](https://github.com/ai-agent-assembly/go-sdk/actions/workflows/lint.yml)
 [![Coverage](https://img.shields.io/codecov/c/github/ai-agent-assembly/go-sdk?logo=codecov)](https://codecov.io/gh/ai-agent-assembly/go-sdk)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ai-agent-assembly/go-sdk)](https://goreportcard.com/report/github.com/ai-agent-assembly/go-sdk)
-[![Docs](https://img.shields.io/github/actions/workflow/status/ai-agent-assembly/go-sdk/docs-site.yml?branch=master&logo=readthedocs&label=docs)](https://docs.agent-assembly.com/go-sdk/)
+[![Docs](https://img.shields.io/github/actions/workflow/status/ai-agent-assembly/go-sdk/docs-site.yml?branch=main&logo=readthedocs&label=docs)](https://docs.agent-assembly.com/go-sdk/)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue?logo=apache)](https://opensource.org/licenses/Apache-2.0)
 [![Go Version](https://img.shields.io/badge/go-%E2%89%A51.26-00ADD8?logo=go)](https://go.dev/doc/devel/release)
 
@@ -22,7 +22,7 @@ Anything outside the `assembly/` package (`internal/`, `examples/`) is not part 
 
 ## Framework compatibility
 
-The first-class agent-framework adapter is **[LangChainGo](https://github.com/tmc/langchaingo)** (`github.com/tmc/langchaingo`), tested on the **`v0.1.x`** line (CI and the [`examples/go/langchaingo`](https://github.com/ai-agent-assembly/examples/tree/master/go/langchaingo) sample pin `v0.1.14`). `assembly.WrapChain` governs a LangChainGo `chains.Chain`; `assembly.WrapTools` governs any tool.
+The first-class agent-framework adapter is **[LangChainGo](https://github.com/tmc/langchaingo)** (`github.com/tmc/langchaingo`), tested on the **`v0.1.x`** line (CI and the [`examples/go/langchaingo`](https://github.com/ai-agent-assembly/examples/tree/HEAD/go/langchaingo) sample pin `v0.1.14`). `assembly.WrapChain` governs a LangChainGo `chains.Chain`; `assembly.WrapTools` governs any tool.
 
 The SDK requires **no framework by default** — `go.mod` imports neither `langchaingo` nor any other framework. `assembly.Tool` is structurally identical to LangChainGo's `tools.Tool` (`Name`/`Description`/`Call`), so `WrapTools` governs an arbitrary slice of `langchaingo/tools.Tool` values (or any other type with the same three methods) with no adapter. Go-side coverage is LangChainGo plus this generic tool-wrapping — there are no other per-framework adapters.
 
@@ -132,7 +132,7 @@ The second argument is the `GovernanceClient` that talks to the gateway. Under t
 
 ## Documentation
 
-- **Live site** — [docs.agent-assembly.com/go-sdk](https://docs.agent-assembly.com/go-sdk/) (Hugo, Hextra theme; built and deployed from `master`).
+- **Live site** — [docs.agent-assembly.com/go-sdk](https://docs.agent-assembly.com/go-sdk/) (Hugo, Hextra theme; built and deployed from `main`).
 - **API reference** — [pkg.go.dev/github.com/ai-agent-assembly/go-sdk](https://pkg.go.dev/github.com/ai-agent-assembly/go-sdk) (auto-generated from godoc; preview locally with `godoc -http=:6060`).
 - **Core concepts** — [docs/core-concepts.md](docs/core-concepts.md) and [docs/api-reference.md](docs/api-reference.md).
 - **Contributing** — [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -141,7 +141,7 @@ The second argument is the `GovernanceClient` that talks to the gateway. Under t
 
 - **Organization** — [github.com/ai-agent-assembly](https://github.com/ai-agent-assembly): org profile and the full production-repo map.
 - **Core runtime** — [ai-agent-assembly/agent-assembly](https://github.com/ai-agent-assembly/agent-assembly): the gateway, policy engine, proxy, and eBPF layers this SDK talks to.
-- **Protocol spec** — the gateway wire protocol this SDK is pinned to lives in the core monorepo at [docs/src/protocol](https://github.com/ai-agent-assembly/agent-assembly/tree/master/docs/src/protocol).
+- **Protocol spec** — the gateway wire protocol this SDK is pinned to lives in the core monorepo at [docs/src/protocol](https://github.com/ai-agent-assembly/agent-assembly/tree/HEAD/docs/src/protocol).
 - **Canonical docs** — the org-wide documentation site at [docs.agent-assembly.com](https://docs.agent-assembly.com/).
 - **Runnable examples** — [ai-agent-assembly/examples](https://github.com/ai-agent-assembly/examples): learn by running small, framework-specific Go (and Python/Node) samples for policy enforcement, approvals, audit, trace, and runtime workflows.
 - **Release notes** — [github.com/ai-agent-assembly/go-sdk/releases](https://github.com/ai-agent-assembly/go-sdk/releases).

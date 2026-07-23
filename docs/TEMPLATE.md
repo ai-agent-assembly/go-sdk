@@ -58,7 +58,7 @@ project plumbing stays out of the SDK's main eye-line.
 | Hosting | GitHub Pages, project-site build target — see "Two-tier URL model" below |
 | Reader-facing URL | `https://docs.agent-assembly.com/<sdk-name>/` |
 | Internal Pages build target (not reader-facing) | `https://ai-agent-assembly.github.io/<sdk-name>/` |
-| Default branch (deploy trigger) | `master` |
+| Default branch (deploy trigger) | `main` |
 | Build command | `cd website && hugo --minify` |
 | Local preview | `cd website && hugo server -D` |
 | Pages source | "GitHub Actions" (set once in repo Settings → Pages) |
@@ -121,7 +121,7 @@ favicon from `design/brand/` into `website/static/images/`. Re-sync from
   pattern (see "Two-tier URL model" above for the worked example from this
   repo). Do not leave `baseURL` on `*.github.io` — that URL is internal-only
   infrastructure, not the public entry point.
-- Versioned docs — single-version (latest `master`) for now; add Hugo's
+- Versioned docs — single-version (latest `main`) for now; add Hugo's
   version selector if/when an LTS branch emerges.
 
 ## Adopting this template in `python-sdk` / `node-sdk`
@@ -133,7 +133,7 @@ favicon from `design/brand/` into `website/static/images/`. Re-sync from
 3. Copy `.github/workflows/docs-site.yml` verbatim; no changes needed if the
    path conventions match.
 4. Set Pages source = "GitHub Actions" once.
-5. First push to `master` deploys to the internal GitHub Pages build target
+5. First push to `main` deploys to the internal GitHub Pages build target
    `https://ai-agent-assembly.github.io/<sdk-name>/`. That is not the
    reader-facing URL — the `docs` repo's aggregation pipeline picks it up
    from there and republishes it at the canonical

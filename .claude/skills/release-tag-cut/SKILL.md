@@ -1,13 +1,13 @@
 ---
 name: release-tag-cut
-description: Cut a go-sdk release tag and let goreleaser + docs-site publish from it. Use when an operator is ready to release a new go-sdk version (e.g. v0.0.1-beta.3) on a green master — covers the tag-push path, what the tagged workflows do automatically, how to validate, and the lockstep native-shim git-SHA pin that ties go-sdk to a specific agent-assembly core commit.
+description: Cut a go-sdk release tag and let goreleaser + docs-site publish from it. Use when an operator is ready to release a new go-sdk version (e.g. v0.0.1-beta.3) on a green main — covers the tag-push path, what the tagged workflows do automatically, how to validate, and the lockstep native-shim git-SHA pin that ties go-sdk to a specific agent-assembly core commit.
 ---
 
 # release-tag-cut (go-sdk)
 
 Executable contract for releasing `github.com/ai-agent-assembly/go-sdk`. go-sdk
 is a **Go module distributed by git tag** — there is no binary publish step and
-no registry. A release IS a `v*` tag on `master`; everything downstream is
+no registry. A release IS a `v*` tag on `main`; everything downstream is
 triggered by that tag.
 
 > This skill ends at `git push remote v<X>`. It does not own the agent-assembly
@@ -20,10 +20,10 @@ Pick this skill when **all** of the following hold:
 
 - The operator has decided go-sdk is ready for a new tag (e.g. cutting
   `v0.0.1-beta.3` after `v0.0.1-beta.2`; the series so far is alpha → beta).
-- The most recent CI run on `master` is green.
-- The working tree is clean and `master` is up to date with `remote/master`.
+- The most recent CI run on `main` is green.
+- The working tree is clean and `main` is up to date with `remote/main`.
 - If this release tracks a new agent-assembly core release, the native-shim pin
-  has already been bumped + merged on `master` (see the pin section below).
+  has already been bumped + merged on `main` (see the pin section below).
 
 Triggering operator phrasing: "Tag go-sdk beta.3", "Cut the next go-sdk
 release", "Release go-sdk v0.0.1-beta.3".
@@ -34,7 +34,7 @@ release", "Release go-sdk v0.0.1-beta.3".
   against a newer agent-assembly release — stop and bump the pin first (separate
   PR), then come back. Tagging with a stale pin ships a go-sdk that links an old
   core ABI.
-- **Pre-conditions not met** — `master` dirty, behind `remote/master`, or red
+- **Pre-conditions not met** — `main` dirty, behind `remote/main`, or red
   CI. Surface the gap; do not remediate from inside this skill.
 - **Re-cutting an existing tag** — tags are immutable here; cut the next patch
   tag instead, never force-move a published tag.
@@ -52,10 +52,10 @@ release", "Release go-sdk v0.0.1-beta.3".
 All MUST hold before any step runs; if any fails, stop and report.
 
 1. **Working tree clean** (`git status --porcelain` empty).
-2. **On `master`, in sync with `remote/master`** — `git fetch remote` first,
+2. **On `main`, in sync with `remote/main`** — `git fetch remote` first,
    then confirm zero ahead/behind.
-3. **Most recent CI run on master is green** —
-   `gh run list --branch master --limit 5`. The release-gating check is
+3. **Most recent CI run on main is green** —
+   `gh run list --branch main --limit 5`. The release-gating check is
    `ci-success` (the `ci-success.yml` aggregate gate).
 4. **Native pin is intentional** — `native/aa-ffi-go/Cargo.toml` pins the core
    SHA you mean to ship against (see below). If a core bump is pending, it must
@@ -64,9 +64,9 @@ All MUST hold before any step runs; if any fails, stop and report.
 
 ## Executable plan
 
-Run from a clean `master` checkout. Substitute the operator-supplied `<X>`.
+Run from a clean `main` checkout. Substitute the operator-supplied `<X>`.
 
-1. **Sync + verify** — `git fetch remote`, confirm `master` == `remote/master`,
+1. **Sync + verify** — `git fetch remote`, confirm `main` == `remote/main`,
    working tree clean, `ci-success` green on the tip.
 2. **Bump BOTH the root `VERSION` file AND the `assembly/version.go` `Version`
    const — in lockstep** (`0.0.1-rc.3`, i.e. tag minus the leading `v`). These are

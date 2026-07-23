@@ -11,7 +11,7 @@
 # tag push (`v0.0.1-alpha.N`, latest a release tag `vX.Y.Z`). So docs versions
 # are organised into MOVING CHANNELS plus frozen ARCHIVED snapshots:
 #
-#   channel = "latest"       moving   tracks master            label "latest (master)"
+#   channel = "latest"       moving   tracks main            label "latest (main)"
 #   channel = "pre-release"  moving   newest pre-release tag    label "pre-release (<tag>)"
 #   channel = "stable"       moving   newest stable tag         label "stable (<tag>)"
 #   channel = "archived"     frozen   one entry per concrete    label "<tag>"
@@ -24,7 +24,7 @@
 # At tag time the release job builds the concrete `/<tag>/` subpath, appends an
 # `archived` entry for it, and points the moving `stable`/`pre-release` channel
 # alias at that concrete build (alias subpath + redirect). `latest` is rebuilt
-# on every push to master.
+# on every push to main.
 #
 # Fields
 #   channel  one of: latest | pre-release | stable | archived
@@ -47,6 +47,6 @@
 [[versions]]
   channel = "latest"
   version = "latest"
-  label = "latest (master)"
+  label = "latest (main)"
   path = "/latest/"
   default = true
