@@ -143,9 +143,9 @@ pre-release). For a reproducible build, pin it explicitly.
 ## See also
 
 - **Canonical core guide** —
-  [Container base images](https://github.com/ai-agent-assembly/agent-assembly/blob/master/docs/src/usage-guide/container-base-images.md)
+  [Container base images](https://github.com/ai-agent-assembly/agent-assembly/blob/HEAD/docs/src/usage-guide/container-base-images.md)
   in the agent-assembly core repo, covering the image family across all SDKs.
 - **ADR 0009** —
-  [Versioned base image tags and SDK pinning](https://github.com/ai-agent-assembly/agent-assembly/blob/master/docs/src/adr/0009-versioned-base-image-tags-and-sdk-pinning.md),
+  [Versioned base image tags and SDK pinning](https://github.com/ai-agent-assembly/agent-assembly/blob/HEAD/docs/src/adr/0009-versioned-base-image-tags-and-sdk-pinning.md),
   the design rationale for the immutable/moving tag scheme and the `SDK_VERSION`
   build-arg.

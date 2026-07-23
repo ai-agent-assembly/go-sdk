@@ -149,7 +149,7 @@ and recorded after.
 
 Pick your framework — each tab shows the governance slice copied verbatim from a
 runnable example in the
-[examples repo](https://github.com/ai-agent-assembly/examples/tree/master/go)
+[examples repo](https://github.com/ai-agent-assembly/examples/tree/HEAD/go)
 (a CI drift check keeps them in lockstep). Go's per-framework
 surface is thin today, so the tabs are **LangChainGo** (the framework path) and
 **Plain** (the framework-agnostic path). Two more validated Go examples already

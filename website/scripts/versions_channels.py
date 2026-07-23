@@ -109,7 +109,7 @@ def compute_channels(tags: list[str]) -> dict[str, str]:
 
     Returns a dict that may contain the keys ``"stable"`` and ``"pre-release"``,
     each mapping to the concrete tag the channel points at. The ``latest``
-    channel (master) is not a release tag and is handled separately by the
+    channel (main) is not a release tag and is handled separately by the
     selector data, so it is never returned here.
 
     The ``pre-release`` key is present only when the gate passes: the newest

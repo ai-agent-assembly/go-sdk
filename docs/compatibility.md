@@ -13,7 +13,7 @@ compatibility contract and how releases are cut.
 
 ## Protocol version
 
-The [`VERSION`](https://github.com/ai-agent-assembly/go-sdk/blob/master/VERSION)
+The [`VERSION`](https://github.com/ai-agent-assembly/go-sdk/blob/main/VERSION)
 file pins the gateway protocol version this SDK speaks (currently `0.0.1-rc.6`). It
 is the wire-compatibility contract, separate from the module's release tags:
 
@@ -123,9 +123,9 @@ index the tag automatically.
 
 ### Cutting a release
 
-1. Land all changes on `master` with CI green.
+1. Land all changes on `main` with CI green.
 2. If the gateway protocol changed, bump
-   [`VERSION`](https://github.com/ai-agent-assembly/go-sdk/blob/master/VERSION)
+   [`VERSION`](https://github.com/ai-agent-assembly/go-sdk/blob/main/VERSION)
    and update the conformance vectors; confirm with `make test`.
 3. Tag the commit and push the tag:
 
@@ -144,7 +144,7 @@ index the tag automatically.
   the module proxy immediately.
 - pkg.go.dev renders the godoc for the tag within minutes.
 - The `goreleaser` config (`.goreleaser.yaml`) is validated on every push to
-  `master` by the `goreleaser-check` job; it is set up for source archives, with
+  `main` by the `goreleaser-check` job; it is set up for source archives, with
   binary builds skipped (this is a library, not a CLI).
 
 ### Consuming a pinned version

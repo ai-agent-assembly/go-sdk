@@ -80,7 +80,7 @@ These are load-bearing; reviewers push back on PRs that skip them.
 - **Branch:** `<release-or-phase>/<ticket>/<type>/<short_summary>`
   (e.g. `v0.0.1/AAASM-1143/feat/readme_contributing`).
 - **PR title:** `[<ticket>] <emoji> (<scope>): <summary>`; base branch **always
-  `master`**; body fills in `.github/PULL_REQUEST_TEMPLATE.md` (Ticket, Summary,
+  `main`**; body fills in `.github/PULL_REQUEST_TEMPLATE.md` (Ticket, Summary,
   Change Scope, Validation, Rollout Notes); ≥1 Pioneer-team approval.
 
 ## Repo-specific gotchas
@@ -88,7 +88,7 @@ These are load-bearing; reviewers push back on PRs that skip them.
 - **`origin` is a personal fork; the canonical remote is `remote`.** In this checkout
   `origin` → `Chisanan232/go-sdk` (a fork) and `remote` → `ai-agent-assembly/go-sdk`
   (canonical), which is usually **ahead** of the fork. Always scope work against
-  `remote/master`, and **push to `remote`, not `origin`**. The fork's `go.mod` may
+  `remote/main`, and **push to `remote`, not `origin`**. The fork's `go.mod` may
   even show the wrong (uppercase) module path — the canonical path is lowercase
   `github.com/ai-agent-assembly/go-sdk`. A "repository moved" redirect notice on push
   is harmless.

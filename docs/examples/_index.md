@@ -6,7 +6,7 @@ weight: 8
 # Examples
 
 Complete, runnable Go examples live in the
-[examples](https://github.com/ai-agent-assembly/examples/tree/master/go)
+[examples](https://github.com/ai-agent-assembly/examples/tree/HEAD/go)
 repository. Each is a self-contained Go module with its own `README.md`. This
 section walks through every Go example in depth: what it demonstrates, how the
 governance flow works, the real commands to run it, and an annotated tour of the
@@ -64,7 +64,7 @@ func main() {
 | [CLI runtime integration]({{< relref "/examples/cli-runtime-integration" >}}) | Auto-start the `aasm` sidecar from a Go workflow and fall back gracefully when it's absent. |
 
 Each example's `README.md` in the
-[examples repo](https://github.com/ai-agent-assembly/examples/tree/master/go)
+[examples repo](https://github.com/ai-agent-assembly/examples/tree/HEAD/go)
 has the canonical step-by-step instructions; these pages add the walkthrough.
 
 ## Where to next

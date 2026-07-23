@@ -126,6 +126,6 @@ Running `go test ./...` exercises the same path offline.
 
 ## Links
 
-- Example directory: [`go/basic-agent`](https://github.com/ai-agent-assembly/examples/tree/master/go/basic-agent)
-- [`README.md`](https://github.com/ai-agent-assembly/examples/blob/master/go/basic-agent/README.md)
+- Example directory: [`go/basic-agent`](https://github.com/ai-agent-assembly/examples/tree/HEAD/go/basic-agent)
+- [`README.md`](https://github.com/ai-agent-assembly/examples/blob/HEAD/go/basic-agent/README.md)
 - Next: [Tool policy]({{< relref "/examples/tool-policy" >}}) — see a tool get **denied**.

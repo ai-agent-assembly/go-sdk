@@ -8,7 +8,7 @@
 
   Messages
     * stable channel / the stable concrete tag  -> no banner
-    * latest channel (master)                    -> "in-development (master)"
+    * latest channel (main)                    -> "in-development (main)"
     * a stable release exists, this isn't it     -> "not the latest stable
                                                      (<stableTag>)" + link
     * no stable release yet (pre-release/old)    -> gentle "pre-release; no
@@ -59,7 +59,7 @@
       <div class="aa-version-banner" role="alert">
         {{- if eq $channel "latest" -}}
           <span class="aa-version-banner-text">
-            You are reading the <strong>in-development</strong> documentation (tracking <code>master</code>).
+            You are reading the <strong>in-development</strong> documentation (tracking <code>main</code>).
             {{- if $stable }} For the released docs, see the
               <a class="aa-version-banner-link" href="{{ $stableHref }}">latest stable ({{ $stableTag }})</a>.{{- end -}}
           </span>

@@ -71,7 +71,7 @@ def render(text: str, raw_tags: list[str]) -> str:
         fields.update({k: v for k, v in flags.items()})
         existing.append(fields)
 
-    # Keep the latest (master) entry as-is. If the user removed it, fall
+    # Keep the latest (main) entry as-is. If the user removed it, fall
     # back to a sensible default so the moving "latest" channel always
     # renders.
     latest = [r for r in existing if r.get("channel") == "latest"]
@@ -80,7 +80,7 @@ def render(text: str, raw_tags: list[str]) -> str:
             {
                 "channel": "latest",
                 "version": "latest",
-                "label": "latest (master)",
+                "label": "latest (main)",
                 "path": "/latest/",
                 "default": "true",
             }

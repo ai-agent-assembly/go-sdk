@@ -184,6 +184,6 @@ Then open
 
 - [Core Concepts]({{< relref "/core-concepts" >}}) — *why* these APIs are shaped the way they are.
 - [Quick Start]({{< relref "/quick-start" >}}) — install, init, wrap your tools.
-- [Contributing](https://github.com/ai-agent-assembly/go-sdk/blob/master/CONTRIBUTING.md) —
+- [Contributing](https://github.com/ai-agent-assembly/go-sdk/blob/main/CONTRIBUTING.md) —
   the conventions enforced in review (context-first, `%w` wrapping, `io.Closer`,
   functional options, `internal/` boundary).
