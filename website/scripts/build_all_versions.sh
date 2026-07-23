@@ -8,7 +8,7 @@
 # the appropriate Hugo build into public/<subpath>/.
 #
 # Mapping:
-#   channel = "latest"                 -> built from master's HEAD
+#   channel = "latest"                 -> built from main's HEAD
 #   channel = "archived", version=v..  -> built from that tag
 #   channel = "stable", tag=v..        -> built from that tag (alias subpath)
 #   channel = "pre-release", tag=v..   -> built from that tag (alias subpath)
@@ -21,7 +21,7 @@
 #   PAGES_BASE   site root, e.g. https://ai-agent-assembly.github.io/go-sdk
 #   PUBLIC_DIR   absolute path to website/public (created if missing)
 #   REPO_ROOT    absolute path to the repo root (for git worktree add)
-#   MASTER_REF   git ref to build for the "latest" channel (defaults to master)
+#   MASTER_REF   git ref to build for the "latest" channel (defaults to main)
 #
 # Usage: bash website/scripts/build_all_versions.sh
 set -euo pipefail
@@ -29,7 +29,7 @@ set -euo pipefail
 : "${PAGES_BASE:?PAGES_BASE must be set}"
 : "${PUBLIC_DIR:?PUBLIC_DIR must be set}"
 : "${REPO_ROOT:?REPO_ROOT must be set}"
-MASTER_REF="${MASTER_REF:-origin/master}"
+MASTER_REF="${MASTER_REF:-origin/main}"
 
 VERSIONS_TOML="${REPO_ROOT}/website/data/versions.toml"
 if [ ! -f "$VERSIONS_TOML" ]; then

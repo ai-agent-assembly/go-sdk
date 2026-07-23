@@ -3,7 +3,7 @@ name: Docs Site
 on:
   push:
     branches:
-      - master
+      - main
     tags:
       - "v*"
     paths:
@@ -12,7 +12,7 @@ on:
       - ".github/workflows/docs-site.yml"
   pull_request:
     branches:
-      - master
+      - main
     paths:
       - "website/**"
       - "docs/**"
