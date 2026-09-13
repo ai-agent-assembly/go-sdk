@@ -5,7 +5,6 @@ Exact fragment checks deliberately reject unknown historical template variants.
 The caller selects the moving pre-release channel, not every archived tag alias.
 """
 from pathlib import Path
-import re
 import sys
 
 CSS = """
@@ -18,8 +17,16 @@ CSS = """
 }
 """
 TITLE = '{{ if .Title }}<h1 class="hx:text-center hx:mt-2 hx:text-4xl hx:font-bold hx:tracking-tight hx:text-slate-900 hx:dark:text-slate-100">{{ .Title }}</h1>{{ end }}'
-TITLE_PATCH = '{{/* AAASM-6099: the release Markdown owns the single page H1. */}}'
-TITLE_MODERN = TITLE.replace('{{ if .Title }}', '{{ if and .Title (ne .Params.showTitle false) }}')
+AUTHORED_H1 = r'{{ $hasAuthoredH1 := gt (len (findRE `(?i)<h1(?:\s|>)` .Content 1)) 0 }}'
+HOME_TITLE_PATCH = AUTHORED_H1 + '\n        ' + TITLE.replace(
+    '{{ if .Title }}', '{{ if and .Title (ne .Params.showTitle false) (not $hasAuthoredH1) }}')
+SINGLE_TITLE_PATCH = AUTHORED_H1 + '\n        ' + TITLE.replace(
+    '{{ if .Title }}', '{{ if and .Title (not $hasAuthoredH1) }}')
+LIST_TITLE = '{{ if .Title }}<h1>{{ .Title }}</h1>{{ end }}'
+LIST_TITLE_PATCH = AUTHORED_H1 + '\n          ' + LIST_TITLE.replace(
+    '{{ if .Title }}', '{{ if and .Title (not $hasAuthoredH1) }}')
+TOC = '{{ partial "toc.html" . }}'
+TOC_PATCH = '{{ partial "custom/toc-if-entries.html" . }}'
 LINK = '<a class="hx:flex hx:items-center hx:hover:opacity-75" href="{{ $logoLink }}">'
 LINK_PATCH = '<a class="aa-navbar-brand hx:flex hx:items-center hx:hover:opacity-75" href="{{ $logoLink }}" aria-label="{{ .Site.Title }}">'
 LABEL = '<span class="hx:mr-2 hx:font-extrabold hx:inline hx:select-none">{{- .Site.Title -}}</span>'
@@ -34,16 +41,21 @@ def replace_checked(text, before, after):
 
 def apply(root):
     root = Path(root)
-    # Suppressing the template title is safe only when the release owns one H1.
-    markdown = (root / 'docs/_index.md').read_text()
-    if len(re.findall(r'^# ', markdown, re.M)) != 1:
-        raise ValueError('Release entry does not own exactly one H1')
     home = root / 'website/layouts/home.html'
+    listing = root / 'website/layouts/list.html'
+    single = root / 'website/layouts/single.html'
+    toc = root / 'website/layouts/_partials/custom/toc-if-entries.html'
     navbar = root / 'website/layouts/_partials/navbar-title.html'
     css = root / 'website/assets/css/custom.css'
-    home_text = home.read_text()
-    if not (TITLE_MODERN in home_text and re.search(r'^showTitle:\s*false\s*$', markdown, re.M)):
-        home_text = replace_checked(home_text, TITLE, TITLE_PATCH)
+    home_text = replace_checked(home.read_text(), TITLE, HOME_TITLE_PATCH)
+    list_text = replace_checked(listing.read_text(), LIST_TITLE, LIST_TITLE_PATCH)
+    single_text = replace_checked(single.read_text(), TITLE, SINGLE_TITLE_PATCH)
+    home_text = replace_checked(home_text, TOC, TOC_PATCH)
+    list_text = replace_checked(list_text, TOC, TOC_PATCH)
+    single_text = replace_checked(single_text, TOC, TOC_PATCH)
+    helper_bytes = (Path(__file__).resolve().parents[1] / 'layouts/_partials/custom/toc-if-entries.html').read_bytes()
+    if toc.exists() and toc.read_bytes() != helper_bytes:
+        raise ValueError('Unsupported current-channel TOC helper; no files changed')
     navbar_text = replace_checked(navbar.read_text(), LINK, LINK_PATCH)
     navbar_text = replace_checked(navbar_text, LABEL, LABEL_PATCH)
     css_text = css.read_text()
@@ -52,6 +64,10 @@ def apply(root):
     # Validate every fragment before touching any file. Markdown and version
     # metadata are intentionally absent from these writes.
     home.write_text(home_text)
+    listing.write_text(list_text)
+    single.write_text(single_text)
+    toc.parent.mkdir(parents=True, exist_ok=True)
+    toc.write_bytes(helper_bytes)
     navbar.write_text(navbar_text)
     css.write_text(css_text)
 
