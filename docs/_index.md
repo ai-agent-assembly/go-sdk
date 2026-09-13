@@ -1,6 +1,7 @@
 ---
 title: go-sdk
 toc: false
+showTitle: false
 ---
 
 # go-sdk · AI Agent Assembly

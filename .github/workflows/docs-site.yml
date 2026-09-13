@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - uiux/visual-experience-overhaul
     tags:
       - "v*"
     paths:
@@ -13,6 +14,7 @@ on:
   pull_request:
     branches:
       - main
+      - uiux/visual-experience-overhaul
     paths:
       - "website/**"
       - "docs/**"
@@ -49,6 +51,11 @@ jobs:
         with:
           go-version: "1.26"
 
+      - name: Channel shell corrections preserve release content
+        run: |
+          python3 website/scripts/test_current_chrome.py
+          python3 website/scripts/test_rc5_heading.py
+
       - name: Install Hugo extended
         run: |
           # githubactions:S6506 — a redirect IS required here: GitHub release
@@ -62,7 +69,7 @@ jobs:
           sudo dpkg -i "$RUNNER_TEMP/hugo.deb"
 
       - name: Configure GitHub Pages
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         id: pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d  # v6
 
@@ -141,6 +148,9 @@ jobs:
           PAGES_BASE: ${{ env.PAGES_BASE }}
           PUBLIC_DIR: ${{ github.workspace }}/website/public
           REPO_ROOT: ${{ github.workspace }}
+          # Validate PR/integration trees; a release tag must not replace the
+          # latest channel with its frozen snapshot.
+          MASTER_REF: ${{ github.ref_type == 'tag' && 'origin/main' || github.sha }}
         run: |
           mkdir -p "$PUBLIC_DIR"
           bash website/scripts/build_all_versions.sh
@@ -175,13 +185,13 @@ jobs:
             website/redirect/index.html > website/public/index.html
 
       - name: Upload Pages artifact
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5
         with:
           path: website/public
 
   deploy:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
     needs: build
     permissions:

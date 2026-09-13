@@ -1,0 +1,7 @@
+{{- /* Hextra renders an empty "On this page" shell when only the article H1
+       exists. It only lists child headings, so retain the TOC when those exist. */ -}}
+{{- $hasEntries := false -}}
+{{- range .Fragments.Headings -}}
+  {{- if .Headings -}}{{- $hasEntries = true -}}{{- end -}}
+{{- end -}}
+{{- if $hasEntries -}}{{- partial "toc.html" . -}}{{- end -}}

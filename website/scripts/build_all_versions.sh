@@ -77,7 +77,7 @@ resolve_ref() {
 
 # Build one (subpath, ref) target into PUBLIC_DIR/<subpath>/.
 build_one() {
-  local subpath="$1" ref="$2"
+  local subpath="$1" ref="$2" channel="$3"
   local worktree
   # mktemp -d is fine but we need it under a path git allows; use the runner
   # temp area when available, otherwise a sibling of the repo.
@@ -96,6 +96,16 @@ build_one() {
   # behaviour, since the selector was a later addition.
   mkdir -p "$worktree/website/data"
   cp "$VERSIONS_TOML" "$worktree/website/data/versions.toml"
+
+  # The audited current channel needs the same two presentation repairs as
+  # latest. Do not apply modern templates or this patch to frozen archives.
+  if [ "$channel" = "pre-release" ]; then
+    python3 "$REPO_ROOT/website/scripts/apply_current_chrome.py" "$worktree"
+  elif [ "$channel" = "archived" ] && [ "$ref" = "v0.0.1-rc.5" ]; then
+    # The audited rc5 entry has one duplicate shell H1. Keep the historical
+    # Markdown, other templates and all other archived tags unchanged.
+    python3 "$REPO_ROOT/website/scripts/apply_rc5_heading.py" "$worktree"
+  fi
 
   (
     cd "$worktree/website"
@@ -136,7 +146,7 @@ for line in "${ENTRIES[@]}"; do
     echo "::warning::Empty subpath for channel=$channel version=$version; skipping."
     continue
   fi
-  build_one "$subpath" "$ref"
+  build_one "$subpath" "$ref" "$channel"
 done
 
 echo "Built subpaths:"
