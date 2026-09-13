@@ -143,8 +143,9 @@ jobs:
           PAGES_BASE: ${{ env.PAGES_BASE }}
           PUBLIC_DIR: ${{ github.workspace }}/website/public
           REPO_ROOT: ${{ github.workspace }}
-          # Validate the proposed/integrated tree, not stale production main.
-          MASTER_REF: ${{ github.sha }}
+          # Validate PR/integration trees; a release tag must not replace the
+          # latest channel with its frozen snapshot.
+          MASTER_REF: ${{ github.ref_type == 'tag' && 'origin/main' || github.sha }}
         run: |
           mkdir -p "$PUBLIC_DIR"
           bash website/scripts/build_all_versions.sh
