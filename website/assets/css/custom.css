@@ -19,6 +19,15 @@
 body { font-family: var(--body-font-family); line-height: 1.65; }
 code, pre, kbd { font-family: var(--mono-font-family); }
 
+/* The compact label preserves room for version and menu controls, while the
+   brand link retains the full product name for assistive technology. */
+.aa-navbar-title-compact { display: none; }
+@media (max-width: 767px) {
+  .aa-navbar-brand { flex-shrink: 0; white-space: nowrap; }
+  .aa-navbar-title-full { display: none; }
+  .aa-navbar-title-compact { display: inline; }
+}
+
 /* readability measure — Hextra content is wide by default.
    Selector may need tuning during the go-sdk build (AAASM-2738). */
 .hextra-content, main article .content { max-width: 72ch; }
