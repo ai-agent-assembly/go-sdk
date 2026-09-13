@@ -51,6 +51,9 @@ jobs:
         with:
           go-version: "1.26"
 
+      - name: Current-channel chrome preserves release content
+        run: python3 website/scripts/test_current_chrome.py
+
       - name: Install Hugo extended
         run: |
           # githubactions:S6506 — a redirect IS required here: GitHub release
