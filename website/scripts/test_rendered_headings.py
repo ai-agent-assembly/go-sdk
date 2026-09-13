@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check the actual Hugo HTML shell, not Markdown regexes or source templates."""
 from pathlib import Path
+from html import unescape
 import re
 import sys
 
@@ -20,19 +21,19 @@ for relative, title in pages.items():
     headings = re.findall(r'<h1(?:\s[^>]*)?>(.*?)</h1>', html, re.I | re.S)
     if len(headings) != 1:
         raise AssertionError(f'{relative}: expected one visible H1; found {len(headings)}')
-    rendered = re.sub(r'<[^>]+>', '', headings[0])
+    rendered = unescape(re.sub(r'<[^>]+>', '', headings[0])).replace('’', "'")
     if title not in rendered:
         raise AssertionError(f'{relative}: wrong surviving article H1: {rendered!r}')
 
-for relative in ('guides/index.html', 'examples/index.html'):
-    html = (site / relative).read_text()
-    if 'aria-label="Table of contents"' in html:
-        raise AssertionError(f'{relative}: empty category TOC shell remains')
+if 'aria-label="Table of contents"' in (site / 'guides/index.html').read_text():
+    raise AssertionError('guides/index.html: empty category TOC shell remains')
 
 quickstart = (site / 'quick-start/index.html').read_text()
 if 'aria-label="Table of contents"' not in quickstart:
     raise AssertionError('quick-start lost its useful article TOC')
-if 'Registration' not in quickstart:
+if 'aria-label="Table of contents"' not in (site / 'examples/index.html').read_text():
+    raise AssertionError('examples lost its useful category TOC')
+if 'agent registration is not reachable' not in quickstart.lower():
     raise AssertionError('quick-start lost the current registration warning')
 
 print(f'PASS: one authored H1, useful TOC, no empty category TOC ({site})')
