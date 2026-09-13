@@ -101,6 +101,10 @@ build_one() {
   # latest. Do not apply modern templates or this patch to frozen archives.
   if [ "$channel" = "pre-release" ]; then
     python3 "$REPO_ROOT/website/scripts/apply_current_chrome.py" "$worktree"
+  elif [ "$channel" = "archived" ] && [ "$ref" = "v0.0.1-rc.5" ]; then
+    # The audited rc5 entry has one duplicate shell H1. Keep the historical
+    # Markdown, other templates and all other archived tags unchanged.
+    python3 "$REPO_ROOT/website/scripts/apply_rc5_heading.py" "$worktree"
   fi
 
   (

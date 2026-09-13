@@ -51,8 +51,10 @@ jobs:
         with:
           go-version: "1.26"
 
-      - name: Current-channel chrome preserves release content
-        run: python3 website/scripts/test_current_chrome.py
+      - name: Channel shell corrections preserve release content
+        run: |
+          python3 website/scripts/test_current_chrome.py
+          python3 website/scripts/test_rc5_heading.py
 
       - name: Install Hugo extended
         run: |
