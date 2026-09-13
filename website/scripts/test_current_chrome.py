@@ -9,7 +9,7 @@ SPEC = importlib.util.spec_from_file_location('chrome', Path(__file__).with_name
 chrome = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(chrome)
 ROOT = Path(__file__).resolve().parents[2]
-TAG = 'v0.0.1-rc.5'
+TAG = 'v0.0.1-rc.6'
 FILES = ['docs/_index.md', 'website/layouts/home.html',
          'website/layouts/_partials/navbar-title.html', 'website/assets/css/custom.css',
          'website/data/versions.toml']
@@ -50,6 +50,13 @@ class CurrentChromeTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             chrome.apply(self.root)
         self.assertEqual((self.root / FILES[1]).read_bytes(), self.original[FILES[1]])
+
+    def test_future_release_with_approved_source_fix_is_idempotent(self):
+        for name in FILES:
+            (self.root / name).write_bytes((ROOT / name).read_bytes())
+        before = {name: (self.root / name).read_bytes() for name in FILES}
+        chrome.apply(self.root)
+        self.assertEqual(before, {name: (self.root / name).read_bytes() for name in FILES})
 
 if __name__ == '__main__':
     unittest.main()

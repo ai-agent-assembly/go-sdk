@@ -19,6 +19,7 @@ CSS = """
 """
 TITLE = '{{ if .Title }}<h1 class="hx:text-center hx:mt-2 hx:text-4xl hx:font-bold hx:tracking-tight hx:text-slate-900 hx:dark:text-slate-100">{{ .Title }}</h1>{{ end }}'
 TITLE_PATCH = '{{/* AAASM-6099: the release Markdown owns the single page H1. */}}'
+TITLE_MODERN = TITLE.replace('{{ if .Title }}', '{{ if and .Title (ne .Params.showTitle false) }}')
 LINK = '<a class="hx:flex hx:items-center hx:hover:opacity-75" href="{{ $logoLink }}">'
 LINK_PATCH = '<a class="aa-navbar-brand hx:flex hx:items-center hx:hover:opacity-75" href="{{ $logoLink }}" aria-label="{{ .Site.Title }}">'
 LABEL = '<span class="hx:mr-2 hx:font-extrabold hx:inline hx:select-none">{{- .Site.Title -}}</span>'
@@ -40,11 +41,13 @@ def apply(root):
     home = root / 'website/layouts/home.html'
     navbar = root / 'website/layouts/_partials/navbar-title.html'
     css = root / 'website/assets/css/custom.css'
-    home_text = replace_checked(home.read_text(), TITLE, TITLE_PATCH)
+    home_text = home.read_text()
+    if not (TITLE_MODERN in home_text and re.search(r'^showTitle:\s*false\s*$', markdown, re.M)):
+        home_text = replace_checked(home_text, TITLE, TITLE_PATCH)
     navbar_text = replace_checked(navbar.read_text(), LINK, LINK_PATCH)
     navbar_text = replace_checked(navbar_text, LABEL, LABEL_PATCH)
     css_text = css.read_text()
-    if CSS not in css_text:
+    if not all(rule in css_text for rule in CSS.splitlines()[2:]):
         css_text += CSS
     # Validate every fragment before touching any file. Markdown and version
     # metadata are intentionally absent from these writes.
