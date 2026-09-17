@@ -41,6 +41,12 @@ jobs:
           # kept, or the autobuilder would run twice in the same job.
           - language: go
             build-mode: autobuild
+          # Every workflow under .github/workflows was previously unanalysed.
+          # The sibling horonomy org surfaced 11 real
+          # actions/missing-workflow-permissions findings the moment this
+          # language was switched on, so it earns its place in the matrix.
+          - language: actions
+            build-mode: none
 
     steps:
       - name: Checkout
