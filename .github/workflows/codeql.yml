@@ -47,6 +47,11 @@ jobs:
           # language was switched on, so it earns its place in the matrix.
           - language: actions
             build-mode: none
+          # 101 KB of first-party Python: scripts/check_claim_vocabulary.py,
+          # website/scripts/*.py and the .claude/skills/*/scripts/*.py helpers.
+          # None of it is vendored or generated.
+          - language: python
+            build-mode: none
 
     steps:
       - name: Checkout
