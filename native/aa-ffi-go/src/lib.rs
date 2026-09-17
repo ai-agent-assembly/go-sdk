@@ -101,6 +101,13 @@ fn status_for(err: &SdkClientError) -> AaStatus {
         // so the caller can distinguish "gateway down" from "gateway said no".
         SdkClientError::GatewayUnreachable => AA_STATUS_GATEWAY_UNREACHABLE,
         SdkClientError::RegisterFailed(_) => AA_STATUS_REGISTER_FAILED,
+        // AAASM-5332's durable-identity registration failure: the agent has no
+        // usable identity key and is refused before the gateway is even
+        // contacted. Folded onto the existing registration-failure code rather
+        // than minting a new public AA_STATUS_* constant here (that's a wider
+        // C-ABI surface decision — new header entry, Go-side mapping — out of
+        // scope for this FFI-pin bump; tracked as a follow-up, AAASM-6119).
+        SdkClientError::IdentityUnavailable(_) => AA_STATUS_REGISTER_FAILED,
     }
 }
 
@@ -195,6 +202,7 @@ pub unsafe extern "C" fn aa_connect(
             team_id: None,
             parent_agent_id: None,
             sdk_version,
+            identity_dir: None,
         };
 
         // All transport lives in aa-sdk-client; we only spawn + own the client.
@@ -329,6 +337,7 @@ pub unsafe extern "C" fn aa_register(
             // The version is signed at IPC-handshake time (`aa_connect`), not on
             // the gateway register, so it is not needed for this config.
             sdk_version: None,
+            identity_dir: None,
         };
 
         // `register` is async (tonic). Drive the one future to completion on a
