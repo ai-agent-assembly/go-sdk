@@ -65,6 +65,13 @@ jobs:
           # inline <script> in website/layouts/**/*.html.
           - language: javascript-typescript
             build-mode: none
+          # PROBE (AAASM-6120): the repo's only C/C++ file is the cbindgen-
+          # generated header native/aa-ffi-go/include/aa_ffi_go.h. There is no
+          # .c/.cc/.cpp translation unit. build-mode: none for c-cpp infers
+          # compilation units from *source* file extensions, so this may find
+          # nothing to extract. Run it once on the PR to find out for certain.
+          - language: c-cpp
+            build-mode: none
 
     steps:
       - name: Checkout
