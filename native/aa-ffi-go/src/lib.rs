@@ -51,6 +51,12 @@ pub const AA_STATUS_GATEWAY_UNREACHABLE: AaStatus = 8;
 /// The gateway was reached but rejected the `Register` call (e.g. an invalid
 /// `did:key`). [`aa_register`] surfaces it; registration never fails open.
 pub const AA_STATUS_REGISTER_FAILED: AaStatus = 9;
+/// The agent's durable identity key could not be established (AAASM-5332), so
+/// registration was refused **before the gateway was ever contacted** —
+/// distinct from [`AA_STATUS_REGISTER_FAILED`], where the gateway was reached
+/// and said no. Callers can use this to distinguish "this agent needs key
+/// provisioning" from "retry against the gateway" (AAASM-6119).
+pub const AA_STATUS_IDENTITY_UNAVAILABLE: AaStatus = 10;
 
 /// C-ABI policy decision returned by [`aa_query_policy`].
 ///
@@ -101,13 +107,12 @@ fn status_for(err: &SdkClientError) -> AaStatus {
         // so the caller can distinguish "gateway down" from "gateway said no".
         SdkClientError::GatewayUnreachable => AA_STATUS_GATEWAY_UNREACHABLE,
         SdkClientError::RegisterFailed(_) => AA_STATUS_REGISTER_FAILED,
-        // AAASM-5332's durable-identity registration failure: the agent has no
-        // usable identity key and is refused before the gateway is even
-        // contacted. Folded onto the existing registration-failure code rather
-        // than minting a new public AA_STATUS_* constant here (that's a wider
-        // C-ABI surface decision — new header entry, Go-side mapping — out of
-        // scope for this FFI-pin bump; tracked as a follow-up, AAASM-6119).
-        SdkClientError::IdentityUnavailable(_) => AA_STATUS_REGISTER_FAILED,
+        // AAASM-6119: AAASM-5332's durable-identity registration failure now
+        // gets its own status code — the agent has no usable identity key and
+        // is refused before the gateway is even contacted, a different
+        // failure class from AA_STATUS_REGISTER_FAILED (gateway reached, said
+        // no).
+        SdkClientError::IdentityUnavailable(_) => AA_STATUS_IDENTITY_UNAVAILABLE,
     }
 }
 

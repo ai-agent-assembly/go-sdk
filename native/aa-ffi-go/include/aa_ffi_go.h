@@ -71,6 +71,15 @@ typedef int32_t AaDecision;
 #define AA_STATUS_REGISTER_FAILED 9
 
 /*
+ The agent's durable identity key could not be established (AAASM-5332), so
+ registration was refused **before the gateway was ever contacted** —
+ distinct from [`AA_STATUS_REGISTER_FAILED`], where the gateway was reached
+ and said no. Callers can use this to distinguish "this agent needs key
+ provisioning" from "retry against the gateway" (AAASM-6119).
+ */
+#define AA_STATUS_IDENTITY_UNAVAILABLE 10
+
+/*
  Action permitted. A failed query no longer maps to allow — it surfaces a
  non-OK status instead (see [`aa_query_policy`]).
  */
