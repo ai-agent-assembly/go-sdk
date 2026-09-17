@@ -52,6 +52,13 @@ jobs:
           # None of it is vendored or generated.
           - language: python
             build-mode: none
+          # native/aa-ffi-go/src/lib.rs — the first-party C-ABI FFI shim, and
+          # the only place in the repo that touches raw pointers. Rust supports
+          # build-mode: none only (rust-analyzer, needs a Cargo.toml, which
+          # native/aa-ffi-go provides); it is rejected by *default* setup with
+          # HTTP 422, which is why it has to live in this advanced setup.
+          - language: rust
+            build-mode: none
 
     steps:
       - name: Checkout
