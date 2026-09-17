@@ -27,7 +27,58 @@ permissions:
 
 jobs:
   analyze:
+    name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Go keeps the autobuild build mode it has always used. Declaring
+          # `build-mode: autobuild` makes the analyze step run the autobuilder
+          # itself (`database trace-command --use-build-mode`), so the separate
+          # `codeql-action/autobuild` step is no longer needed — and must not be
+          # kept, or the autobuilder would run twice in the same job.
+          - language: go
+            build-mode: autobuild
+          # Every workflow under .github/workflows was previously unanalysed.
+          # The sibling horonomy org surfaced 11 real
+          # actions/missing-workflow-permissions findings the moment this
+          # language was switched on, so it earns its place in the matrix.
+          - language: actions
+            build-mode: none
+          # 101 KB of first-party Python: scripts/check_claim_vocabulary.py,
+          # website/scripts/*.py and the .claude/skills/*/scripts/*.py helpers.
+          # None of it is vendored or generated.
+          - language: python
+            build-mode: none
+          # native/aa-ffi-go/src/lib.rs — the first-party C-ABI FFI shim, and
+          # the only place in the repo that touches raw pointers. Rust supports
+          # build-mode: none only (rust-analyzer, needs a Cargo.toml, which
+          # native/aa-ffi-go provides); it is rejected by *default* setup with
+          # HTTP 422, which is why it has to live in this advanced setup.
+          - language: rust
+            build-mode: none
+          # website/assets/js/{consent-banner,feedback-widget}.js — hand-written
+          # dependency-free vanilla JS that runs in every docs-site visitor's
+          # browser and drives Consent Mode v2. The extractor also picks up
+          # inline <script> in website/layouts/**/*.html.
+          - language: javascript-typescript
+            build-mode: none
+          # c-cpp is deliberately absent, and this is an extractor limitation,
+          # NOT an exclusion of real source. The repo's whole C byte count is
+          # one cbindgen-GENERATED header,
+          # native/aa-ffi-go/include/aa_ffi_go.h; there is no .c/.cc/.cpp
+          # translation unit anywhere. `build-mode: none` infers compilation
+          # units from *source* file extensions, so the extractor has nothing
+          # to observe. Measured on PR #216 (job 105087199546, CodeQL 2.27.0,
+          # ubuntu-24.04):
+          #   Indexed folder "...", found 0 source files, 1 header files,
+          #   318 total files.
+          #   Extraction failed: No source files found.
+          # (diagnostic source ID cpp/bmn/standalone-extraction-failure).
+          # The Rust source that header is generated FROM is analysed by the
+          # `rust` leg above, so the underlying logic is still covered.
 
     steps:
       - name: Checkout
@@ -38,10 +89,10 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@65216971a11ded447a6b76263d5a144519e5eee1 # codeql-bundle-v2.25.2
         with:
-          languages: go
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@65216971a11ded447a6b76263d5a144519e5eee1 # codeql-bundle-v2.25.2
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
 
       - name: Analyze
         uses: github/codeql-action/analyze@65216971a11ded447a6b76263d5a144519e5eee1 # codeql-bundle-v2.25.2
+        with:
+          category: "/language:${{ matrix.language }}"
