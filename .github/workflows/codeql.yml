@@ -80,15 +80,6 @@ jobs:
           # The Rust source that header is generated FROM is analysed by the
           # `rust` leg above, so the underlying logic is still covered.
 
-    # PROBE (AAASM-6120), to be removed before merge: PR analyses are
-    # diff-informed ("Persisted 4 diff range(s) across 1 file(s)"), so a PR that
-    # only touches this file cannot surface the pre-existing findings that the
-    # newly enabled languages will report on the first push to main. Disable
-    # diff-informed queries for one run to get the full repo-wide picture and
-    # fix anything real before merging.
-    env:
-      CODEQL_ACTION_DIFF_INFORMED_QUERIES: "false"
-
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
