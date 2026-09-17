@@ -59,6 +59,12 @@ jobs:
           # HTTP 422, which is why it has to live in this advanced setup.
           - language: rust
             build-mode: none
+          # website/assets/js/{consent-banner,feedback-widget}.js — hand-written
+          # dependency-free vanilla JS that runs in every docs-site visitor's
+          # browser and drives Consent Mode v2. The extractor also picks up
+          # inline <script> in website/layouts/**/*.html.
+          - language: javascript-typescript
+            build-mode: none
 
     steps:
       - name: Checkout
