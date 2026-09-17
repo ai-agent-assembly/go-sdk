@@ -27,7 +27,20 @@ permissions:
 
 jobs:
   analyze:
+    name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Go keeps the autobuild build mode it has always used. Declaring
+          # `build-mode: autobuild` makes the analyze step run the autobuilder
+          # itself (`database trace-command --use-build-mode`), so the separate
+          # `codeql-action/autobuild` step is no longer needed — and must not be
+          # kept, or the autobuilder would run twice in the same job.
+          - language: go
+            build-mode: autobuild
 
     steps:
       - name: Checkout
@@ -38,10 +51,10 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@65216971a11ded447a6b76263d5a144519e5eee1 # codeql-bundle-v2.25.2
         with:
-          languages: go
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@65216971a11ded447a6b76263d5a144519e5eee1 # codeql-bundle-v2.25.2
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
 
       - name: Analyze
         uses: github/codeql-action/analyze@65216971a11ded447a6b76263d5a144519e5eee1 # codeql-bundle-v2.25.2
+        with:
+          category: "/language:${{ matrix.language }}"
