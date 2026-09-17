@@ -197,6 +197,12 @@ const RegisterFailedStatus = statusRegisterFailed
 // RegisterFailedStatus.
 const GatewayUnreachableStatus = statusGatewayUnreachable
 
+// IdentityUnavailableStatus is the native status code aa_register returns when
+// the agent has no usable durable identity key, refused before the gateway is
+// ever contacted (AAASM-5332/AAASM-6119). Exported for the same reason as
+// RegisterFailedStatus.
+const IdentityUnavailableStatus = statusIdentityUnavailable
+
 // denyingRegisteringBinding records native registrations like capturingBinding
 // and additionally answers policy queries (policyQuerier) with a fixed decision.
 // It lets a boot test drive the full Init -> aa_register -> WrapTools ->

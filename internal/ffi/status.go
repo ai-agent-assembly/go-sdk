@@ -5,23 +5,24 @@ import (
 	"fmt"
 )
 
-// Status codes 0–9 mirror the aa-ffi-go C ABI (AaStatus) returned by the native
+// Status codes 0–10 mirror the aa-ffi-go C ABI (AaStatus) returned by the native
 // cgo bridge. statusRuntimeUnavailable is a Go-only sentinel used by the
-// fail-closed fallback binding (no native transport compiled in). Codes 8–9 are
+// fail-closed fallback binding (no native transport compiled in). Codes 8–10 are
 // the fail-closed registration outcomes surfaced only by aa_register — unlike a
 // policy query, registration never fails open (see aa_ffi_go.h).
 const (
-	statusOK                 int32 = 0
-	statusNullPointer        int32 = 1
-	statusInvalidUTF8        int32 = 2
-	statusNotConnected       int32 = 3
-	statusMutexPoison        int32 = 4
-	statusIPCError           int32 = 5
-	statusChannelClosed      int32 = 6
-	statusPanic              int32 = 7
-	statusGatewayUnreachable int32 = 8
-	statusRegisterFailed     int32 = 9
-	statusRuntimeUnavailable int32 = 100
+	statusOK                  int32 = 0
+	statusNullPointer         int32 = 1
+	statusInvalidUTF8         int32 = 2
+	statusNotConnected        int32 = 3
+	statusMutexPoison         int32 = 4
+	statusIPCError            int32 = 5
+	statusChannelClosed       int32 = 6
+	statusPanic               int32 = 7
+	statusGatewayUnreachable  int32 = 8
+	statusRegisterFailed      int32 = 9
+	statusIdentityUnavailable int32 = 10
+	statusRuntimeUnavailable  int32 = 100
 )
 
 // errWrapFormat is the shared format string for wrapping a sentinel error with
@@ -53,6 +54,13 @@ var (
 	// invalid did:key). Like ErrGatewayUnreachable it is advisory at the SDK
 	// layer.
 	ErrRegisterFailed = errors.New("ffi register rejected by gateway")
+	// ErrIdentityUnavailable reports the agent has no usable durable identity
+	// key, so registration was refused before the gateway was ever contacted
+	// (AAASM-5332) — a different failure class from ErrRegisterFailed (the
+	// gateway was reached and said no). A caller distinguishing the two might
+	// prompt for key provisioning here instead of retrying against the
+	// gateway (AAASM-6119).
+	ErrIdentityUnavailable = errors.New("ffi agent identity unavailable")
 	// ErrRuntimeUnavailable reports that no native enforcement transport is
 	// available. The SDK fails closed rather than silently allowing traffic;
 	// build with `-tags aa_ffi_go` (CGO_ENABLED=1) to enable the native binding.
@@ -81,6 +89,8 @@ func statusToError(status int32, operation string) error {
 		return fmt.Errorf(errWrapFormat, operation, ErrGatewayUnreachable)
 	case statusRegisterFailed:
 		return fmt.Errorf(errWrapFormat, operation, ErrRegisterFailed)
+	case statusIdentityUnavailable:
+		return fmt.Errorf(errWrapFormat, operation, ErrIdentityUnavailable)
 	case statusRuntimeUnavailable:
 		return fmt.Errorf(errWrapFormat, operation, ErrRuntimeUnavailable)
 	default:
