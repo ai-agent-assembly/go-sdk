@@ -65,13 +65,20 @@ jobs:
           # inline <script> in website/layouts/**/*.html.
           - language: javascript-typescript
             build-mode: none
-          # PROBE (AAASM-6120): the repo's only C/C++ file is the cbindgen-
-          # generated header native/aa-ffi-go/include/aa_ffi_go.h. There is no
-          # .c/.cc/.cpp translation unit. build-mode: none for c-cpp infers
-          # compilation units from *source* file extensions, so this may find
-          # nothing to extract. Run it once on the PR to find out for certain.
-          - language: c-cpp
-            build-mode: none
+          # c-cpp is deliberately absent, and this is an extractor limitation,
+          # NOT an exclusion of real source. The repo's whole C byte count is
+          # one cbindgen-GENERATED header,
+          # native/aa-ffi-go/include/aa_ffi_go.h; there is no .c/.cc/.cpp
+          # translation unit anywhere. `build-mode: none` infers compilation
+          # units from *source* file extensions, so the extractor has nothing
+          # to observe. Measured on PR #216 (job 105087199546, CodeQL 2.27.0,
+          # ubuntu-24.04):
+          #   Indexed folder "...", found 0 source files, 1 header files,
+          #   318 total files.
+          #   Extraction failed: No source files found.
+          # (diagnostic source ID cpp/bmn/standalone-extraction-failure).
+          # The Rust source that header is generated FROM is analysed by the
+          # `rust` leg above, so the underlying logic is still covered.
 
     steps:
       - name: Checkout
