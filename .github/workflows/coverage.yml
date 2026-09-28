@@ -60,11 +60,14 @@ jobs:
         if: ${{ matrix.cgo-enabled == '1' }}
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
 
+      # AAASM-6215: declared + checksum-pinned, and no release-API lookup at
+      # run time. arduino/setup-protoc defaulted to the floating range 23.x and
+      # resolved it through an unretried API call, so this required check could
+      # redden on the network. Kept byte-identical to node-sdk's copy so both
+      # SDKs compile aa-proto with the same declared compiler.
       - name: Install protoc
         if: ${{ matrix.cgo-enabled == '1' }}
-        uses: arduino/setup-protoc@c65c819552d16ad3c9b72d9dfd5ba5237b9c906b # v3.0.0
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+        uses: ./.github/actions/setup-protoc
 
       - name: Setup Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
