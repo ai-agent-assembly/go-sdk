@@ -33,7 +33,7 @@ jobs:
       # AAASM-4634 comment there). Without this, `go` resolves to whatever
       # actions/setup-go's `go-version: "1.26.x"` cached (the 1.26.4 toolcache)
       # and `go mod download`/golangci-lint's own `go build` run outbound TLS
-      # on a stdlib still vulnerable to GO-2026-5856.
+      # on a stdlib still vulnerable to advisories fixed in go1.26.10.
       GOTOOLCHAIN: go1.26.10
 
     steps:

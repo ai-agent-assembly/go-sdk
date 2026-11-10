@@ -52,7 +52,8 @@ jobs:
         # directive in go.mod and run under whatever setup-go resolved
         # (`go-version: 1.26.x` → the 1.26.4 toolcache). An *explicit* version
         # here overrides `local`: `go` self-downloads and runs exactly go1.26.10,
-        # where GO-2026-5856 (crypto/tls ECH privacy leak) is patched — so the
+        # where the stdlib advisories fixed through go1.26.10 (e.g. GO-2026-5856,
+        # crypto/tls ECH privacy leak) are patched — so the
         # scan sees it as fixed instead of flagging it against the older
         # resolved toolchain.
         env:
